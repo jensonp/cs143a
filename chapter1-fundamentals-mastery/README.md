@@ -1,6 +1,6 @@
 # Chapter 1 Fundamentals Mastery Companion
 
-Companion to [chapter1_fundamentals.md](chapter1_fundamentals.md).
+Companion to [chapter1 fundamentals](../chapter1-fundamentals/).
 
 The reference file is optimized for quick review.
 This file is optimized for building operating-systems intuition that is closer to implementation skill.
@@ -571,7 +571,7 @@ The control problems do not.
 
 ## 7. How To Use This With The Reference File
 
-Use [chapter1_fundamentals.md](chapter1_fundamentals.md) when:
+Use [chapter1 fundamentals](../chapter1-fundamentals/) when:
 
 - you need a fast pass before class, quiz, or discussion
 - you want compact review and diagrams

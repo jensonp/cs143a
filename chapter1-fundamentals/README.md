@@ -20,7 +20,7 @@ Users do not interact with hardware directly; they pursue tasks through software
 
 This distinction matters because "OS" is a broader functional idea than "kernel." On many systems, users experience the operating system through command interpreters that accept user requests, libraries that package reusable code, window systems that manage graphical displays, service managers that start and supervise background services, and runtime frameworks that provide standard execution support for applications, yet those components are not all part of the kernel. The kernel is better understood as the minimal trusted core that must remain resident because it arbitrates access to the CPU, memory, storage, and devices. From that follow the textbook's two classic descriptions of the OS: as a `resource allocator`, it decides how scarce resources are shared; as a `control program`, it supervises execution so programs do not interfere with one another or misuse hardware.
 
-![Supplement: software layers and OS boundaries](chapter1_graphviz/fig_s3_software_stack_boundaries.svg)
+![Supplement: software layers and OS boundaries](../chapter1_graphviz/fig_s3_software_stack_boundaries.svg)
 
 Rigorous distinctions:
 
@@ -38,7 +38,7 @@ After the kernel is running, control must return to it whenever the system needs
 
 The distinction between `user mode` and `kernel mode` makes this control transfer enforceable rather than conventional. In user mode, application code runs with restricted privilege. In kernel mode, the processor permits `privileged instructions` such as direct device control, changes to page tables that map virtual addresses to physical memory, and other protected operations. A `timer` is then what makes the system preemptive instead of merely polite: by generating an interrupt after a bounded interval, it guarantees that the OS regains control even if a process would otherwise never yield. `DMA` (direct memory access) is the corresponding idea on the data-movement side of I/O. The kernel first initiates an I/O operation, for example a disk read into memory, by programming the device controller with the source, destination, and size of the transfer. The controller can then perform a `bulk transfer`, meaning a large contiguous sequence of bytes or words, directly between a device buffer and main memory without requiring the CPU to copy each word itself. When the transfer finishes, the device typically raises an interrupt so the kernel can record completion, wake any waiting process, and continue the request.
 
-![Supplement: distinct paths into kernel mode](chapter1_graphviz/fig_s4_kernel_entry_paths.svg)
+![Supplement: distinct paths into kernel mode](../chapter1_graphviz/fig_s4_kernel_entry_paths.svg)
 
 Rigorous distinctions:
 
@@ -60,7 +60,7 @@ When hardware supplies more than one general-purpose CPU, the terminology shifts
 
 A `clustered system` pushes cooperation beyond one physical machine. Multiple computers coordinate through a network and often shared storage to provide higher availability or greater aggregate service capacity. That is why `fault tolerance` and `graceful degradation` should not be conflated. `Fault tolerance` means the system still provides correct service after a component fails, so the user-visible service is preserved despite the fault. `Graceful degradation` means the system continues to provide some useful service after a fault, but with reduced performance, capacity, or feature availability. The latter is weaker but often more practical.
 
-![Supplement: execution models from one CPU to clustered systems](chapter1_graphviz/fig_s5_execution_scaling_models.svg)
+![Supplement: execution models from one CPU to clustered systems](../chapter1_graphviz/fig_s5_execution_scaling_models.svg)
 
 Rigorous distinctions:
 
@@ -74,11 +74,11 @@ A program cannot execute from arbitrary persistent storage in the way users conc
 
 Performance then introduces copying. A `cache` is a faster store that keeps copies of data expected to be reused soon or located near other recently used data, exploiting temporal or spatial locality to reduce average access time. But once multiple copies exist, consistency becomes a system property instead of a local one. `Cache coherency` is the requirement that the system preserve a consistent view across cached copies under the architecture's coherence rules; otherwise one processor or device may act on stale data while another believes it has already updated the shared state. This is why the chapter's storage discussion is not only about capacity and speed. It is equally about deciding which copy is current and under what rule a read is allowed to observe a write.
 
-![Supplement: one data item, many copies](chapter1_graphviz/fig_s6_storage_copies_authority.svg)
+![Supplement: one data item, many copies](../chapter1_graphviz/fig_s6_storage_copies_authority.svg)
 
 The same logic carries into access control. `Protection` is the part of the system that specifies and enforces which subject may access which object in which way: for example, which process may read a file, map a page, or send to a device. `Security` is broader. It includes protection, but also authentication, resistance to hostile behavior, auditing, confidentiality, integrity, and recovery after compromise. A system can have strong protection rules on paper and still be insecure if credentials are stolen or privileged software is exploited. `User IDs` and `group IDs` provide the naming machinery for many traditional protection decisions: the OS binds actions to user and group identities so policy can be stated and checked consistently.
 
-![Supplement: protection as a subset of security](chapter1_graphviz/fig_s7_protection_security_scope.svg)
+![Supplement: protection as a subset of security](../chapter1_graphviz/fig_s7_protection_security_scope.svg)
 
 Rigorous distinctions:
 
@@ -112,7 +112,7 @@ The chapter starts by placing the operating system between user goals and raw ha
 
 That role can be described from several viewpoints at once. From the user view, the OS is about convenience, responsiveness, and access to common services. From the system view, it is about arbitration: deciding how CPU time, memory, devices, and storage are shared safely. From the implementation view, the kernel is the privileged always-running core that enforces those decisions. The important limitation is that there is no single perfect boundary for what "counts as the OS." On some systems the boundary feels narrow and kernel-centered; on others it includes large bodies of supporting software around the kernel.
 
-![Figure 1.1 reconstruction](chapter1_graphviz/fig_1_1_abstract_view.svg)
+![Figure 1.1 reconstruction](../chapter1_graphviz/fig_1_1_abstract_view.svg)
 
 ### 2.2 Computer-System Organization
 
@@ -122,15 +122,15 @@ The same section explains why storage is hierarchical rather than uniform. Faste
 
 The main structural limitation is contention. Shared buses, memory channels, and device paths mean CPUs and controllers compete for access. Interrupt-per-byte transfer scales badly because the CPU spends too much time servicing tiny events, which is why DMA exists. The broader interpretation is that Chapter 1 treats the machine as a coordinated flow of control and data: boot code loads the kernel, devices announce completion, controllers move information, and the operating system keeps the whole path coherent despite competing costs in speed, capacity, and persistence.
 
-![Figure 1.2 reconstruction](chapter1_graphviz/fig_1_2_modern_computer.svg)
+![Figure 1.2 reconstruction](../chapter1_graphviz/fig_1_2_modern_computer.svg)
 
-![Figure 1.3 reconstruction](chapter1_graphviz/fig_1_3_interrupt_timeline.svg)
+![Figure 1.3 reconstruction](../chapter1_graphviz/fig_1_3_interrupt_timeline.svg)
 
-![Figure 1.4 reconstruction](chapter1_graphviz/fig_1_4_storage_hierarchy.svg)
+![Figure 1.4 reconstruction](../chapter1_graphviz/fig_1_4_storage_hierarchy.svg)
 
-![Figure 1.5 reconstruction](chapter1_graphviz/fig_1_5_modern_system_flow.svg)
+![Figure 1.5 reconstruction](../chapter1_graphviz/fig_1_5_modern_system_flow.svg)
 
-![Supplementary boot and interrupt path](chapter1_graphviz/fig_s1_boot_interrupt_path.svg)
+![Supplementary boot and interrupt path](../chapter1_graphviz/fig_s1_boot_interrupt_path.svg)
 
 ### 2.3 Computer-System Architecture
 
@@ -138,9 +138,9 @@ Computer-system architecture changes the shape of the OS problem by changing how
 
 The limitation is that more processors do not automatically mean proportional speedup. Coordination costs rise. SMP introduces cache, memory, and I/O coordination problems, and NUMA means that once systems scale, memory behavior may stop being uniform across processors. Clusters increase availability and aggregate capacity, but they also push more responsibility onto software for communication, failover, and distributed coordination. The key interpretation is that architecture is not only about counting CPUs. It is about understanding how tightly processors, memory, and machines are coupled, because that coupling determines what the operating system must coordinate.
 
-![Figure 1.6 reconstruction](chapter1_graphviz/fig_1_6_smp.svg)
+![Figure 1.6 reconstruction](../chapter1_graphviz/fig_1_6_smp.svg)
 
-![Figure 1.8 reconstruction](chapter1_graphviz/fig_1_8_cluster.svg)
+![Figure 1.8 reconstruction](../chapter1_graphviz/fig_1_8_cluster.svg)
 
 ### 2.4 Operating-System Structure and Operations
 
@@ -148,9 +148,9 @@ The operating system becomes structurally interesting as soon as more than one j
 
 Those mechanisms immediately create structural pressure. Once several jobs are resident, the system must schedule them, manage memory among them, synchronize access to shared state, and protect them from one another. Response time depends on how well the OS handles switching and memory pressure, and without hardware-enforced privilege separation one bad user program can corrupt the entire machine. The essential interpretation is simple: multiprogramming solves idle CPU time, time sharing solves user waiting time, and dual mode plus timers solve control and safety.
 
-![Figure 1.9 reconstruction](chapter1_graphviz/fig_1_9_multiprogramming.svg)
+![Figure 1.9 reconstruction](../chapter1_graphviz/fig_1_9_multiprogramming.svg)
 
-![Figure 1.10 reconstruction](chapter1_graphviz/fig_1_10_mode_transition.svg)
+![Figure 1.10 reconstruction](../chapter1_graphviz/fig_1_10_mode_transition.svg)
 
 ### 2.5 Process, Memory, and Storage Management
 
@@ -158,7 +158,7 @@ Process, memory, and storage management are the core mechanisms by which the OS 
 
 The structural limits here are fundamental. A program cannot execute directly from disk; it must be brought into memory. Main memory is finite, so multiprogramming forces the OS to make replacement and allocation decisions under pressure. Caching improves average latency, but it also creates stale-copy problems, and those become harder when multiple processors or distributed components may observe or modify different copies. The right interpretation is that storage management is not only a capacity problem. It is also a consistency problem, because the same logical data item may exist in several places at once and the OS must know which copy is authoritative.
 
-![Figure 1.12 reconstruction](chapter1_graphviz/fig_1_12_storage_migration.svg)
+![Figure 1.12 reconstruction](../chapter1_graphviz/fig_1_12_storage_migration.svg)
 
 ### 2.6 Protection and Security
 
@@ -172,7 +172,7 @@ Kernel data structures matter because the OS spends a large amount of time organ
 
 Each structure brings its own limits. Linked-list lookup is linear in the worst case, a binary search tree can degrade toward linear behavior if it becomes unbalanced, hashing degrades as collisions increase, and bitmaps are only meaningful if the mapping from bit positions to resources remains correct. The deeper interpretation is that the kernel chooses structures by access pattern, not by aesthetic preference. If the dominant operation is frequent insertion and removal, one structure fits better; if it is dense status tracking or direct key lookup, another does.
 
-![Kernel data-structure panel](chapter1_graphviz/fig_1_13_to_17_kernel_structures.svg)
+![Kernel data-structure panel](../chapter1_graphviz/fig_1_13_to_17_kernel_structures.svg)
 
 ### 2.8 Computing Environments
 
@@ -180,13 +180,13 @@ Computing environments extend the same operating-system questions into larger or
 
 Each environment shifts the operating-system tradeoffs. Client-server designs simplify control but can concentrate bottlenecks and failure points. Peer-to-peer designs reduce some central dependence but make discovery, coordination, and policy harder. Virtualization improves reuse and isolation but adds a management layer and some overhead. Cloud systems move local hardware management into service management, which changes trust and control boundaries. Real-time systems change the definition of correctness itself, because producing the right output too late still counts as failure. The broad interpretation is that computing environments differ mainly in where control lives, how resources are shared, and how strict the timing and reliability requirements are.
 
-![Figure 1.18 reconstruction](chapter1_graphviz/fig_1_18_client_server.svg)
+![Figure 1.18 reconstruction](../chapter1_graphviz/fig_1_18_client_server.svg)
 
-![Figure 1.19 reconstruction](chapter1_graphviz/fig_1_19_p2p.svg)
+![Figure 1.19 reconstruction](../chapter1_graphviz/fig_1_19_p2p.svg)
 
-![Figure 1.20 reconstruction](chapter1_graphviz/fig_1_20_virtualization.svg)
+![Figure 1.20 reconstruction](../chapter1_graphviz/fig_1_20_virtualization.svg)
 
-![Figure 1.21 reconstruction](chapter1_graphviz/fig_1_21_cloud.svg)
+![Figure 1.21 reconstruction](../chapter1_graphviz/fig_1_21_cloud.svg)
 
 ### 2.9 Open-Source Operating Systems
 
@@ -207,7 +207,7 @@ The limitation is that openness does not remove bugs or complexity. It changes t
 9. Kernel data structures matter because operating-system performance is mostly about how state is organized and accessed.
 10. Distributed systems, virtualization, cloud systems, and embedded real-time systems are not side topics. They are different answers to the same question: how should computation be organized and controlled?
 
-![Supplementary concept map](chapter1_graphviz/fig_s2_ch1_fundamentals_map.svg)
+![Supplementary concept map](../chapter1_graphviz/fig_s2_ch1_fundamentals_map.svg)
 
 ## 4. Fundamental Questions
 

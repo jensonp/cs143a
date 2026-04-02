@@ -6,8 +6,8 @@ This repo is organized so each note lives in its own directory as a `README.md`,
 
 - [Chapter 1 Fundamentals](chapter1-fundamentals/)
 - [Chapter 1 Fundamentals Mastery Companion](chapter1-fundamentals-mastery/)
-- [Chapter 2 Operating-System Structures Reinforcement](chapter2-operating-system-structures/)
-- [Chapter 3 Processes Reinforcement](chapter3-processes/)
+- [Chapter 2 Operating-System Structures Mastery](chapter2-operating-system-structures/)
+- [Chapter 3 Processes Mastery](chapter3-processes/)
 
 ## Shared Assets
 

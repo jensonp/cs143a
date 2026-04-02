@@ -1,0 +1,37 @@
+digraph G {
+  graph [rankdir=TB, pad=0.2, nodesep=0.4, ranksep=0.45, bgcolor="white"];
+  node [fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.2, arrowsize=0.8];
+
+  users [shape=plain, label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="8" COLOR="#5B6B73">
+      <TR>
+        <TD BGCOLOR="#E6F3F9">user 1</TD>
+        <TD BGCOLOR="#E6F3F9">user 2</TD>
+        <TD BGCOLOR="#E6F3F9">user 3</TD>
+        <TD BGCOLOR="#E6F3F9">...</TD>
+        <TD BGCOLOR="#E6F3F9">user n</TD>
+      </TR>
+    </TABLE>
+  >];
+
+  apps [shape=plain, label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="8" COLOR="#5B6B73">
+      <TR>
+        <TD BGCOLOR="#DDEAF1">compiler</TD>
+        <TD BGCOLOR="#DDEAF1">assembler</TD>
+        <TD BGCOLOR="#DDEAF1">text editor</TD>
+        <TD BGCOLOR="#DDEAF1">...</TD>
+        <TD BGCOLOR="#DDEAF1">database system</TD>
+      </TR>
+      <TR>
+        <TD COLSPAN="5" BGCOLOR="#DDEAF1"><B>system and application programs</B></TD>
+      </TR>
+    </TABLE>
+  >];
+
+  os [shape=box, style="rounded,filled", fillcolor="#BFE2F1", label="operating system", width=3.4];
+  hw [shape=box, style="rounded,filled", fillcolor="#D9D9D9", label="computer hardware", width=3.4];
+
+  users -> apps -> os -> hw;
+}

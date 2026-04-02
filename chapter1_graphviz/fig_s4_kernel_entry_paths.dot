@@ -1,0 +1,35 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.45, ranksep=0.55, splines=ortho, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75];
+
+  running [label="user process\nexecuting", fillcolor="#F5F5F5"];
+  device [label="device completion\nor timer expiry", fillcolor="#F5F5F5"];
+  request [label="program requests\nOS service", fillcolor="#F5F5F5"];
+  fault [label="program faults\nor violates a rule", fillcolor="#F5F5F5"];
+
+  subgraph cluster_kernel {
+    label="control enters kernel mode";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+
+    interrupt [label="interrupt\nasynchronous", fillcolor="#DDEAF1"];
+    syscall [label="system call\nintentional", fillcolor="#DDEAF1"];
+    exception [label="exception / trap\nsynchronous", fillcolor="#DDEAF1"];
+
+    ih [label="interrupt handler", fillcolor="#BFE2F1"];
+    kh [label="kernel service\nroutine", fillcolor="#BFE2F1"];
+    fh [label="fault handler\nrepair, signal,\nor terminate", fillcolor="#BFE2F1"];
+    resume [label="resume current process\nor dispatch another", fillcolor="#D5EDF7"];
+
+    interrupt -> ih -> resume;
+    syscall -> kh -> resume;
+    exception -> fh -> resume;
+  }
+
+  device -> interrupt;
+  running -> request -> syscall;
+  running -> fault -> exception;
+  resume -> running;
+}

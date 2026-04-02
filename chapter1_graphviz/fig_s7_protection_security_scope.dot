@@ -1,0 +1,34 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.45, ranksep=0.6, splines=ortho, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75];
+
+  subgraph cluster_security {
+    label="security: broader defense problem";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+
+    auth [label="authentication\nwho is requesting?", fillcolor="#F5F5F5"];
+    audit [label="auditing / logging\nwhat happened?", fillcolor="#F5F5F5"];
+    attack [label="attack resistance\nmalware, theft,\nhostile access", fillcolor="#F5F5F5"];
+    recover [label="recovery after\ncompromise", fillcolor="#F5F5F5"];
+
+    subgraph cluster_protection {
+      label="protection: authorization and enforcement";
+      color="#7CB6CC";
+      style="rounded";
+      subject [label="user / process", fillcolor="#DDEAF1"];
+      policy [label="policy check\nUID, GID,\npermissions, mode", fillcolor="#BFE2F1"];
+      object [label="resource\nCPU, memory,\nfile, device", fillcolor="#D5EDF7"];
+
+      subject -> policy -> object;
+    }
+  }
+
+  auth -> policy;
+  object -> audit;
+  attack -> auth [style=dashed];
+  attack -> policy [style=dashed];
+  audit -> recover [style=dashed];
+}

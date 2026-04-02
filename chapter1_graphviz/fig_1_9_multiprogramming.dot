@@ -1,0 +1,14 @@
+digraph G {
+  graph [rankdir=TB, pad=0.2, bgcolor="white"];
+  node [shape=plain, fontname="Helvetica"];
+
+  memory [label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="10" COLOR="#5B6B73">
+      <TR><TD BGCOLOR="#F5F5F5">0</TD><TD BGCOLOR="#D9D9D9"><B>operating system</B></TD></TR>
+      <TR><TD BGCOLOR="#F5F5F5"></TD><TD BGCOLOR="#BFE2F1">job 1</TD></TR>
+      <TR><TD BGCOLOR="#F5F5F5"></TD><TD BGCOLOR="#C9E7F4">job 2</TD></TR>
+      <TR><TD BGCOLOR="#F5F5F5"></TD><TD BGCOLOR="#D5EDF7">job 3</TD></TR>
+      <TR><TD BGCOLOR="#F5F5F5">Max</TD><TD BGCOLOR="#E6F3F9">job 4</TD></TR>
+    </TABLE>
+  >];
+}

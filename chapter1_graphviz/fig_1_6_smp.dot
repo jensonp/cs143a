@@ -1,0 +1,35 @@
+digraph G {
+  graph [rankdir=TB, pad=0.25, nodesep=0.4, ranksep=0.55, splines=ortho, bgcolor="white"];
+  node [fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.15, arrowsize=0.8];
+
+  { rank=same;
+    cpu0 [shape=plain, label=<
+      <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#5B6B73">
+        <TR><TD BGCOLOR="#D9D9D9"><B>CPU0</B></TD></TR>
+        <TR><TD BGCOLOR="#F5F5F5">registers</TD></TR>
+        <TR><TD BGCOLOR="#E6F3F9">cache</TD></TR>
+      </TABLE>
+    >];
+    cpu1 [shape=plain, label=<
+      <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#5B6B73">
+        <TR><TD BGCOLOR="#D9D9D9"><B>CPU1</B></TD></TR>
+        <TR><TD BGCOLOR="#F5F5F5">registers</TD></TR>
+        <TR><TD BGCOLOR="#E6F3F9">cache</TD></TR>
+      </TABLE>
+    >];
+    cpu2 [shape=plain, label=<
+      <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#5B6B73">
+        <TR><TD BGCOLOR="#D9D9D9"><B>CPU2</B></TD></TR>
+        <TR><TD BGCOLOR="#F5F5F5">registers</TD></TR>
+        <TR><TD BGCOLOR="#E6F3F9">cache</TD></TR>
+      </TABLE>
+    >];
+  }
+
+  memory [shape=box, style="rounded,filled", fillcolor="#BFE2F1", label="shared memory", width=3.2];
+
+  cpu0 -> memory;
+  cpu1 -> memory;
+  cpu2 -> memory;
+}

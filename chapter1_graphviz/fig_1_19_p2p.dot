@@ -1,0 +1,21 @@
+graph G {
+  graph [pad=0.25, nodesep=0.5, ranksep=0.5, bgcolor="white"];
+  node [shape=ellipse, style="filled", fillcolor="#C9E7F4", color="#5B6B73", fontname="Helvetica", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05];
+
+  a [label="client"];
+  b [label="client"];
+  c [label="client"];
+  d [label="client"];
+  e [label="client"];
+
+  a -- b;
+  a -- c;
+  a -- d;
+  b -- c;
+  b -- e;
+  c -- d;
+  c -- e;
+  d -- e;
+  d -- b;
+}

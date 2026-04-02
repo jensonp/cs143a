@@ -1,0 +1,28 @@
+digraph G {
+  graph [rankdir=TB, pad=0.25, nodesep=0.4, ranksep=0.38, splines=ortho, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.15, arrowsize=0.8];
+
+  subgraph cluster_user {
+    label="user mode (mode bit = 1)";
+    color="#C7D7DF";
+    style="rounded";
+    uexec [label="user process executing", fillcolor="#F5F5F5"];
+    call [label="calls system call", fillcolor="#F5F5F5"];
+    retu [label="return from system call", fillcolor="#F5F5F5"];
+    uexec -> call -> retu;
+  }
+
+  subgraph cluster_kernel {
+    label="kernel mode (mode bit = 0)";
+    color="#9EC9DA";
+    style="rounded";
+    trap [label="trap\nmode bit = 0", fillcolor="#DDEAF1"];
+    exec [label="execute system call", fillcolor="#BFE2F1"];
+    retk [label="return\nmode bit = 1", fillcolor="#DDEAF1"];
+    trap -> exec -> retk;
+  }
+
+  call -> trap;
+  retk -> retu;
+}

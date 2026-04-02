@@ -1,0 +1,36 @@
+digraph G {
+  graph [rankdir=TB, pad=0.25, nodesep=0.45, ranksep=0.55, splines=polyline, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75];
+
+  users [shape=ellipse, label="users", fillcolor="#C9E7F4"];
+  apps [label="application programs\nsolve user tasks", fillcolor="#E6F3F9"];
+  hw [label="hardware\nCPU, memory, devices", fillcolor="#D9D9D9"];
+  note [shape=note, label="OS boundary is broader\nthan the kernel and can vary\nby system design", fillcolor="#F5F5F5"];
+
+  subgraph cluster_os {
+    label="operating system in the broad sense";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+
+    sys [label="system programs\nshells, loaders,\nfile tools, compilers,\ndaemons", fillcolor="#DDEAF1"];
+    mid [label="middleware\nreusable services\nand frameworks", fillcolor="#D5EDF7"];
+
+    subgraph cluster_kernel {
+      label="kernel";
+      color="#7CB6CC";
+      style="rounded";
+      kern [label="privileged always-running core\nscheduling, protection,\nmemory, device control", fillcolor="#BFE2F1"];
+    }
+  }
+
+  users -> apps;
+  apps -> sys [style=dashed, label="uses support tools"];
+  apps -> mid [style=dashed, label="uses APIs"];
+  apps -> kern [label="system calls"];
+  sys -> kern;
+  mid -> kern;
+  kern -> hw;
+  note -> sys [style=dotted, arrowhead=none];
+}

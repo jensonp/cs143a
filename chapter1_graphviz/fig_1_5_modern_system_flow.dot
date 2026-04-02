@@ -1,0 +1,32 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.5, ranksep=0.65, splines=true, bgcolor="white"];
+  node [fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.15, arrowsize=0.8];
+
+  cpu [shape=plain, label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="8" COLOR="#5B6B73">
+      <TR><TD BGCOLOR="#D9D9D9"><B>CPU (*N)</B></TD></TR>
+      <TR><TD BGCOLOR="#E6F3F9">thread of execution</TD></TR>
+      <TR><TD BGCOLOR="#DDEAF1">cache</TD></TR>
+    </TABLE>
+  >];
+
+  device [shape=plain, label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="8" COLOR="#5B6B73">
+      <TR><TD BGCOLOR="#DDEAF1"><B>device (*M)</B></TD></TR>
+    </TABLE>
+  >];
+
+  memory [shape=plain, label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="8" COLOR="#5B6B73">
+      <TR><TD BGCOLOR="#D9D9D9"><B>memory</B></TD></TR>
+      <TR><TD BGCOLOR="#E6F3F9">instructions and data</TD></TR>
+    </TABLE>
+  >];
+
+  cpu -> memory [label="instruction execution cycle"];
+  memory -> cpu [label="data movement"];
+  cpu -> device [label="I/O request"];
+  device -> cpu [label="interrupt"];
+  device -> memory [label="DMA"];
+}

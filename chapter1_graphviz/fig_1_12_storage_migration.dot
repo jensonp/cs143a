@@ -1,0 +1,14 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.45, ranksep=0.5, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [dir=both, arrowtail=normal, arrowhead=normal, color="#5B6B73", penwidth=1.15];
+
+  disk [label="magnetic disk\nA", fillcolor="#E7EEF2"];
+  memory [label="main memory\nA", fillcolor="#D5EDF7"];
+  cache [label="cache\nA", fillcolor="#C9E7F4"];
+  reg [label="hardware register\nA", fillcolor="#BFE2F1"];
+
+  disk -> memory [label="I/O copy"];
+  memory -> cache [label="cache fill"];
+  cache -> reg [label="load"];
+}

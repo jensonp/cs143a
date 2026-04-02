@@ -1,0 +1,44 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.55, ranksep=0.7, splines=ortho, bgcolor="white"];
+  node [fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75];
+
+  subgraph cluster_native {
+    label="(a) Native execution";
+    color="#C7D7DF";
+    style="rounded";
+    native [shape=plain, label=<
+      <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="8" COLOR="#5B6B73">
+        <TR><TD BGCOLOR="#F5F5F5">processes</TD></TR>
+        <TR><TD BGCOLOR="#BFE2F1">kernel</TD></TR>
+        <TR><TD BGCOLOR="#D9D9D9">hardware</TD></TR>
+      </TABLE>
+    >];
+  }
+
+  subgraph cluster_vm {
+    label="(b) VMware style virtualization";
+    color="#C7D7DF";
+    style="rounded";
+    vm [shape=plain, label=<
+      <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="6" COLOR="#5B6B73">
+        <TR>
+          <TD BGCOLOR="#F5F5F5">processes</TD>
+          <TD BGCOLOR="#F5F5F5">processes</TD>
+          <TD BGCOLOR="#F5F5F5">processes</TD>
+        </TR>
+        <TR>
+          <TD BGCOLOR="#BFE2F1">kernel VM1</TD>
+          <TD BGCOLOR="#BFE2F1">kernel VM2</TD>
+          <TD BGCOLOR="#BFE2F1">kernel VM3</TD>
+        </TR>
+        <TR>
+          <TD COLSPAN="3" BGCOLOR="#DDEAF1">virtual machine manager</TD>
+        </TR>
+        <TR>
+          <TD COLSPAN="3" BGCOLOR="#D9D9D9">hardware</TD>
+        </TR>
+      </TABLE>
+    >];
+  }
+}

@@ -1,0 +1,30 @@
+digraph G {
+  graph [rankdir=TB, pad=0.25, nodesep=0.45, ranksep=0.45, splines=polyline, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75];
+
+  internet [label="Internet", shape=ellipse, fillcolor="#C9E7F4"];
+  firewall [label="firewall", fillcolor="#F5F5F5"];
+  lb [label="load balancer", fillcolor="#F5F5F5"];
+
+  subgraph cluster_cloud {
+    label="cloud";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+    vm1 [label="virtual machines", fillcolor="#DDEAF1"];
+    vm2 [label="virtual machines", fillcolor="#DDEAF1"];
+    storage [label="storage", fillcolor="#DDEAF1"];
+    mgmt [label="cloud management services", fillcolor="#BFE2F1"];
+  }
+
+  ui [label="cloud customer interface", fillcolor="#DDEAF1"];
+
+  internet -> firewall;
+  firewall -> lb;
+  firewall -> ui [style=dashed, label="customer requests"];
+  lb -> vm1;
+  lb -> vm2;
+  lb -> storage;
+  ui -> mgmt [style=dashed, label="cloud management commands"];
+}

@@ -1,0 +1,16 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.45, ranksep=0.5, splines=ortho, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.1, arrowsize=0.8];
+
+  power [label="power on / reboot", fillcolor="#F5F5F5"];
+  boot [label="firmware / bootstrap", fillcolor="#DDEAF1"];
+  kernel [label="load kernel", fillcolor="#BFE2F1"];
+  init [label="start init and system daemons", fillcolor="#D5EDF7"];
+  user [label="run user-mode process", fillcolor="#F5F5F5"];
+  event [label="interrupt / trap / system call", fillcolor="#E6F3F9"];
+  handler [label="kernel handler / service routine", fillcolor="#BFE2F1"];
+  resume [label="resume or dispatch next process", fillcolor="#D5EDF7"];
+
+  power -> boot -> kernel -> init -> user -> event -> handler -> resume -> user;
+}

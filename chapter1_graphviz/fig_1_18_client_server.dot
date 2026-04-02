@@ -1,0 +1,16 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.45, ranksep=0.6, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.15, arrowsize=0.8];
+
+  server [label="server", fillcolor="#DDEAF1"];
+  network [label="network", shape=ellipse, fillcolor="#BFE2F1", width=1.8];
+  desktop [label="client desktop", fillcolor="#F5F5F5"];
+  laptop [label="client laptop", fillcolor="#F5F5F5"];
+  phone [label="client smartphone", fillcolor="#F5F5F5"];
+
+  server -> network [dir=both];
+  network -> desktop [dir=both];
+  network -> laptop [dir=both];
+  network -> phone [dir=both];
+}

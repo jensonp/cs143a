@@ -1,0 +1,25 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.45, ranksep=0.7, splines=true, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75];
+
+  os [label="operating system", fillcolor="#BFE2F1", width=2.3];
+
+  hardware [label="hardware\nCPU, memory, devices", fillcolor="#D9D9D9"];
+  control [label="control\ninterrupts, traps, timers,\nprivileged instructions", fillcolor="#DDEAF1"];
+  proc [label="processes\ncreation, scheduling,\ncommunication", fillcolor="#E6F3F9"];
+  mem [label="memory\nallocation, residency,\nvirtualization", fillcolor="#E6F3F9"];
+  storage [label="storage\nfiles, disks, caches,\nconsistency", fillcolor="#E6F3F9"];
+  protect [label="protection and security\nauthorization,\nauthentication, defense", fillcolor="#DDEAF1"];
+  env [label="environments\ndistributed, P2P,\nvirtualized, cloud,\nreal-time", fillcolor="#E6F3F9"];
+  source [label="open source\nstudy, modify,\ninspect implementation", fillcolor="#DDEAF1"];
+
+  os -> hardware;
+  os -> control;
+  os -> proc;
+  os -> mem;
+  os -> storage;
+  os -> protect;
+  os -> env;
+  os -> source;
+}

@@ -1,0 +1,35 @@
+digraph G {
+  graph [rankdir=TB, pad=0.25, nodesep=0.45, ranksep=0.55, splines=ortho, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.2, arrowsize=0.8];
+
+  { rank=same;
+    disks [label="disks", fillcolor="#E6F3F9"];
+    mouse [label="mouse", fillcolor="#E6F3F9"];
+    keyboard [label="keyboard", fillcolor="#E6F3F9"];
+    printer [label="printer", fillcolor="#E6F3F9"];
+    monitor [label="monitor", fillcolor="#E6F3F9"];
+  }
+
+  { rank=same;
+    cpu [label="CPU", fillcolor="#D9D9D9"];
+    diskctl [label="disk controller", fillcolor="#DDEAF1"];
+    usbctl [label="USB controller", fillcolor="#DDEAF1"];
+    gfx [label="graphics adapter", fillcolor="#DDEAF1"];
+  }
+
+  bus [label="shared bus", shape=box, height=0.25, width=4.5, fillcolor="#F5F5F5"];
+  memory [label="memory", fillcolor="#BFE2F1", width=2.0];
+
+  disks -> diskctl;
+  mouse -> usbctl;
+  keyboard -> usbctl;
+  printer -> usbctl;
+  monitor -> gfx;
+
+  cpu -> bus [dir=none];
+  diskctl -> bus [dir=none];
+  usbctl -> bus [dir=none];
+  gfx -> bus [dir=none];
+  bus -> memory;
+}

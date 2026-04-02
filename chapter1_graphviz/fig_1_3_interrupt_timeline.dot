@@ -1,0 +1,41 @@
+digraph G {
+  graph [rankdir=TB, pad=0.2, bgcolor="white"];
+  node [shape=plain, fontname="Helvetica"];
+
+  timeline [label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#5B6B73">
+      <TR>
+        <TD BGCOLOR="#F5F5F5"><B>Lane</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Before request</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>I/O request</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Transfer in progress</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Transfer done</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>After interrupt</B></TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>CPU</B></TD>
+        <TD>user process executing</TD>
+        <TD>issues request</TD>
+        <TD>user process executing</TD>
+        <TD>I/O interrupt processing</TD>
+        <TD>user process executing</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>I/O device</B></TD>
+        <TD>idle</TD>
+        <TD>starts transfer</TD>
+        <TD>transferring</TD>
+        <TD>signals completion</TD>
+        <TD>idle</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Event</B></TD>
+        <TD>-</TD>
+        <TD>I/O request</TD>
+        <TD>-</TD>
+        <TD>interrupt raised</TD>
+        <TD>service complete</TD>
+      </TR>
+    </TABLE>
+  >];
+}

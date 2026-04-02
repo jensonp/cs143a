@@ -1,0 +1,117 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.35, ranksep=0.7, splines=true, bgcolor="white"];
+  node [fontname="Helvetica", color="#5B6B73", fontcolor="#233238", style="rounded,filled"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75];
+
+  subgraph cluster_singly {
+    label="Figure 1.13: Singly linked list";
+    color="#C7D7DF";
+    style="rounded";
+    s1 [shape=box, fillcolor="#E6F3F9", label="data"];
+    s2 [shape=box, fillcolor="#E6F3F9", label="data"];
+    s3 [shape=box, fillcolor="#E6F3F9", label="data"];
+    sn [shape=box, fillcolor="#F5F5F5", label="null"];
+    s1 -> s2 -> s3 -> sn;
+  }
+
+  subgraph cluster_doubly {
+    label="Figure 1.14: Doubly linked list";
+    color="#C7D7DF";
+    style="rounded";
+    d1 [shape=box, fillcolor="#E6F3F9", label="data"];
+    d2 [shape=box, fillcolor="#E6F3F9", label="data"];
+    d3 [shape=box, fillcolor="#E6F3F9", label="data"];
+    d0 [shape=box, fillcolor="#F5F5F5", label="null"];
+    d4 [shape=box, fillcolor="#F5F5F5", label="null"];
+    d0 -> d1 [dir=both];
+    d1 -> d2 [dir=both];
+    d2 -> d3 [dir=both];
+    d3 -> d4 [dir=both];
+  }
+
+  subgraph cluster_circular {
+    label="Figure 1.15: Circularly linked list";
+    color="#C7D7DF";
+    style="rounded";
+    c1 [shape=box, fillcolor="#E6F3F9", label="data"];
+    c2 [shape=box, fillcolor="#E6F3F9", label="data"];
+    c3 [shape=box, fillcolor="#E6F3F9", label="data"];
+    c4 [shape=box, fillcolor="#E6F3F9", label="data"];
+    c1 -> c2 -> c3 -> c4 -> c1;
+  }
+
+  subgraph cluster_bst {
+    label="Figure 1.16: Binary search tree";
+    color="#C7D7DF";
+    style="rounded";
+    node [shape=circle, fillcolor="#C9E7F4"];
+    t17 [label="17"];
+    t12 [label="12"];
+    t35 [label="35"];
+    t6 [label="6"];
+    t14 [label="14"];
+    t40 [label="40"];
+    t42 [label="42"];
+    t17 -> t12;
+    t17 -> t35;
+    t12 -> t6;
+    t12 -> t14;
+    t35 -> t40;
+    t40 -> t42;
+  }
+
+  subgraph cluster_hash {
+    label="Figure 1.17: Hash map";
+    color="#C7D7DF";
+    style="rounded";
+    hashmap [shape=plain, label=<
+      <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="4">
+        <TR>
+          <TD COLSPAN="4">hash_function(key)</TD>
+        </TR>
+        <TR>
+          <TD COLSPAN="4">&#8595;</TD>
+        </TR>
+        <TR>
+          <TD BORDER="1" COLOR="#5B6B73" BGCOLOR="#E6F3F9" WIDTH="42">0</TD>
+          <TD BORDER="1" COLOR="#5B6B73" BGCOLOR="#E6F3F9" WIDTH="42">1</TD>
+          <TD BORDER="1" COLOR="#5B6B73" BGCOLOR="#E6F3F9" WIDTH="42">...</TD>
+          <TD BORDER="1" COLOR="#5B6B73" BGCOLOR="#E6F3F9" WIDTH="42">n</TD>
+        </TR>
+        <TR>
+          <TD COLSPAN="4">hash map</TD>
+        </TR>
+        <TR>
+          <TD COLSPAN="4">&#8595;</TD>
+        </TR>
+        <TR>
+          <TD COLSPAN="4" BORDER="1" COLOR="#5B6B73" BGCOLOR="#BFE2F1">value</TD>
+        </TR>
+      </TABLE>
+    >];
+  }
+
+  subgraph cluster_bitmap {
+    label="Supplement: Bitmap";
+    color="#C7D7DF";
+    style="rounded";
+    bm [shape=plain, label=<
+      <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="6" COLOR="#5B6B73">
+        <TR>
+          <TD BGCOLOR="#F5F5F5">0</TD>
+          <TD BGCOLOR="#F5F5F5">0</TD>
+          <TD BGCOLOR="#BFE2F1">1</TD>
+          <TD BGCOLOR="#F5F5F5">0</TD>
+          <TD BGCOLOR="#BFE2F1">1</TD>
+          <TD BGCOLOR="#BFE2F1">1</TD>
+          <TD BGCOLOR="#BFE2F1">1</TD>
+          <TD BGCOLOR="#F5F5F5">0</TD>
+          <TD BGCOLOR="#BFE2F1">1</TD>
+        </TR>
+        <TR>
+          <TD COLSPAN="9">1 = unavailable, 0 = available</TD>
+        </TR>
+      </TABLE>
+    >];
+  }
+}

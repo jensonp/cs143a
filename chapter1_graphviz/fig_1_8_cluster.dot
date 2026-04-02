@@ -1,0 +1,19 @@
+digraph G {
+  graph [rankdir=TB, pad=0.25, nodesep=0.55, ranksep=0.55, splines=ortho, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.15, arrowsize=0.8];
+
+  { rank=same;
+    c1 [label="computer", fillcolor="#DDEAF1"];
+    c2 [label="computer", fillcolor="#DDEAF1"];
+    c3 [label="computer", fillcolor="#DDEAF1"];
+  }
+
+  lan [label="interconnect", fillcolor="#F5F5F5", width=4.2, height=0.35];
+  san [label="storage area network", fillcolor="#BFE2F1", width=4.8];
+
+  c1 -> lan [dir=none];
+  c2 -> lan [dir=none];
+  c3 -> lan [dir=none];
+  lan -> san;
+}

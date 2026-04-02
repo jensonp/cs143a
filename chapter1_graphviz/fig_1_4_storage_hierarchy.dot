@@ -1,0 +1,20 @@
+digraph G {
+  graph [rankdir=TB, pad=0.25, nodesep=0.3, ranksep=0.42, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [dir=both, arrowtail=normal, arrowhead=normal, color="#5B6B73", penwidth=1.1];
+
+  registers [label="registers", fillcolor="#BFE2F1", width=1.8];
+  cache [label="cache", fillcolor="#C9E7F4", width=2.2];
+  memory [label="main memory", fillcolor="#D5EDF7", width=2.8];
+  ssd [label="solid-state disk", fillcolor="#DDEAF1", width=3.3];
+  hdd [label="magnetic disk", fillcolor="#E7EEF2", width=4.0];
+  optical [label="optical disk", fillcolor="#EDF2F5", width=4.7];
+  tape [label="magnetic tapes", fillcolor="#F3F6F8", width=5.4];
+
+  registers -> cache;
+  cache -> memory;
+  memory -> ssd;
+  ssd -> hdd;
+  hdd -> optical;
+  optical -> tape;
+}

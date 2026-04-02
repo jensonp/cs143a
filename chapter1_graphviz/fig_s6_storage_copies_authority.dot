@@ -1,0 +1,21 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.45, ranksep=0.6, splines=polyline, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75];
+
+  file [label="logical file\nname and bytes", fillcolor="#E6F3F9"];
+  disk [label="secondary storage\npersistent copy", fillcolor="#D9D9D9"];
+  mem [label="main memory\nresident pages", fillcolor="#BFE2F1"];
+  cache [label="cache\nfast nearby copy", fillcolor="#DDEAF1"];
+  cpu [label="CPU uses data", fillcolor="#F5F5F5"];
+  note [shape=note, label="same data item may exist\nin several places at once;\nthe system must know\nwhich copy is current", fillcolor="#F5F5F5"];
+
+  file -> disk [style=dashed, label="mapped onto"];
+  disk -> mem [label="load / page in"];
+  mem -> cache [label="copy"];
+  cache -> cpu [label="read / write"];
+  cache -> mem [label="evict / flush"];
+  mem -> disk [label="write back"];
+  note -> mem [style=dotted, arrowhead=none];
+  note -> cache [style=dotted, arrowhead=none];
+}

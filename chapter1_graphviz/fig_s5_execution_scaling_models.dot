@@ -1,0 +1,14 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.55, ranksep=0.65, splines=polyline, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75];
+
+  single [label="single processor\n1 CPU\n1 instruction stream\nat a time", fillcolor="#F5F5F5"];
+  multi [label="multiprogramming /\ntime sharing\n1 CPU, many jobs\nswitch on wait or timer", fillcolor="#DDEAF1"];
+  smp [label="SMP / multicore\nmany CPUs\nshared memory,\nshared coordination", fillcolor="#BFE2F1"];
+  cluster [label="cluster\nmany computers\nnetwork coordination,\nfailover, service sharing", fillcolor="#D5EDF7"];
+
+  single -> multi [label="keep CPU busy"];
+  multi -> smp [label="add hardware parallelism"];
+  smp -> cluster [label="loosen coupling"];
+}

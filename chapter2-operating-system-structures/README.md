@@ -132,6 +132,8 @@ The same service can therefore have many request surfaces while still converging
 2. How can one service have several interfaces without changing what the OS guarantees?
 3. Why is the implementation layer the real site of protection enforcement?
 
+![Supplement: service, interface, and implementation are distinct layers that converge on one privileged mechanism](../chapter2_graphviz/fig_2_1_service_interface_implementation.svg)
+
 ### 3.2 Human Interfaces And Why Shells Stay Out Of The Kernel
 
 **Problem**
@@ -240,6 +242,8 @@ One packages intent for programmers; the other transfers authority to the kernel
 1. Why can two APIs expose the same service while using different wrapper code?
 2. What job does the library wrapper perform that the kernel should not do for it?
 3. Why is syscall argument validation part of OS correctness and security?
+
+![Supplement: API call to system call to kernel return (boundary and lane view)](../chapter2_graphviz/fig_2_2_api_to_syscall_trace.svg)
 
 ### 3.4 System-Call Categories As Control Surfaces
 
@@ -445,6 +449,8 @@ where does this code live, and how much does it cost to communicate with it?
 2. What performance cost appears when a service moves from kernel space to a user-space server?
 3. Why can a kernel be monolithic in execution style and still modular in deployment style?
 
+![Supplement: kernel structure choices are mostly about where code runs and how components communicate](../chapter2_graphviz/fig_2_3_kernel_structure_comparison.svg)
+
 ### 3.8 Debugging, Observability, System Generation, And Boot
 
 **Problem**
@@ -580,6 +586,11 @@ The names change.
 The boundary costs do not.
 
 ## 7. How To Use This File
+
+If you are short on time:
+
+- Read `## 2. Mental Models To Know Cold` once.
+- Reproduce the traces in `## 4. Canonical Traces To Reproduce From Memory`.
 
 Use this file when:
 

@@ -1,0 +1,57 @@
+digraph G {
+  graph [rankdir=TB, pad=0.2, bgcolor="white"];
+  node [shape=plain, fontname="Helvetica"];
+
+  trace [label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#5B6B73">
+      <TR>
+        <TD BGCOLOR="#F5F5F5"><B>Lane</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Before call</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>API invoked</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Enter kernel</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Dispatch + checks</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Return</B></TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Program</B></TD>
+        <TD>user code running</TD>
+        <TD>calls API function</TD>
+        <TD>paused on entry</TD>
+        <TD>waits for result</TD>
+        <TD>receives status</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Library</B></TD>
+        <TD>idle until called</TD>
+        <TD>packages syscall number + args</TD>
+        <TD>executes entry instruction</TD>
+        <TD>inactive</TD>
+        <TD>converts return convention</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>CPU</B></TD>
+        <TD>user mode</TD>
+        <TD>still user mode</TD>
+        <TD>switches to kernel mode</TD>
+        <TD>executes privileged code</TD>
+        <TD>returns to user mode</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Kernel</B></TD>
+        <TD>not on CPU</TD>
+        <TD>not on CPU</TD>
+        <TD>syscall handler runs</TD>
+        <TD>validates + performs service</TD>
+        <TD>returns result/error</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Boundary</B></TD>
+        <TD>-</TD>
+        <TD>API boundary</TD>
+        <TD><B>privilege boundary</B></TD>
+        <TD>authority exercised</TD>
+        <TD>authority released</TD>
+      </TR>
+    </TABLE>
+  >];
+}

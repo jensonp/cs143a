@@ -1,0 +1,49 @@
+digraph G {
+  graph [rankdir=TB, pad=0.2, bgcolor="white"];
+  node [shape=plain, fontname="Helvetica"];
+
+  trace [label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#5B6B73">
+      <TR>
+        <TD BGCOLOR="#F5F5F5"><B>Lane</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Running</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>exit()</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Zombie phase</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>wait()</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Reaped</B></TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Child</B></TD>
+        <TD>executing</TD>
+        <TD>terminates + reports status</TD>
+        <TD>no execution</TD>
+        <TD>no execution</TD>
+        <TD>fully removed</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Kernel</B></TD>
+        <TD>schedules child</TD>
+        <TD>records status, begins cleanup</TD>
+        <TD>retains table entry + status</TD>
+        <TD>returns status to parent</TD>
+        <TD>final cleanup complete</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Parent</B></TD>
+        <TD>running or waiting</TD>
+        <TD>may continue</TD>
+        <TD>may not have collected status yet</TD>
+        <TD>collects status via wait</TD>
+        <TD>observes outcome</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Key idea</B></TD>
+        <TD>-</TD>
+        <TD>execution ends</TD>
+        <TD>status survives execution</TD>
+        <TD>collection authorizes deletion</TD>
+        <TD>bookkeeping removed</TD>
+      </TR>
+    </TABLE>
+  >];
+}

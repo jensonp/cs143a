@@ -1,0 +1,44 @@
+digraph G {
+  graph [rankdir=TB, pad=0.2, bgcolor="white"];
+  node [shape=plain, fontname="Helvetica"];
+
+  cmp [label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#5B6B73">
+      <TR>
+        <TD BGCOLOR="#F5F5F5"><B>Question</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Monolithic</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Layered</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Microkernel</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Modular / Hybrid</B></TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Where does code run?</B></TD>
+        <TD>most services in kernel space</TD>
+        <TD>services split into kernel layers</TD>
+        <TD>minimal kernel; many servers in user space</TD>
+        <TD>kernel core + loadable privileged modules</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>How do components talk?</B></TD>
+        <TD>direct calls inside kernel</TD>
+        <TD>calls descend through layers</TD>
+        <TD>message passing + context switches</TD>
+        <TD>direct calls (modules) + selective boundaries</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Main advantage</B></TD>
+        <TD>low overhead</TD>
+        <TD>reasoning + separation</TD>
+        <TD>fault isolation + replaceability</TD>
+        <TD>extensibility with strong performance</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Main cost</B></TD>
+        <TD>large privileged fault scope</TD>
+        <TD>layering overhead + awkward dependencies</TD>
+        <TD>IPC + switching overhead</TD>
+        <TD>module bugs still privileged; mixed complexity</TD>
+      </TR>
+    </TABLE>
+  >];
+}

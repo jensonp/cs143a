@@ -415,6 +415,8 @@ That separation is the main conceptual point, not the exact API names.
 2. Why is parent-child ancestry not the same thing as sharing a future program image?
 3. What resource decisions must the OS make during process creation?
 
+![Supplement: fork then exec is controlled duplication, then image replacement](../chapter3_graphviz/fig_3_7_fork_exec_trace.svg)
+
 ### 3.8 Termination, Wait, Zombies, And Orphans
 
 **Problem**
@@ -466,6 +468,8 @@ On UNIX-like systems, orphans are typically reparented so someone can still coll
 1. Why is a zombie not just “a dead process” in the most naive sense?
 2. Why are zombie and orphan different failure or lifecycle outcomes?
 3. Why does final cleanup often happen after execution has already ended?
+
+![Supplement: exit preserves status via a zombie phase until wait authorizes final cleanup](../chapter3_graphviz/fig_3_8_exit_wait_trace.svg)
 
 ![Supplement: process creation and termination form one lifecycle, including zombies and orphans](../chapter3_graphviz/fig_3_5_process_lifecycle_relations.svg)
 
@@ -756,6 +760,11 @@ The examples get more complex.
 The process-control problems do not.
 
 ## 7. How To Use This File
+
+If you are short on time:
+
+- Read `## 2. Mental Models To Know Cold` once.
+- Reproduce the traces in `## 4. Canonical Traces To Reproduce From Memory`.
 
 Use this file when:
 

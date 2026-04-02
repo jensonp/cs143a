@@ -1,0 +1,49 @@
+digraph G {
+  graph [rankdir=TB, pad=0.2, bgcolor="white"];
+  node [shape=plain, fontname="Helvetica"];
+
+  trace [label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#5B6B73">
+      <TR>
+        <TD BGCOLOR="#F5F5F5"><B>Lane</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Before fork</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>fork() / create</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>After fork</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>exec() (optional)</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>After exec</B></TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Parent</B></TD>
+        <TD>running</TD>
+        <TD>requests child creation</TD>
+        <TD>continues or waits</TD>
+        <TD>unchanged</TD>
+        <TD>continues as parent</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Kernel</B></TD>
+        <TD>tracks parent state</TD>
+        <TD>allocates child identity + PCB</TD>
+        <TD>decides inheritance + scheduling</TD>
+        <TD>replaces child image + entry state</TD>
+        <TD>returns to user mode</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Child</B></TD>
+        <TD>does not exist</TD>
+        <TD>created with inherited context</TD>
+        <TD>runs with diverging control flow</TD>
+        <TD>program image replaced</TD>
+        <TD>runs new program</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Key idea</B></TD>
+        <TD>-</TD>
+        <TD>identity + inheritance decision</TD>
+        <TD>duplication then divergence</TD>
+        <TD>image replacement</TD>
+        <TD>new execution meaning</TD>
+      </TR>
+    </TABLE>
+  >];
+}

@@ -1,0 +1,49 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.35, ranksep=0.55, splines=polyline, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75, fontname="Helvetica", fontsize=11];
+
+  subgraph cluster_interface {
+    label="interfaces (how requests are expressed)";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+
+    gui [label="GUI action\n\"delete\"", fillcolor="#F5F5F5"];
+    cli [label="CLI command\n`rm file`", fillcolor="#F5F5F5"];
+    api [label="API call\n`unlink(path)`", fillcolor="#F5F5F5"];
+  }
+
+  subgraph cluster_service {
+    label="service (what capability exists)";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+
+    svc [label="file deletion\nservice", fillcolor="#DDEAF1"];
+  }
+
+  subgraph cluster_impl {
+    label="implementation (what code actually runs)";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+
+    util [label="system program\n`rm` utility", fillcolor="#D5EDF7"];
+    wrapper [label="library wrapper\npackages syscall ABI", fillcolor="#D5EDF7"];
+    sys [label="system call\nkernel entry", fillcolor="#BFE2F1"];
+    vfs [label="kernel file-system\ncode paths", fillcolor="#BFE2F1"];
+    disk [label="storage update\nmetadata + blocks", fillcolor="#F5F5F5"];
+  }
+
+  gui -> svc [label="expresses intent"];
+  cli -> util [label="launches"];
+  api -> wrapper [label="calls"];
+
+  util -> sys [label="invokes"];
+  wrapper -> sys [label="invokes"];
+
+  sys -> vfs [label="dispatch"];
+  vfs -> disk [label="updates"];
+  vfs -> svc [label="realizes"];
+}

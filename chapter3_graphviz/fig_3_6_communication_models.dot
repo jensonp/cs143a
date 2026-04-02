@@ -1,0 +1,56 @@
+digraph G {
+  graph [rankdir=TB, pad=0.25, nodesep=0.5, ranksep=0.8, splines=polyline, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75, fontname="Helvetica", fontsize=11];
+
+  subgraph cluster_shared {
+    label="shared memory";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+
+    shm_a [label="process A", fillcolor="#DDEAF1"];
+    shm_region [label="shared region", fillcolor="#BFE2F1"];
+    shm_b [label="process B", fillcolor="#DDEAF1"];
+    shm_kernel [label="kernel sets up\nmapping + protection", fillcolor="#F5F5F5"];
+
+    shm_a -> shm_region [dir=both, label="read / write"];
+    shm_region -> shm_b [dir=both, label="read / write"];
+    shm_kernel -> shm_region [label="establish once"];
+  }
+
+  subgraph cluster_message {
+    label="local message passing";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+
+    msg_a [label="sender", fillcolor="#DDEAF1"];
+    mailbox [label="mailbox / port /\nkernel buffer", fillcolor="#BFE2F1"];
+    msg_b [label="receiver", fillcolor="#DDEAF1"];
+    msg_kernel [label="kernel mediates\neach exchange", fillcolor="#F5F5F5"];
+
+    msg_a -> mailbox [label="send()"];
+    mailbox -> msg_b [label="receive()"];
+    msg_kernel -> mailbox [label="delivery, buffering,\nprotection"];
+  }
+
+  subgraph cluster_remote {
+    label="client-server across machines";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+
+    client [label="client process", fillcolor="#DDEAF1"];
+    api [label="socket or RPC layer", fillcolor="#BFE2F1"];
+    network [label="network", shape=ellipse, fillcolor="#F5F5F5"];
+    server [label="server process", fillcolor="#DDEAF1"];
+
+    client -> api [label="request"];
+    api -> network [label="marshal / transmit"];
+    network -> server [label="deliver bytes or call"];
+    server -> network [label="reply"];
+    network -> api [label="return path"];
+    api -> client [label="response"];
+  }
+}

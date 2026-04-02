@@ -1,0 +1,36 @@
+digraph G {
+  graph [rankdir=TB, pad=0.25, nodesep=0.45, ranksep=0.6, splines=polyline, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75];
+
+  program [label="program file on disk\npassive instructions", fillcolor="#F5F5F5"];
+  start [label="execution begins", shape=ellipse, fillcolor="#BFE2F1"];
+
+  subgraph cluster_process {
+    label="active process image";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+
+    layout [shape=plain, label=<
+      <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#5B6B73">
+        <TR><TD BGCOLOR="#F5F5F5"><B>address space</B></TD></TR>
+        <TR><TD BGCOLOR="#DDEAF1">code text: instructions being run</TD></TR>
+        <TR><TD BGCOLOR="#DDEAF1">data section: globals and statics</TD></TR>
+        <TR><TD BGCOLOR="#DDEAF1">heap: dynamic allocations</TD></TR>
+        <TR><TD BGCOLOR="#DDEAF1">stack: calls, locals, return addresses</TD></TR>
+      </TABLE>
+    >];
+  }
+
+  cpu [label="live CPU context\nprogram counter + registers", fillcolor="#BFE2F1"];
+  resources [label="open resources\nfiles and OS objects", fillcolor="#D5EDF7"];
+  pcb [label="PCB in kernel memory\nsaved state + scheduling +\nmemory + I/O metadata", fillcolor="#BFE2F1"];
+
+  program -> start -> layout;
+  layout -> cpu [label="current execution state"];
+  layout -> resources [label="uses"];
+  pcb -> cpu [label="save / restore"];
+  pcb -> layout [label="represents this process"];
+  pcb -> resources [label="tracks"];
+}

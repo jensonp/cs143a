@@ -1,0 +1,29 @@
+digraph G {
+  graph [rankdir=TB, pad=0.25, nodesep=0.4, ranksep=0.65, splines=polyline, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75, fontname="Helvetica", fontsize=11];
+
+  parent [label="parent process", fillcolor="#DDEAF1"];
+  child [label="child process", fillcolor="#BFE2F1"];
+  exec [label="optional exec()\nreplace program image", fillcolor="#D5EDF7"];
+  running [label="child running", fillcolor="#F5F5F5"];
+  zombie [label="zombie\nstatus retained,\nno normal execution", fillcolor="#F5F5F5"];
+  reaped [label="reaped\nfinal cleanup complete", fillcolor="#D5EDF7"];
+  parent_exit [label="parent exits first", fillcolor="#F5F5F5"];
+  orphan [label="orphan\nchild still alive", fillcolor="#F5F5F5"];
+  init [label="init / system reaper", fillcolor="#DDEAF1"];
+
+  parent -> child [label="fork() / create"];
+  child -> exec [label="optional"];
+  child -> running [label="continues"];
+  exec -> running [label="new program image"];
+  running -> zombie [label="exit before wait()"];
+  parent -> reaped [label="wait() can reap"];
+  zombie -> reaped [label="after wait()"];
+
+  parent -> parent_exit [label="if parent dies early"];
+  running -> orphan [label="still executing"];
+  parent_exit -> orphan [label="original parent gone"];
+  orphan -> init [label="reparented to"];
+  init -> reaped [label="later wait()"];
+}

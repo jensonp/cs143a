@@ -1,0 +1,28 @@
+digraph G {
+  graph [rankdir=TB, pad=0.25, nodesep=0.45, ranksep=0.65, splines=polyline, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75, fontname="Helvetica", fontsize=11];
+
+  jobq [label="job queue\nall known processes", fillcolor="#F5F5F5"];
+  lts [label="long-term scheduler", fillcolor="#BFE2F1"];
+  readyq [label="ready queue", fillcolor="#DDEAF1"];
+  sts [label="CPU scheduler", fillcolor="#BFE2F1"];
+  cpu [label="running process", fillcolor="#D5EDF7"];
+  devq [label="device queue", fillcolor="#DDEAF1"];
+  device [label="I/O device", fillcolor="#F5F5F5"];
+  mts [label="medium-term scheduler", fillcolor="#BFE2F1"];
+  suspended [label="suspended queue\nswapped-out processes", fillcolor="#F5F5F5"];
+
+  jobq -> lts [label="admission"];
+  lts -> readyq [label="brought into memory"];
+  readyq -> sts [label="candidate set"];
+  sts -> cpu [label="dispatch"];
+  cpu -> readyq [label="timer expires /\npreempted"];
+  cpu -> devq [label="I/O request /\nblocks"];
+  devq -> device [label="service starts"];
+  device -> readyq [label="completion event"];
+  readyq -> mts [label="memory pressure"];
+  mts -> suspended [label="swap out"];
+  suspended -> mts [label="swap in"];
+  mts -> readyq [label="restore"];
+}

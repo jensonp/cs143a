@@ -12,6 +12,8 @@ This repo is organized so each note lives in its own directory as a `README.md`,
 ## Shared Assets
 
 - [Chapter 1 Graphviz Figures](chapter1_graphviz/)
+- [Chapter 3 Graphviz Figures](chapter3_graphviz/)
+- [Graphviz Learning Heuristic Template](graphviz-learning-heuristic/)
 
 ## Structure
 

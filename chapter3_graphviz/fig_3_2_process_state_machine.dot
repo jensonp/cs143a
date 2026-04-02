@@ -1,0 +1,18 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.55, ranksep=0.8, splines=true, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.1, arrowsize=0.8, fontname="Helvetica", fontsize=11];
+
+  new [label="new", fillcolor="#F5F5F5"];
+  ready [label="ready", fillcolor="#DDEAF1"];
+  running [label="running", fillcolor="#BFE2F1"];
+  waiting [label="waiting", fillcolor="#D5EDF7"];
+  terminated [label="terminated", fillcolor="#F5F5F5"];
+
+  new -> ready [label="admit"];
+  ready -> running [label="dispatch"];
+  running -> ready [label="timer expires\nor preemption"];
+  running -> waiting [label="I/O request,\nsleep, or wait"];
+  waiting -> ready [label="event or I/O completes"];
+  running -> terminated [label="exit or fatal error"];
+}

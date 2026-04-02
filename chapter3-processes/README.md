@@ -37,6 +37,8 @@ Rigorous distinctions:
 - `Heap`: memory allocated dynamically during execution.
 - `Stack`: memory region that tracks nested control flow and temporary per-call state.
 
+![Supplement: passive program file, active process image, CPU context, and PCB](../chapter3_graphviz/fig_3_1_process_image_anatomy.svg)
+
 ### 2.2 Process State Exists Because Execution Is Interrupted, Delayed, and Resumed
 
 Once a process is active, it does not simply run from start to finish without interruption. It changes `state`, meaning its current relationship to execution and waiting. The chapter uses the familiar states `new`, `ready`, `running`, `waiting`, and `terminated`.
@@ -52,6 +54,8 @@ If you want a compact operational view, think of a process state transition as:
 `state_t -> state_(t+1)`
 
 where the transition is caused by an event such as admission, dispatch, interrupt, I/O request, I/O completion, or exit.
+
+![Supplement: process states are defined by what the process can do next](../chapter3_graphviz/fig_3_2_process_state_machine.svg)
 
 ### 2.3 The PCB Is the Kernel’s Authoritative Record of a Process
 
@@ -106,6 +110,8 @@ Rigorous distinctions:
 - `I/O-bound process`: spends a larger fraction of time waiting for or issuing I/O.
 - `CPU-bound process`: spends a larger fraction of time computing between I/O requests.
 
+![Supplement: admission, dispatch, blocking, completion, and swap pressure create the queue structure](../chapter3_graphviz/fig_3_3_scheduler_queues.svg)
+
 ### 2.6 Context Switching Is Necessary Overhead
 
 The operating system often needs to stop one process and later resume it, either because of an interrupt, a trap, a blocking event, timer expiration, or a scheduling decision. The act of saving the state of one process and restoring the state of another is a `context switch`.
@@ -117,6 +123,8 @@ A context switch is pure overhead in the narrow sense that the system is doing m
 `W / (W + O)`
 
 That is why switching must be correct, but it must also be efficient. Hardware support can reduce this cost, and some architectures make certain parts of the switch cheaper than others. But the general rule remains: frequent switching improves responsiveness and fairness only up to the point where switching overhead itself becomes too expensive.
+
+![Supplement: a context switch is a save-decision-restore protocol, not a mysterious jump](../chapter3_graphviz/fig_3_4_context_switch_trace.svg)
 
 ### 2.7 Process Creation Is About Ownership, Inheritance, and Independence
 
@@ -151,6 +159,8 @@ Rigorous distinctions:
 - `Orphan process`: child process whose parent has terminated first.
 - `Reparenting`: assigning a surviving process to a new parent for management purposes.
 - `Cascading termination`: policy in which children are terminated when their parent exits.
+
+![Supplement: process creation and termination form one lifecycle, including zombies and orphans](../chapter3_graphviz/fig_3_5_process_lifecycle_relations.svg)
 
 ### 2.9 IPC Exists Because Some Processes Must Cooperate
 
@@ -216,6 +226,8 @@ The final section broadens IPC into client-server communication. The main concep
 The central lesson is that client-server communication is not a different universe from IPC. It is the same basic question pushed outward:
 
 `How does one execution context request work from another, exchange data, and preserve enough structure that both sides know what the communication means?`
+
+![Supplement: communication models differ mainly in where coordination and mediation live](../chapter3_graphviz/fig_3_6_communication_models.svg)
 
 ## 3. Common Confusions
 

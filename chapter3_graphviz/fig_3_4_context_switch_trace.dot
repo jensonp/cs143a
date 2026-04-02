@@ -1,0 +1,63 @@
+digraph G {
+  graph [rankdir=TB, pad=0.2, bgcolor="white"];
+  node [shape=plain, fontname="Helvetica"];
+
+  trace [label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#5B6B73">
+      <TR>
+        <TD BGCOLOR="#F5F5F5"><B>Lane</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Before switch</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Trap or timer</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Save old context</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Choose next</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Restore new context</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>After switch</B></TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>CPU</B></TD>
+        <TD>P_old executing</TD>
+        <TD>enters kernel mode</TD>
+        <TD>registers and PC captured</TD>
+        <TD>not yet doing user work</TD>
+        <TD>P_new state loaded</TD>
+        <TD>P_new executing</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Kernel</B></TD>
+        <TD>scheduler idle</TD>
+        <TD>trap frame created</TD>
+        <TD>writes context to PCB_old</TD>
+        <TD>picks next runnable process</TD>
+        <TD>reads PCB_new</TD>
+        <TD>returns to user mode</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>PCB_old</B></TD>
+        <TD>older saved state</TD>
+        <TD>unchanged</TD>
+        <TD>updated with latest CPU state</TD>
+        <TD>marked ready or waiting</TD>
+        <TD>retained in kernel</TD>
+        <TD>inactive record</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>PCB_new</B></TD>
+        <TD>saved runnable context</TD>
+        <TD>unchanged</TD>
+        <TD>unchanged</TD>
+        <TD>selected for dispatch</TD>
+        <TD>copied back into CPU</TD>
+        <TD>now current process</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Cause</B></TD>
+        <TD>-</TD>
+        <TD>timer, block, or trap</TD>
+        <TD>outgoing context preserved</TD>
+        <TD>scheduler decision</TD>
+        <TD>incoming context restored</TD>
+        <TD>execution resumes</TD>
+      </TR>
+    </TABLE>
+  >];
+}

@@ -1,0 +1,32 @@
+digraph G {
+  graph [rankdir=TB, pad=0.2, bgcolor="white"];
+  node [shape=plain, fontname="Helvetica"];
+
+  trace [label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#5B6B73">
+      <TR>
+        <TD BGCOLOR="#F5F5F5"><B>Operation</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Semaphore value</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Caller outcome</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Meaning</B></TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>wait(P)</B></TD>
+        <TD>decrement</TD>
+        <TD>if result &lt; 0: block</TD>
+        <TD>consume a permit (or sleep until one exists)</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>signal(V)</B></TD>
+        <TD>increment</TD>
+        <TD>if waiters exist: wake one</TD>
+        <TD>produce a permit (or resume a blocked waiter)</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#FFF3CD"><B>Key idea</B></TD>
+        <TD COLSPAN="3">A semaphore is a counter plus a queue: resource accounting + waiting.</TD>
+      </TR>
+    </TABLE>
+  >];
+}
+

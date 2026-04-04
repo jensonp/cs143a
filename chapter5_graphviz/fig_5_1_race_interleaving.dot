@@ -1,0 +1,44 @@
+digraph G {
+  graph [rankdir=TB, pad=0.2, bgcolor="white"];
+  node [shape=plain, fontname="Helvetica"];
+
+  trace [label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#5B6B73">
+      <TR>
+        <TD BGCOLOR="#F5F5F5"><B>Time</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Thread A</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Thread B</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Shared x</B></TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>t0</B></TD>
+        <TD>load x (0)</TD>
+        <TD>-</TD>
+        <TD>0</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>t1</B></TD>
+        <TD>-</TD>
+        <TD>load x (0)</TD>
+        <TD>0</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>t2</B></TD>
+        <TD>compute 1; store 1</TD>
+        <TD>-</TD>
+        <TD><B>1</B></TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>t3</B></TD>
+        <TD>-</TD>
+        <TD>compute 1; store 1</TD>
+        <TD><B>1</B></TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#FFF3CD"><B>result</B></TD>
+        <TD COLSPAN="3">Two increments became one: lost update.</TD>
+      </TR>
+    </TABLE>
+  >];
+}
+

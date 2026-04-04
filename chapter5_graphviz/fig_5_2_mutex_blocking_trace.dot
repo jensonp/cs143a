@@ -1,0 +1,40 @@
+digraph G {
+  graph [rankdir=TB, pad=0.2, bgcolor="white"];
+  node [shape=plain, fontname="Helvetica"];
+
+  trace [label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#5B6B73">
+      <TR>
+        <TD BGCOLOR="#F5F5F5"><B>Phase</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Thread A (owner)</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Thread B (contender)</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Mutex / kernel</B></TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Acquire</B></TD>
+        <TD>locks mutex</TD>
+        <TD>tries to lock</TD>
+        <TD>mutex becomes owned by A</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Block</B></TD>
+        <TD>runs critical section</TD>
+        <TD>sleeps</TD>
+        <TD>B enqueued on wait queue</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Release</B></TD>
+        <TD>unlocks mutex</TD>
+        <TD>still asleep</TD>
+        <TD>mutex becomes free; wake one waiter</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Handoff</B></TD>
+        <TD>continues</TD>
+        <TD>wakes; later acquires</TD>
+        <TD>B becomes runnable; acquires when scheduled</TD>
+      </TR>
+    </TABLE>
+  >];
+}
+

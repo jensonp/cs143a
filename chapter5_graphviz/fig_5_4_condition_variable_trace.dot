@@ -1,0 +1,46 @@
+digraph G {
+  graph [rankdir=TB, pad=0.2, bgcolor="white"];
+  node [shape=plain, fontname="Helvetica"];
+
+  trace [label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#5B6B73">
+      <TR>
+        <TD BGCOLOR="#F5F5F5"><B>Phase</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Waiter</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Signaler</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Mutex + condition</B></TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Check</B></TD>
+        <TD>holds mutex; predicate false</TD>
+        <TD>-</TD>
+        <TD>state protected by mutex</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Wait</B></TD>
+        <TD>enqueue + release mutex + sleep</TD>
+        <TD>-</TD>
+        <TD>wait queue now contains waiter</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Make true</B></TD>
+        <TD>sleeping</TD>
+        <TD>acquires mutex; updates state</TD>
+        <TD>predicate becomes true</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Signal</B></TD>
+        <TD>runnable</TD>
+        <TD>signals condition; releases mutex</TD>
+        <TD>waiter may run later</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Resume</B></TD>
+        <TD>wakes; reacquires mutex; re-checks</TD>
+        <TD>-</TD>
+        <TD>Mesa semantics: always re-check predicate</TD>
+      </TR>
+    </TABLE>
+  >];
+}
+

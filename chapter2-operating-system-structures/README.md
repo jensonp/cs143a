@@ -161,6 +161,8 @@ A `CLI` accepts textual commands.
 A `batch interface` runs commands non-interactively from a file or job stream.
 A `GUI` packages requests through graphical controls.
 
+![Mental model: CLI, batch, and GUI are different front-ends that package requests into the same OS services](../chapter2_graphviz/fig_2_4_human_interfaces.png)
+
 The `command interpreter`, usually a `shell`, is typically a user-space program.
 It reads commands, parses them, locates programs, handles built-ins, and starts other programs as needed.
 

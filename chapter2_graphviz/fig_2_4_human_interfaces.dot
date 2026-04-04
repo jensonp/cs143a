@@ -1,0 +1,66 @@
+digraph fig_2_4_human_interfaces {
+  rankdir=LR;
+  bgcolor="white";
+
+  graph [
+    fontname="Latin Modern Roman"
+    fontsize=18
+    labelloc="t"
+    label="Human interfaces package requests"
+  ];
+
+  node [
+    fontname="Latin Modern Roman"
+    fontsize=14
+    shape=box
+    style="rounded,filled"
+    fillcolor="#F7F7F7"
+    color="#444444"
+    penwidth=1.2
+  ];
+
+  edge [
+    fontname="Latin Modern Roman"
+    fontsize=12
+    color="#444444"
+    penwidth=1.2
+    arrowsize=0.8
+  ];
+
+  user [
+    shape=oval
+    style="filled"
+    fillcolor="#FFF7E6"
+    label="Human\n(User)"
+  ];
+
+  cli [
+    fillcolor="#E9F2FF"
+    label=<<B>CLI</B><BR/><FONT POINT-SIZE="11">textual commands</FONT>>
+  ];
+  batch [
+    fillcolor="#E9F2FF"
+    label=<<B>Batch Interface</B><BR/><FONT POINT-SIZE="11">file / job stream</FONT>>
+  ];
+  gui [
+    fillcolor="#E9F2FF"
+    label=<<B>GUI</B><BR/><FONT POINT-SIZE="11">graphical controls</FONT>>
+  ];
+
+  os [
+    shape=box3d
+    style="filled"
+    fillcolor="#EAF7EA"
+    label=<<B>OS Services</B><BR/><FONT POINT-SIZE="11">system calls &amp; kernel</FONT>>
+  ];
+
+  { rank=same; cli; batch; gui; }
+
+  user -> cli [label="types"];
+  user -> batch [label="submits"];
+  user -> gui [label="clicks"];
+
+  cli -> os [label="requests"];
+  batch -> os [label="requests"];
+  gui -> os [label="requests"];
+}

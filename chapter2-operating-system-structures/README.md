@@ -37,23 +37,23 @@ An `interface` is how a human or program asks for it.
 The `implementation` is the internal mechanism that actually carries it out.
 
 If you treat services, interfaces, and implementations as the same thing, Chapter 2 looks repetitive.
-If you separate them, each term names a different layer of the system: capability, request surface, and mechanism.
+If you separate them, each term names a different layer of the system: capability, request surface, and enforcing machinery.
 
 ### 2.2 The Kernel Boundary Is Also A Cost Boundary
 
 A transition from user space to kernel space has a cost.
 That transition changes four things: the privilege level of the executing code, the need for argument validation, the system's ability to block or reschedule the caller, and the scope of damage if the executing code fails.
 
-Many design choices in Chapter 2 reduce to one placement question: should this code run in user space or in kernel space?
-That placement determines communication cost, fault scope, and the amount of privilege the code receives.
+Many structural tradeoffs in Chapter 2 reduce to one placement question: which parts of the path run in user space, and which parts run in kernel space?
+That placement determines communication cost, fault scope, and the amount of privilege available at each step.
 
 ### 2.3 APIs Package Intent; System Calls Transfer Authority
 
 An API is a programmer-facing interface.
 A system call is not the API itself; it is the controlled transfer from user mode to kernel mode that allows the kernel to perform a protected operation.
 
-Some API calls complete entirely in user space.
-Other API calls package arguments and cause exactly one controlled kernel entry.
+Some API functions are implemented entirely in user space.
+Other API invocations package arguments and cause exactly one controlled kernel entry.
 
 ### 2.4 Structure Is About Damage Containment As Much As Organization
 
@@ -61,8 +61,8 @@ Kernel structure determines three things: the fault scope of a bug, the communic
 
 ### 2.5 Policy And Mechanism Must Be Separable Or The System Hardens In The Wrong Places
 
-A mechanism is the part of the system that makes an action possible.
-A policy is the rule that selects which action the system should take.
+A mechanism is the system-provided apparatus that makes a class of actions or state transitions possible.
+A policy is the rule that selects which allowed action the system should take in a particular situation.
 
 If a policy is baked into the mechanism too early, the system becomes difficult to tune, port, or evolve because changing the decision requires rewriting the machinery that enforces it.
 
@@ -72,8 +72,8 @@ If a policy is baked into the mechanism too early, the system becomes difficult 
 
 **Problem**
 
-Users and programs need capabilities such as running code, reading files, communicating, and controlling devices.
-If those capabilities are not distinguished from the way they are requested, the system boundary becomes conceptually blurry.
+The operating system must provide services such as running code, reading files, communicating, and controlling devices.
+If the note does not separate the service from its request surface and from its enforcing implementation, the reader can no longer tell whether a sentence is about capability, interface, or authority.
 
 **Mechanism**
 
@@ -95,16 +95,17 @@ Those services can be reached through different interfaces:
 - a library API
 - a system call wrapper
 
-The implementation behind the interface may involve kernel code, drivers, file-system structures, schedulers, or user-space utilities.
+The end-to-end request path may involve user-space utilities, library wrappers, kernel code, drivers, file-system structures, and schedulers.
+Those objects do not all play the same role: utilities and wrappers express or package the request, while the implementation is the machinery that validates the request and commits its protected effect.
 
 A single OS service can be requested through multiple interfaces, such as a GUI action, a shell command, or a library call.
-The interfaces differ, but they can all lead to the same kernel operation that performs the protected work.
+The interfaces differ, but they can all reach the same enforcement boundary and the same service semantics for the protected work.
 
 **Invariants**
 
 - A service is defined by capability, not by one user-visible command.
 - An interface expresses intent; it does not by itself perform the protected work.
-- Protected work must eventually reach authoritative kernel-managed state.
+- Any operation that changes protected system state must eventually be validated at the privileged boundary and committed to authoritative system-managed state.
 - Multiple interfaces may converge on the same service without changing the service itself.
 
 **What Breaks If This Fails**
@@ -116,7 +117,7 @@ The interfaces differ, but they can all lead to the same kernel operation that p
 **One Trace: deleting a file through different interfaces**
 
 This is a “one service, many interfaces” comparison.
-The GUI, CLI, and API all package the same intent, but the privileged part is the same in every path: the kernel must validate permissions and update authoritative file-system metadata.
+The GUI, CLI, and API all package the same user intent, but each path reaches the same enforcement boundary: privileged kernel code must validate permissions and update authoritative file-system metadata.
 When you cover this table, point to the first row where privilege is required and explain why no amount of user-space polish can replace that enforcement.
 
 | Step | GUI Path | CLI Path | Programmatic Path | Shared OS Meaning |
@@ -124,7 +125,7 @@ When you cover this table, point to the first row where privilege is required an
 | request expressed | user clicks delete | user runs `rm` | code calls an API | intent is file removal |
 | front-end logic | GUI emits action | shell starts utility | library wrapper prepares call | interface-specific packaging |
 | privileged entry | utility or wrapper enters kernel | utility enters kernel | wrapper enters kernel | kernel checks permissions |
-| implementation | file-system metadata updated | file-system metadata updated | file-system metadata updated | one service, many interfaces |
+| authoritative effect | file-system metadata updated | file-system metadata updated | file-system metadata updated | service semantics committed |
 
 The key row is the first row in which execution enters kernel-controlled code.
 Above that row, the request is only being expressed or packaged.
@@ -133,7 +134,7 @@ At that row and below it, the system can enforce permissions and modify authorit
 **Code Bridge**
 
 - When reading a shell or utility, ask which parts are interface logic and which parts merely package a kernel request.
-- When reading kernel code, ask which user-visible surfaces can converge on the same implementation path.
+- When reading kernel code, ask which user-visible surfaces converge on the same enforcement path.
 
 **Drills (With Answers)**
 
@@ -141,12 +142,12 @@ At that row and below it, the system can enforce permissions and modify authorit
 **A:** `rm` is one user-space interface (a utility) that *requests* file removal. The service is the OS-guaranteed capability: removing a name, updating directory entries and metadata, enforcing permissions, and preserving filesystem invariants. You can replace `rm`, call the syscall from another program, or delete via a GUI; the service remains the same because the kernel implements and enforces it.
 
 2. **Q:** How can one service have several interfaces without changing what the OS guarantees?
-**A:** Interfaces differ in how they express intent (a click, a command, an API call), but the guarantee lives at the implementation boundary: the kernel’s semantics for permission checks and metadata updates. As long as the privileged path converges on the same kernel mechanisms and invariants, multiple interfaces can exist without changing what “delete” means.
+**A:** Interfaces differ in how they express user intent (a click, a command, an API call), but the operational meaning is fixed at the enforcement boundary: the kernel’s rules for permission checks, directory updates, and metadata changes. As long as each interface reaches the same privileged semantics, multiple interfaces can exist without changing what the delete operation does to authoritative filesystem state.
 
 3. **Q:** Why is the implementation layer the real site of protection enforcement?
 **A:** Because interface code can be bypassed. A user can write a program that never calls the GUI, never runs `rm`, and still requests deletion. The only place enforcement can be universal is where authoritative state is mutated: in privileged kernel code that validates identity, permissions, and filesystem integrity before committing changes.
 
-![Supplement: service, interface, and implementation are distinct layers that converge on one privileged mechanism](../chapter2_graphviz/fig_2_1_service_interface_implementation.svg)
+![Supplement: service, interface, and implementation are distinct layers that converge on a common privileged enforcement boundary](../chapter2_graphviz/fig_2_1_service_interface_implementation.svg)
 
 ### 3.2 Human Interfaces And Why Shells Stay Out Of The Kernel
 
@@ -181,7 +182,7 @@ Keeping the shell outside the kernel means new commands can be added as ordinary
 
 Read this as a boundary-placement trace.
 Command parsing, scripting language features, and user interaction are intentionally kept in user space, while the kernel owns the authoritative act of creating an execution context and installing the initial privilege-separated state.
-When you rehearse it, the pivot is: user intent becomes privileged execution only at the `exec`-style request.
+When you rehearse it, the pivot is: user intent first reaches privileged kernel code only when the shell issues the `exec`-style request.
 
 | Step | Shell | Kernel | Why It Matters |
 | --- | --- | --- | --- |
@@ -269,7 +270,7 @@ Responsibility for validating and updating protected state still lies in the ker
 **Code Bridge**
 
 - Compare a libc wrapper with the kernel syscall dispatcher.
-- Ask where programmer-facing naming ends and where privileged service begins.
+- Ask where programmer-facing naming ends and where privileged enforcement begins.
 
 **Drills (With Answers)**
 
@@ -420,8 +421,8 @@ The chapter separates:
 
 It also separates:
 
-- `mechanism`: how something can be done
-- `policy`: which choice should be made
+- `mechanism`: the apparatus the system provides for carrying out a class of actions
+- `policy`: the rule that chooses which allowed action the system should take
 
 Examples:
 
@@ -601,8 +602,8 @@ Cover the tables and reproduce the sequence from memory.
 
 ### 4.1 CLI Command To Program Execution
 
-This is the minimal “intent -> privileged execution -> return” loop for a shell.
-When you recite it, say exactly when privilege changes and what the kernel must construct (process + address space + initial context) before control can return safely.
+This is the minimal shell path from user intent to a privileged kernel request, then to a newly constructed execution context, and then back to user mode.
+When you recite it, say exactly when execution enters privileged code and what the kernel must construct (process + address space + initial context) before control can return safely.
 
 | Step | User / Shell | Kernel |
 | --- | --- | --- |
@@ -644,7 +645,7 @@ When you reproduce it, name where the kernel mediates IPC and where the server�
 | service work | waiting for reply | may schedule peers | performs service logic |
 | response | receives result | mediates return | sends reply |
 
-This is the same “service, interface, implementation” story with one extra twist: the implementation now lives in a restartable user-space server.
+This trace uses the same service/interface/implementation layering with one extra twist: the service logic runs in a restartable user-space server while the kernel still mediates the protected boundary.
 You gain fault containment, but you pay additional scheduling and IPC overhead and must treat the server as part of the service’s correctness story.
 
 ### 4.4 Boot Path From Firmware To Usable System
@@ -714,8 +715,8 @@ If you later study a teaching kernel or Linux-like codebase, a good Chapter 2 re
 
 Conceptual anchors to look for:
 
-- where user intent becomes privileged work
-- where interface code stops and implementation begins
+- where a user-space request first enters privileged code
+- where interface code hands off to enforcement or service logic
 - where message or call boundaries widen or shrink fault scope
 - where boot hands control from firmware to the kernel
 - where debugging and performance visibility hooks are placed

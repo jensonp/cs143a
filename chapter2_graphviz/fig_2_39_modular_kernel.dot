@@ -1,0 +1,96 @@
+digraph fig_2_39_modular_kernel {
+  rankdir=LR;
+  bgcolor="white";
+
+  graph [
+    fontname="Latin Modern Roman"
+    fontsize=18
+    labelloc="t"
+    label="Modular kernel: core + loadable privileged modules"
+    nodesep=0.55
+    ranksep=0.85
+  ];
+
+  node [
+    fontname="Latin Modern Roman"
+    fontsize=12
+    shape=box
+    style="rounded,filled"
+    fillcolor="#F7F7F7"
+    color="#444444"
+    penwidth=1.2
+  ];
+
+  edge [
+    fontname="Latin Modern Roman"
+    fontsize=11
+    color="#444444"
+    penwidth=1.15
+    arrowsize=0.8
+  ];
+
+  admin [fillcolor="#E9F2FF" label="Admin tool\n(modprobe, kextload)"];
+  app [fillcolor="#E9F2FF" label="Application"];
+  libc [fillcolor="#FFF7E6" label="Libc / wrappers"];
+
+  subgraph cluster_kernel {
+    label="Kernel space (modules are still privileged)";
+    style="rounded,filled";
+    color="#4B8B5A";
+    fillcolor="#EAF7EA";
+    fontname="Latin Modern Roman";
+    fontsize=12;
+
+    entry [shape=box3d fillcolor="#DFF3DF" label="Syscall / trap\nentry"];
+    core [label="Core kernel\n(sched, VM, IPC)"];
+    loader [label="Module loader\n(load/unload, link)"];
+
+    subgraph cluster_modules {
+      label="Loadable modules";
+      style="rounded,filled";
+      color="#6AA779";
+      fillcolor="#DFF3DF";
+      fontname="Latin Modern Roman";
+      fontsize=12;
+
+      fsmod [label="FS module"];
+      netmod [label="Network module"];
+      drvmod [label="Driver module"];
+    }
+
+    entry -> core;
+    core -> fsmod [label="direct calls"];
+    core -> netmod [label="direct calls"];
+    fsmod -> drvmod;
+    netmod -> drvmod;
+  }
+
+  hw [
+    shape=component
+    style="filled"
+    fillcolor="#FFF7E6"
+    color="#444444"
+    label="Hardware\nCPU, MMU, devices"
+  ];
+
+  app -> libc [label="API calls"];
+  libc -> entry [label="syscalls"];
+
+  admin -> loader [label="load/unload request"];
+  loader -> fsmod [style=dotted label="dynamic link"];
+  loader -> drvmod [style=dotted label="dynamic link"];
+  loader -> netmod [style=dotted label="dynamic link"];
+
+  drvmod -> hw [label="program devices"];
+
+  note [
+    shape=note
+    style="filled"
+    fillcolor="#FFFFFF"
+    color="#777777"
+    fontcolor="#333333"
+    label="Extensible without rebuilding the kernel image\nBut once loaded, module bugs still run with full kernel privilege"
+  ];
+  note -> loader [style=dotted arrowhead=none color="#777777"];
+}
+

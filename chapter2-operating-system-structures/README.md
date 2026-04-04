@@ -497,11 +497,55 @@ But any structure choice changes both performance and fault behavior.
 
 **Mechanism**
 
-A `monolithic` style keeps most services in one kernel address space with direct internal calls.
-A `layered` design arranges services into levels.
-A `microkernel` keeps only the most fundamental privileged primitives in kernel space and moves many services to user-space servers.
-`Loadable modules` keep a core kernel while allowing new privileged code to be linked dynamically.
-`Hybrid systems` mix these ideas.
+A `kernel structure` is mainly a statement about **where code runs** and therefore (1) how subsystems communicate and (2) what fault scope a bug has.
+You should read every structure choice as a boundary placement choice: which parts of the request path are in one privileged address space, and which parts are separated by a boundary (syscall/IPC/context switch)?
+
+The two invariants to keep in your head as you compare structures are:
+
+1. **Communication cost**: direct calls inside one kernel address space are usually the cheapest; boundary crossings add validation, scheduling points, and cache/TLB disruption.
+2. **Fault scope / TCB size**: code running with kernel privilege can corrupt the whole machine state; code outside the kernel can often crash and be restarted without corrupting the kernel.
+
+Below are the five canonical organization patterns, each shown as the mental picture you should rehearse when you read the words.
+
+**Monolithic kernel**
+
+Most OS services (file system, networking, memory management, drivers) share a single privileged address space and call each other directly.
+This tends to minimize overhead on hot paths because calls are ordinary function calls and data structures are shared in-kernel.
+The cost is that the privileged fault domain is wide: a bug in any in-kernel component can corrupt kernel memory or crash the whole system.
+
+![Supplement: monolithic kernel (fast internal calls, wide privileged fault domain)](../chapter2_graphviz/fig_2_36_monolithic_kernel.png)
+
+**Layered kernel**
+
+Subsystems are arranged into levels with a designed dependency direction: higher layers are allowed to use only the services of lower layers.
+This can improve reasoning and separation when the dependency order matches reality.
+But OS dependencies are often not strictly hierarchical (for example, paging and file I/O want each other), so layered designs either accept “layer violations” or introduce awkward indirection that adds overhead.
+
+![Supplement: layered kernel (ordered dependencies; layering can become leaky if reality is cyclic)](../chapter2_graphviz/fig_2_37_layered_kernel.png)
+
+**Microkernel**
+
+Only the most fundamental privileged mechanisms stay in kernel space (address spaces/mappings, scheduling/thread control, IPC, low-level interrupt mediation).
+Many traditional “kernel services” become user-space servers (file server, network server, driver servers).
+This shrinks the privileged fault domain and can make services restartable/replaceable, but it increases communication cost because requests become IPC messages that introduce extra boundary crossings and scheduling points.
+
+![Supplement: microkernel (minimal privileged core; services as user-space servers over IPC)](../chapter2_graphviz/fig_2_38_microkernel_structure.png)
+
+**Modular kernel (loadable modules)**
+
+The kernel retains a core, but new privileged code can be loaded dynamically as modules (most commonly drivers and file-system components).
+This is primarily an extensibility and deployment technique: it makes it easier to ship new functionality without rebuilding the whole kernel image.
+However, once loaded, module code still runs with full kernel privilege, so the fault scope remains largely shared.
+
+![Supplement: modular kernel (core + loadable privileged modules)](../chapter2_graphviz/fig_2_39_modular_kernel.png)
+
+**Hybrid systems**
+
+Real systems often mix patterns: a largely monolithic in-kernel fast path for performance, module loading for extensibility, and selective boundary-separated services (policy daemons, user-space servers, or microkernel-style bridges) where isolation or replaceability is worth the cost.
+The gain is pragmatic: you can keep hot paths cheap while isolating a few risky or fast-evolving components.
+The cost is conceptual and engineering complexity: more interaction styles means more ways control and state can flow.
+
+![Supplement: hybrid systems (mix fast in-kernel paths with selective boundary-separated services)](../chapter2_graphviz/fig_2_40_hybrid_kernel.png)
 
 Each structure choice places code in a particular protection domain.
 That placement determines the communication path, the communication cost, and the fault scope of a failure in that code.
@@ -532,6 +576,7 @@ When you memorize it, do not memorize names; memorize the trade: lower overhead 
 | layered | call descends through ordered levels | reasoning and separation | added path length and awkward dependencies |
 | microkernel | message to user-space server via kernel IPC | fault isolation and replaceability | message and context-switch overhead |
 | modular | direct in-kernel call into loaded module | extensibility with strong performance | module bug still runs privileged |
+| hybrid | mostly direct calls; selective IPC/upcalls for some services | pragmatic balance | mixed complexity and multiple boundaries |
 
 Code placement determines communication cost.
 Code placement also determines fault scope.
@@ -546,11 +591,17 @@ Most arguments about kernel structure are arguments about how to trade those two
 1. **Q:** Why is a microkernel not just “a small operating system”?
 **A:** “Microkernel” is not about being small for its own sake; it is about moving many services out of privileged space so failures are contained and services can be restarted or replaced. The kernel still provides essential primitives (address spaces, scheduling, IPC, low-level device mediation). The point is a change in fault boundaries and communication structure, not merely fewer lines of code.
 
+![Supplement: drill visual — microkernel is a boundary reorganization, not just fewer lines](../chapter2_graphviz/fig_2_41_drill_microkernel_not_small.png)
+
 2. **Q:** What performance cost appears when a service moves from kernel space to a user-space server?
 **A:** Communication overhead: message passing, context switches, and often data copies or mapping operations. The request path can include more scheduling points and more cache/TLB disruption. You typically pay this cost to gain isolation, replaceability, and a smaller privileged fault domain.
 
+![Supplement: drill visual — user-space servers add IPC + switching cost](../chapter2_graphviz/fig_2_42_drill_userspace_server_costs.png)
+
 3. **Q:** Why can a kernel be monolithic in execution style and still modular in deployment style?
 **A:** “Monolithic execution” means services call each other directly in one privileged address space at runtime. “Modular deployment” means the set of privileged components can be loaded/unloaded or compiled separately (loadable modules). Even with modules, once loaded the code still runs with kernel privilege, so performance can be monolithic while safety/fault scope remains largely shared.
+
+![Supplement: drill visual — execution style vs deployment style are different axes](../chapter2_graphviz/fig_2_43_drill_monolithic_modular_axes.png)
 
 ![Supplement: kernel structure choices are mostly about where code runs and how components communicate](../chapter2_graphviz/fig_2_3_kernel_structure_comparison.svg)
 

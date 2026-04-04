@@ -1,0 +1,70 @@
+digraph fig_2_41_drill_microkernel_not_small {
+  rankdir=LR;
+  bgcolor="white";
+
+  graph [
+    fontname="Latin Modern Roman"
+    fontsize=18
+    labelloc="t"
+    label="Drill: microkernel is about fault boundaries, not just fewer lines of code"
+    nodesep=0.55
+    ranksep=0.8
+  ];
+
+  node [
+    fontname="Latin Modern Roman"
+    fontsize=12
+    shape=box
+    style="rounded,filled"
+    fillcolor="#F7F7F7"
+    color="#444444"
+    penwidth=1.2
+  ];
+
+  edge [
+    fontname="Latin Modern Roman"
+    fontsize=11
+    color="#444444"
+    penwidth=1.15
+    arrowsize=0.8
+  ];
+
+  subgraph cluster_small {
+    label="“Small monolithic” (still one privileged fault domain)";
+    style="rounded,filled";
+    color="#B28A2E";
+    fillcolor="#FFF7E6";
+
+    a1 [fillcolor="#E9F2FF" label="App"];
+    k1 [shape=box3d fillcolor="#EAF7EA" label="Kernel (smaller)\n…but services still inside"];
+    a1 -> k1 [label="syscalls"];
+  }
+
+  subgraph cluster_micro {
+    label="Microkernel (services moved out)";
+    style="rounded,filled";
+    color="#4B8B5A";
+    fillcolor="#EAF7EA";
+
+    a2 [fillcolor="#E9F2FF" label="App"];
+    mk [shape=box3d fillcolor="#DFF3DF" label="Microkernel primitives\nIPC, scheduling, mappings"];
+    s2 [fillcolor="#E9F2FF" label="User-space servers\nFS, drivers, net"];
+    a2 -> mk [label="message/syscall"];
+    mk -> s2 [label="IPC"];
+    s2 -> mk [label="reply"];
+    mk -> a2 [label="return"];
+  }
+
+  diff [
+    shape=note
+    style="filled"
+    fillcolor="#FFFFFF"
+    color="#777777"
+    fontcolor="#333333"
+    label="Microkernel point:\nmove services out of privilege so faults are contained\nand servers can be restarted/replaced"
+  ];
+
+  k1 -> mk [style=dashed label="reorganize boundary" fontcolor="#555555"];
+  diff -> mk [style=dotted arrowhead=none color="#777777"];
+}
+

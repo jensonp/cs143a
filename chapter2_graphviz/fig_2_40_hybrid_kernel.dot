@@ -1,0 +1,89 @@
+digraph fig_2_40_hybrid_kernel {
+  rankdir=LR;
+  bgcolor="white";
+
+  graph [
+    fontname="Latin Modern Roman"
+    fontsize=18
+    labelloc="t"
+    label="Hybrid systems: mix in-kernel fast paths with selected boundary-separated services"
+    nodesep=0.55
+    ranksep=0.85
+  ];
+
+  node [
+    fontname="Latin Modern Roman"
+    fontsize=12
+    shape=box
+    style="rounded,filled"
+    fillcolor="#F7F7F7"
+    color="#444444"
+    penwidth=1.2
+  ];
+
+  edge [
+    fontname="Latin Modern Roman"
+    fontsize=11
+    color="#444444"
+    penwidth=1.15
+    arrowsize=0.8
+  ];
+
+  subgraph cluster_user {
+    label="User space";
+    style="rounded,filled";
+    color="#6B7FA6";
+    fillcolor="#E9F2FF";
+    fontname="Latin Modern Roman";
+    fontsize=12;
+
+    app [label="Applications"];
+    libc [fillcolor="#FFF7E6" label="Libc / wrappers"];
+    server [label="User-space server\n(policy / services)\n(restartable)"];
+  }
+
+  subgraph cluster_kernel {
+    label="Kernel core + modules (privileged)";
+    style="rounded,filled";
+    color="#4B8B5A";
+    fillcolor="#EAF7EA";
+    fontname="Latin Modern Roman";
+    fontsize=12;
+
+    entry [shape=box3d fillcolor="#DFF3DF" label="Syscall / trap\nentry"];
+    core [label="Core kernel\n(sched, VM, IPC)"];
+    fast [label="In-kernel subsystems\n(hot paths)"];
+    mod [label="Loadable modules\n(drivers/FS)"];
+    bridge [shape=box3d fillcolor="#DFF3DF" label="Selective boundary bridge\n(IPC, upcalls, shared mem)"];
+
+    entry -> core -> fast -> mod;
+    core -> bridge [style=dashed label="delegate when worth isolating"];
+  }
+
+  hw [
+    shape=component
+    style="filled"
+    fillcolor="#FFF7E6"
+    color="#444444"
+    label="Hardware\nCPU, MMU, devices"
+  ];
+
+  app -> libc [label="API calls"];
+  libc -> entry [label="syscalls"];
+
+  bridge -> server [label="message / event"];
+  server -> bridge [label="reply / policy decision"];
+
+  mod -> hw [label="program devices"];
+
+  note [
+    shape=note
+    style="filled"
+    fillcolor="#FFFFFF"
+    color="#777777"
+    fontcolor="#333333"
+    label="Goal: keep hot paths fast; isolate a few high-risk/fast-changing pieces\nCost: multiple interaction styles increase complexity and debugging burden"
+  ];
+  note -> core [style=dotted arrowhead=none color="#777777"];
+}
+

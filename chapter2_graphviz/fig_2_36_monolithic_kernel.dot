@@ -1,0 +1,96 @@
+digraph fig_2_36_monolithic_kernel {
+  rankdir=LR;
+  bgcolor="white";
+
+  graph [
+    fontname="Latin Modern Roman"
+    fontsize=18
+    labelloc="t"
+    label="Monolithic kernel: direct calls in one privileged address space"
+    nodesep=0.55
+    ranksep=0.85
+  ];
+
+  node [
+    fontname="Latin Modern Roman"
+    fontsize=12
+    shape=box
+    style="rounded,filled"
+    fillcolor="#F7F7F7"
+    color="#444444"
+    penwidth=1.2
+  ];
+
+  edge [
+    fontname="Latin Modern Roman"
+    fontsize=11
+    color="#444444"
+    penwidth=1.15
+    arrowsize=0.8
+  ];
+
+  subgraph cluster_user {
+    label="User space (unprivileged)";
+    style="rounded,filled";
+    color="#6B7FA6";
+    fillcolor="#E9F2FF";
+    fontname="Latin Modern Roman";
+    fontsize=12;
+
+    shell [label="Shell / GUI\n(interface)"];
+    app [label="Application"];
+    libc [label="Libc + runtime\n(APIs & wrappers)"];
+
+    shell -> libc [label="launch, I/O"];
+    app -> libc [label="calls"];
+  }
+
+  subgraph cluster_kernel {
+    label="Kernel space (single privileged fault domain)";
+    style="rounded,filled";
+    color="#4B8B5A";
+    fillcolor="#EAF7EA";
+    fontname="Latin Modern Roman";
+    fontsize=12;
+
+    entry [shape=box3d fillcolor="#DFF3DF" label="Syscall / trap\nentry"];
+    sched [label="Scheduler"];
+    vm [label="Virtual memory\n(page tables)"];
+    fs [label="File system\n+ page cache"];
+    net [label="Networking"];
+    drv [label="Drivers\nIRQs / DMA"];
+
+    entry -> sched;
+    entry -> vm;
+    entry -> fs;
+    entry -> net;
+
+    fs -> drv;
+    net -> drv;
+
+    sched -> vm [style=dotted label="preempt/migrate"];
+    vm -> fs [style=dotted label="paging, mmap"];
+  }
+
+  hw [
+    shape=component
+    style="filled"
+    fillcolor="#FFF7E6"
+    color="#444444"
+    label="Hardware\nCPU, MMU, devices"
+  ];
+
+  libc -> entry [label="syscall ABI"];
+  drv -> hw [label="program devices\n(handle interrupts)"];
+
+  note [
+    shape=note
+    style="filled"
+    fillcolor="#FFFFFF"
+    color="#777777"
+    fontcolor="#333333"
+    label="Fast path: direct calls + shared memory\nFault scope: bug in any in-kernel service can crash/corrupt"
+  ];
+  note -> entry [style=dotted arrowhead=none color="#777777"];
+}
+

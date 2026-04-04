@@ -1,0 +1,95 @@
+digraph fig_2_38_microkernel_structure {
+  rankdir=LR;
+  bgcolor="white";
+
+  graph [
+    fontname="Latin Modern Roman"
+    fontsize=18
+    labelloc="t"
+    label="Microkernel: minimal privileged core + user-space servers (IPC)"
+    nodesep=0.55
+    ranksep=0.85
+  ];
+
+  node [
+    fontname="Latin Modern Roman"
+    fontsize=12
+    shape=box
+    style="rounded,filled"
+    fillcolor="#F7F7F7"
+    color="#444444"
+    penwidth=1.2
+  ];
+
+  edge [
+    fontname="Latin Modern Roman"
+    fontsize=11
+    color="#444444"
+    penwidth=1.15
+    arrowsize=0.8
+  ];
+
+  subgraph cluster_user {
+    label="User space (apps + restartable servers)";
+    style="rounded,filled";
+    color="#6B7FA6";
+    fillcolor="#E9F2FF";
+    fontname="Latin Modern Roman";
+    fontsize=12;
+
+    app [label="Application"];
+    fs [label="File server"];
+    net [label="Network server"];
+    drv [label="Driver server"];
+  }
+
+  subgraph cluster_kernel {
+    label="Microkernel (privileged primitives only)";
+    style="rounded,filled";
+    color="#4B8B5A";
+    fillcolor="#EAF7EA";
+    fontname="Latin Modern Roman";
+    fontsize=12;
+
+    ipc [shape=box3d fillcolor="#DFF3DF" label="IPC + access checks\n(route messages)"];
+    sched [shape=box3d fillcolor="#DFF3DF" label="Scheduling\n+ threads"];
+    mmu [shape=box3d fillcolor="#DFF3DF" label="Address spaces\n+ mapping"];
+    irq [shape=box3d fillcolor="#DFF3DF" label="Interrupt/trap\nmediation"];
+
+    ipc -> sched -> mmu;
+    irq -> sched [style=dotted arrowhead=none label="wakeup"];
+  }
+
+  hw [
+    shape=component
+    style="filled"
+    fillcolor="#FFF7E6"
+    color="#444444"
+    label="Hardware\nCPU, MMU, devices"
+  ];
+
+  app -> ipc [label="send request\n(syscall)"];
+  ipc -> fs [label="deliver msg"];
+  fs -> ipc [label="reply"];
+  ipc -> app [label="return"];
+
+  ipc -> net [style=dashed label="other service IPC"];
+  net -> ipc [style=dashed label="reply"];
+
+  ipc -> drv [label="device messages"];
+  irq -> drv [label="IRQ notification"];
+
+  mmu -> hw [label="MMU control"];
+  irq -> hw [label="program devices"];
+
+  note [
+    shape=note
+    style="filled"
+    fillcolor="#FFFFFF"
+    color="#777777"
+    fontcolor="#333333"
+    label="Benefit: smaller privileged fault domain; servers can be restarted\nCost: IPC + context switches + coordination overhead"
+  ];
+  note -> ipc [style=dotted arrowhead=none color="#777777"];
+}
+

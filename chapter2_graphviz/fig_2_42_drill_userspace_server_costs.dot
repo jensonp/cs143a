@@ -1,0 +1,55 @@
+digraph fig_2_42_drill_userspace_server_costs {
+  rankdir=LR;
+  bgcolor="white";
+
+  graph [
+    fontname="Latin Modern Roman"
+    fontsize=18
+    labelloc="t"
+    label="Drill: what you pay when a service lives in a user-space server"
+    nodesep=0.55
+    ranksep=0.85
+  ];
+
+  node [
+    fontname="Latin Modern Roman"
+    fontsize=12
+    shape=box
+    style="rounded,filled"
+    fillcolor="#F7F7F7"
+    color="#444444"
+    penwidth=1.2
+  ];
+
+  edge [
+    fontname="Latin Modern Roman"
+    fontsize=11
+    color="#444444"
+    penwidth=1.15
+    arrowsize=0.8
+  ];
+
+  app [fillcolor="#E9F2FF" label="App (user mode)"];
+  trap [shape=box3d fillcolor="#DFF3DF" label="Kernel entry\n(syscall/trap)"];
+  route [shape=box3d fillcolor="#DFF3DF" label="IPC route\n+ checks"];
+  srv [fillcolor="#E9F2FF" label="Server process\n(user mode)"];
+  back [shape=box3d fillcolor="#DFF3DF" label="Reply\n+ scheduling point"];
+  ret [fillcolor="#E9F2FF" label="App resumes"];
+
+  app -> trap [label="1) enter kernel"];
+  trap -> route [label="2) send message"];
+  route -> srv [label="3) context switch"];
+  srv -> back [label="4) reply (IPC)"];
+  back -> ret [label="5) return to caller"];
+
+  note [
+    shape=note
+    style="filled"
+    fillcolor="#FFFFFF"
+    color="#777777"
+    fontcolor="#333333"
+    label="Costs you introduce:\n- more context switches / scheduling points\n- IPC bookkeeping and validation\n- possible data copies or mapping operations\n- cache/TLB disruption from switching"
+  ];
+  note -> route [style=dotted arrowhead=none color="#777777"];
+}
+

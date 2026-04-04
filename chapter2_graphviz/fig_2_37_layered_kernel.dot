@@ -1,0 +1,60 @@
+digraph fig_2_37_layered_kernel {
+  rankdir=TB;
+  bgcolor="white";
+
+  graph [
+    fontname="Latin Modern Roman"
+    fontsize=18
+    labelloc="t"
+    label="Layered kernel: ordered dependencies (each layer uses only lower layers)"
+    nodesep=0.6
+    ranksep=0.55
+  ];
+
+  node [
+    fontname="Latin Modern Roman"
+    fontsize=12
+    shape=box
+    style="rounded,filled"
+    fillcolor="#F7F7F7"
+    color="#444444"
+    penwidth=1.2
+  ];
+
+  edge [
+    fontname="Latin Modern Roman"
+    fontsize=11
+    color="#444444"
+    penwidth=1.15
+    arrowsize=0.8
+  ];
+
+  user [fillcolor="#E9F2FF" label="User programs\n+ utilities"];
+  api [fillcolor="#FFF7E6" label="Libraries + syscall interface\n(request surface)"];
+
+  l3 [shape=box3d fillcolor="#EAF7EA" label="Layer 3: high-level services\nfiles, network, IPC endpoints"];
+  l2 [shape=box3d fillcolor="#EAF7EA" label="Layer 2: resource management\nprocesses, VM, scheduling"];
+  l1 [shape=box3d fillcolor="#EAF7EA" label="Layer 1: low-level core\ntraps, drivers, interrupts"];
+  hw [shape=component style="filled" fillcolor="#FFF7E6" color="#444444" label="Hardware"];
+
+  user -> api -> l3 -> l2 -> l1 -> hw;
+
+  l2 -> l3 [
+    style=dashed
+    color="#777777"
+    constraint=false
+    label="real dependency can point upward\n(e.g., paging wants file-system I/O)"
+    fontcolor="#555555"
+  ];
+
+  note [
+    shape=note
+    style="filled"
+    fillcolor="#FFFFFF"
+    color="#777777"
+    fontcolor="#333333"
+    label="Benefit: clean call direction helps reasoning\nCost: if dependencies are cyclic, layering becomes leaky/awkward"
+  ];
+  note -> l3 [style=dotted arrowhead=none color="#777777"];
+}
+

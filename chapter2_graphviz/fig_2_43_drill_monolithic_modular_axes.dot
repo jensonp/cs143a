@@ -1,0 +1,83 @@
+digraph fig_2_43_drill_monolithic_modular_axes {
+  rankdir=TB;
+  bgcolor="white";
+
+  graph [
+    fontname="Latin Modern Roman"
+    fontsize=18
+    labelloc="t"
+    label="Drill: execution style and deployment style are different axes"
+    nodesep=0.55
+    ranksep=0.7
+  ];
+
+  node [
+    fontname="Latin Modern Roman"
+    fontsize=12
+    shape=box
+    style="rounded,filled"
+    fillcolor="#F7F7F7"
+    color="#444444"
+    penwidth=1.2
+  ];
+
+  edge [
+    fontname="Latin Modern Roman"
+    fontsize=11
+    color="#444444"
+    penwidth=1.15
+    arrowsize=0.8
+  ];
+
+  exec [
+    fillcolor="#E9F2FF"
+    label=<
+      <B>Execution style (runtime communication)</B><BR/>
+      <FONT POINT-SIZE="11">
+        &bull; monolithic: direct calls in one kernel address space<BR/>
+        &bull; microkernel: IPC across protection domains
+      </FONT>
+    >
+  ];
+
+  deploy [
+    fillcolor="#FFF7E6"
+    label=<
+      <B>Deployment style (how code is shipped)</B><BR/>
+      <FONT POINT-SIZE="11">
+        &bull; static: compiled into the kernel image<BR/>
+        &bull; modular: load/unload as privileged modules
+      </FONT>
+    >
+  ];
+
+  subgraph cluster_example {
+    label="Example: monolithic execution + modular deployment";
+    style="rounded,filled";
+    color="#4B8B5A";
+    fillcolor="#EAF7EA";
+    fontname="Latin Modern Roman";
+    fontsize=12;
+
+    app [fillcolor="#E9F2FF" label="App"];
+    core [shape=box3d fillcolor="#DFF3DF" label="Kernel core"];
+    mod [label="Loaded module\n(driver / FS)"];
+
+    app -> core [label="syscall"];
+    core -> mod [label="direct call\n(same privilege)"];
+  }
+
+  exec -> app [style=dotted arrowhead=none color="#777777"];
+  deploy -> mod [style=dotted arrowhead=none color="#777777"];
+
+  note [
+    shape=note
+    style="filled"
+    fillcolor="#FFFFFF"
+    color="#777777"
+    fontcolor="#333333"
+    label="Modularity does not automatically mean isolation:\nmodules run with full kernel privilege once loaded"
+  ];
+  note -> mod [style=dotted arrowhead=none color="#777777"];
+}
+

@@ -412,6 +412,22 @@ Once one CPU or one machine is not enough, the question changes from simple shar
 - Treating virtualization like mere multiprogramming misses the extra control layer.
 - Treating real-time like ordinary throughput optimization misses the deadline requirement entirely.
 
+**One Trace: guest kernel hits the “kernel beneath the kernel” (VM exit)**
+
+Virtualization is a control-boundary story.
+The guest kernel may believe it is “the privileged authority,” but the hypervisor is the actual hardware authority.
+This trace is the smallest operational picture of that: a sensitive operation becomes a forced control transfer below the guest.
+
+| Stage | Guest (inside VM) | Hypervisor / Hardware | Meaning |
+| --- | --- | --- | --- |
+| run | guest executes normally | hardware runs guest in a constrained mode | guest has the *illusion* of full machine control |
+| sensitive op | guest touches privileged state or device surface | hardware triggers a VM exit | control transfers below the guest kernel |
+| handle | guest is paused (state preserved) | hypervisor decides/emulates/updates virtual state | real authority and policy live here |
+| resume | guest continues execution | hypervisor performs VM entry | illusion continues with enforced boundaries |
+
+The mastery point is not the brand names.
+It is to be able to say: “what event forces control to transfer, what state is preserved, and where the real policy/authority decision happens.”
+
 **Code Bridge**
 
 - When studying a hypervisor later, identify which privileges moved beneath the guest kernel.
@@ -526,6 +542,23 @@ Common structures and what they encode:
 - Unbalanced trees lose their expected search benefits.
 - Hash collisions can turn “fast lookup” into a bottleneck.
 - A corrupted bitmap or queue can misrepresent ownership or readiness.
+
+**One Trace: bitmap allocation for fixed-size resources**
+
+This is the “state representation becomes policy” trace.
+Bitmaps are popular in kernels because they are compact and fast, but the scanning rule (first free bit, next-fit cursor, per-CPU cache) encodes a policy about locality, fairness, and contention.
+When you cover this table, name the invariant you must preserve: “never hand out the same resource twice.”
+
+| Step | Bitmap | Kernel action | Meaning |
+| --- | --- | --- | --- |
+| request | some bits are 0 (free) | scan for a 0 bit | choose a candidate resource |
+| claim | bit i is 0 | atomically set bit i to 1 | prevent double allocation under contention |
+| return | i is now marked used | map i -> resource (page frame, PID, block) | index mapping defines what “i” means |
+| free | bit i is 1 (used) | clear bit i to 0 | resource becomes available again |
+
+If the claim is not atomic, you double-allocate.
+If the index mapping is wrong, you “allocate” the wrong underlying thing.
+If the scanning order is poor, you may get pathological contention or fragmentation even though the bitmap is correct.
 
 **Code Bridge**
 

@@ -1,0 +1,43 @@
+digraph fig_2_13_api_syscall_trace {
+  rankdir=LR;
+  bgcolor="white";
+
+  graph [
+    fontname="Latin Modern Roman"
+    fontsize=18
+    labelloc="t"
+    label="Trace: API call to kernel return"
+    nodesep=0.55
+    ranksep=0.9
+  ];
+
+  node [
+    fontname="Latin Modern Roman"
+    fontsize=12
+    shape=box
+    style="rounded,filled"
+    fillcolor="#F7F7F7"
+    color="#444444"
+    penwidth=1.2
+  ];
+
+  edge [
+    fontname="Latin Modern Roman"
+    fontsize=11
+    color="#444444"
+    penwidth=1.2
+    arrowsize=0.8
+  ];
+
+  user_req [fillcolor="#E9F2FF" label=<<B>Step 1</B><BR/><FONT POINT-SIZE="11">User code calls API</FONT>>];
+  wrapper_pack [fillcolor="#FFF7E6" label=<<B>Step 2</B><BR/><FONT POINT-SIZE="11">Wrapper packages args</FONT>>];
+  boundary [shape=plaintext label=<<FONT POINT-SIZE="11">privilege boundary</FONT>>];
+  enter [shape=box3d fillcolor="#EAF7EA" label=<<B>Step 3</B><BR/><FONT POINT-SIZE="11">Syscall entry</FONT>>];
+  dispatch [shape=box3d fillcolor="#DFF3DF" label=<<B>Step 4</B><BR/><FONT POINT-SIZE="11">Kernel dispatch &amp; validate</FONT>>];
+  return_step [fillcolor="#E9F2FF" label=<<B>Step 5</B><BR/><FONT POINT-SIZE="11">Result returned</FONT>>];
+
+  user_req -> wrapper_pack -> boundary -> enter -> dispatch -> return_step;
+
+  note [shape=note style="filled" fillcolor="#FFFFFF" color="#777777" fontcolor="#333333" label="Wrapper stops at the boundary; kernel begins authority."];
+  note -> boundary [style=dashed arrowhead=none color="#777777"];
+}

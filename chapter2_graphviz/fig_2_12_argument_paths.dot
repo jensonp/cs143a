@@ -1,0 +1,41 @@
+digraph fig_2_12_argument_paths {
+  rankdir=LR;
+  bgcolor="white";
+
+  graph [
+    fontname="Latin Modern Roman"
+    fontsize=18
+    labelloc="t"
+    label="Baby step: how arguments travel"
+    nodesep=0.6
+    ranksep=0.8
+  ];
+
+  node [
+    fontname="Latin Modern Roman"
+    fontsize=12
+    shape=box
+    style="rounded,filled"
+    fillcolor="#F7F7F7"
+    color="#444444"
+    penwidth=1.2
+  ];
+
+  edge [
+    fontname="Latin Modern Roman"
+    fontsize=11
+    color="#444444"
+    penwidth=1.2
+    arrowsize=0.8
+  ];
+
+  wrapper [fillcolor="#FFF7E6" label=<<B>Wrapper</B><BR/><FONT POINT-SIZE="11">collects args</FONT>>];
+  regs [fillcolor="#E9F2FF" label=<<B>Registers</B><BR/><FONT POINT-SIZE="11">small fast args</FONT>>];
+  stack [fillcolor="#E9F2FF" label=<<B>User Stack</B><BR/><FONT POINT-SIZE="11">call frame</FONT>>];
+  block [fillcolor="#E9F2FF" label=<<B>Memory Block</B><BR/><FONT POINT-SIZE="11">tables/buffers</FONT>>];
+  syscall [shape=box3d fillcolor="#EAF7EA" label=<<B>Syscall Handler</B><BR/><FONT POINT-SIZE="11">validates pointers &amp; sizes</FONT>>];
+
+  wrapper -> regs -> syscall;
+  wrapper -> stack -> syscall;
+  wrapper -> block -> syscall;
+}

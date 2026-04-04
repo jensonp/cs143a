@@ -1,0 +1,39 @@
+digraph fig_2_11_api_layers {
+  rankdir=TB;
+  bgcolor="white";
+
+  graph [
+    fontname="Latin Modern Roman"
+    fontsize=18
+    labelloc="t"
+    label="Layered view: API vs wrapper vs syscall vs kernel"
+    nodesep=0.5
+    ranksep=0.6
+  ];
+
+  node [
+    fontname="Latin Modern Roman"
+    fontsize=12
+    shape=box
+    style="rounded,filled"
+    fillcolor="#F7F7F7"
+    color="#444444"
+    penwidth=1.2
+  ];
+
+  edge [
+    fontname="Latin Modern Roman"
+    fontsize=11
+    color="#444444"
+    penwidth=1.2
+    arrowsize=0.8
+  ];
+
+  api [fillcolor="#E9F2FF" label=<<B>API</B><BR/><FONT POINT-SIZE="11">programmer-visible function</FONT>>];
+  wrapper [fillcolor="#FFF7E6" label=<<B>Library Wrapper</B><BR/><FONT POINT-SIZE="11">marshal args, ABI, retries</FONT>>];
+  boundary [shape=plaintext label=<<FONT POINT-SIZE="11">privilege boundary</FONT>>];
+  syscall [shape=box3d fillcolor="#EAF7EA" label=<<B>System Call</B><BR/><FONT POINT-SIZE="11">privileged entry</FONT>>];
+  kernel [shape=box3d fillcolor="#DFF3DF" label=<<B>Kernel Service</B><BR/><FONT POINT-SIZE="11">authoritative state change</FONT>>];
+
+  api -> wrapper -> boundary -> syscall -> kernel;
+}

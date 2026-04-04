@@ -1,0 +1,50 @@
+digraph fig_2_14_wrapper_variants {
+  rankdir=TB;
+  bgcolor="white";
+
+  graph [
+    fontname="Latin Modern Roman"
+    fontsize=18
+    labelloc="t"
+    label="Final photo: many wrappers, one kernel service"
+    nodesep=0.6
+    ranksep=0.5
+  ];
+
+  node [
+    fontname="Latin Modern Roman"
+    fontsize=12
+    shape=box
+    style="rounded,filled"
+    fillcolor="#F7F7F7"
+    color="#444444"
+    penwidth=1.2
+  ];
+
+  edge [
+    fontname="Latin Modern Roman"
+    fontsize=11
+    color="#444444"
+    penwidth=1.2
+    arrowsize=0.8
+  ];
+
+  api_c [fillcolor="#E9F2FF" label=<<B>libc API</B><BR/><FONT POINT-SIZE="11">open(), read()</FONT>>];
+  api_python [fillcolor="#E9F2FF" label=<<B>Python API</B><BR/><FONT POINT-SIZE="11">os.open()</FONT>>];
+  api_js [fillcolor="#E9F2FF" label=<<B>Node API</B><BR/><FONT POINT-SIZE="11">fs.open()</FONT>>];
+
+  wrap_c [fillcolor="#FFF7E6" label=<<B>libc wrapper</B><BR/><FONT POINT-SIZE="11">syscall ABI</FONT>>];
+  wrap_python [fillcolor="#FFF7E6" label=<<B>CPython wrapper</B><BR/><FONT POINT-SIZE="11">C ext + ABI</FONT>>];
+  wrap_js [fillcolor="#FFF7E6" label=<<B>libuv wrapper</B><BR/><FONT POINT-SIZE="11">C++ + ABI</FONT>>];
+
+  syscall [shape=box3d fillcolor="#EAF7EA" label=<<B>Syscall</B><BR/><FONT POINT-SIZE="11">kernel entry</FONT>>];
+  kernel [shape=box3d fillcolor="#DFF3DF" label=<<B>Kernel service</B><BR/><FONT POINT-SIZE="11">authoritative semantics</FONT>>];
+
+  api_c -> wrap_c -> syscall;
+  api_python -> wrap_python -> syscall;
+  api_js -> wrap_js -> syscall;
+  syscall -> kernel;
+
+  note [shape=note style="filled" fillcolor="#FFFFFF" color="#777777" fontcolor="#333333" label="APIs can differ; kernel semantics stay fixed."];
+  note -> kernel [style=dashed arrowhead=none color="#777777"];
+}

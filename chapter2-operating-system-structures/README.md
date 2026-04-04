@@ -236,6 +236,8 @@ An `API` is the programmer-visible function interface.
 A `library wrapper` prepares arguments, follows the machine calling convention, and issues the actual privileged entry.
 A `system call` is the kernel entry request itself.
 
+![Baby photo 1: layered view of API, wrapper, syscall, kernel](../chapter2_graphviz/fig_2_11_api_layers.png)
+
 An API function may:
 
 - do all work in user space
@@ -247,6 +249,8 @@ Argument passing may use:
 - registers
 - a memory block or table
 - the user stack
+
+![Baby photo 2: how arguments travel from wrapper to syscall handler](../chapter2_graphviz/fig_2_12_argument_paths.png)
 
 An API and a system call are different objects.
 The API defines the programmer-facing function surface.
@@ -278,8 +282,12 @@ The wrapper exists so the kernel does not need to implement language- and libc-s
 | dispatch | blocked on return | wrapper inactive | kernel identifies requested service |
 | completion | receives result | converts return convention if needed | returns status or error |
 
+![Baby photo 3: trace from API call, through wrapper, across privilege boundary, to kernel return](../chapter2_graphviz/fig_2_13_api_syscall_trace.png)
+
 The wrapper is the user-space object that absorbs calling conventions, compatibility behavior, and convenience logic.
 Responsibility for validating and updating protected state still lies in the kernel.
+
+![Final photo: multiple language wrappers converge on one stable kernel service](../chapter2_graphviz/fig_2_14_wrapper_variants.png)
 
 **Code Bridge**
 

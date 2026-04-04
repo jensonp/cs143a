@@ -3,7 +3,7 @@
 Source: Chapter 3 of `textbook.pdf` (Operating System Concepts, 9th ed.).
 
 This file is the mastery note for Chapter 3.
-It is written to make process management feel like live kernel control rather than like a list of terms and UNIX examples.
+It treats process management as kernel control over resumable computations rather than as a vocabulary list organized around UNIX examples.
 
 If Chapter 1 established why the OS must control execution and Chapter 2 explained how programs reach the kernel, Chapter 3 explains how the kernel keeps many computations alive at once without losing track of state, ownership, or coordination.
 
@@ -44,13 +44,13 @@ If a computation can be stopped and later continued, the kernel must have a dura
 
 ### 2.4 Scheduling Is Queue Selection Under Scarcity
 
-The scheduler is not a mystical policy engine.
-It is a mechanism that chooses among runnable work while other work is waiting for events, devices, or memory relief.
+The scheduler is a kernel mechanism for choosing which runnable process or thread receives CPU service next.
+It operates over explicit queues while other work waits for device completion, timer expiration, or memory relief.
 
 ### 2.5 IPC Is Coordination, Not Just Data Transfer
 
-The hard part of IPC is not only moving data.
-It is preserving ordering, ownership, meaning, and progress across separate execution contexts.
+IPC is the mechanism isolated processes use to exchange information and coordinate progress.
+The difficult part is preserving ordering, ownership, meaning, and liveness across separate execution contexts.
 
 ## 3. Mastery Modules
 
@@ -58,8 +58,8 @@ It is preserving ordering, ownership, meaning, and progress across separate exec
 
 **Problem**
 
-The operating system must manage active computations, not just stored instructions.
-A file on disk does not tell the kernel where execution currently is or what resources are in use.
+The operating system must manage computations that are currently executing and owning resources, not just program files stored on disk.
+A file on disk cannot tell the kernel which instruction is live, which registers hold state, or which resources are currently owned.
 
 **Mechanism**
 
@@ -243,10 +243,10 @@ The process remains the larger resource-owning container:
 
 Threads share those process-level resources while keeping distinct execution states.
 
-This is why the process/thread distinction is really a distinction between:
+The process/thread distinction is a distinction between two kernel responsibilities:
 
-- ownership and protection
-- control flow and scheduling
+- the process owns the address space and protection boundary
+- the thread carries one schedulable control flow through that boundary
 
 **Invariants**
 
@@ -295,7 +295,7 @@ The `short-term scheduler` chooses among ready processes.
 The `long-term scheduler` influences how many processes are admitted into active competition.
 The `medium-term scheduler` can reduce pressure by swapping processes out and back in.
 
-This is best understood as queue selection under resource scarcity.
+These structures exist because the kernel must represent different scarcity conditions explicitly: CPU scarcity in the ready queue, device scarcity in wait queues, and memory scarcity in swap-related structures.
 
 **Invariants**
 
@@ -363,8 +363,7 @@ It is triggered by events such as:
 
 The scheduler's decision only becomes real because the context switch changes which process state is live on the CPU.
 
-Context-switch cost is overhead in the narrow sense:
-it preserves the illusion of concurrent progress rather than advancing user work directly.
+Context-switch cost is kernel overhead because the switch preserves resumability and fairness rather than advancing the user program's instruction stream directly.
 
 **Invariants**
 
@@ -395,7 +394,7 @@ When you rehearse it, explicitly name where the saved state lives (PCB / kernel 
 | restore | B's state loaded | kernel returns to user mode | B becomes running |
 
 The correctness pressure here is atomicity: saving state, changing queues/state, and restoring the next context must be consistent even under interrupts and (in later chapters) multiple CPUs.
-This is why context-switch code is small and carefully structured: it is the bridge between policy (which should run) and physics (which registers and address space are live on the CPU).
+Context-switch code is small and tightly structured because it is the point where scheduling policy becomes machine state: the kernel must translate "B should run next" into B's registers, stack, and address space becoming live on the CPU.
 
 **Code Bridge**
 
@@ -434,7 +433,7 @@ UNIX expresses this structurally with `fork()` and `exec()`:
 - `fork()` duplicates the process image
 - `exec()` replaces the current program image
 
-That separation is the main conceptual point, not the exact API names.
+The conceptual point is that process creation and program-image replacement are separate kernel actions, regardless of the exact API names a system uses.
 
 **Invariants**
 
@@ -598,7 +597,7 @@ The producer-consumer pattern matters here because it shows that shared data wit
 **A:** Because the correctness hazard is not “where do we put bytes,” but “when is an item valid,” “who owns the slot,” and “what ordering and capacity guarantees exist.” Without a protocol, the consumer can read uninitialized/stale data or miss updates, and the producer can overwrite unread items. Producer-consumer is the minimal model that forces you to reason about visibility, atomicity, and bounded capacity.
 
 3. **Q:** Why is modularity one of the strongest reasons to allow process cooperation?
-**A:** Modular decomposition lets you isolate failures, restart components, and limit privilege (a service can run with only the rights it needs). IPC is what turns modular structure into working behavior: it preserves the boundaries while still allowing the system to function as one coherent whole. Without IPC, modularity becomes “separate programs” rather than “separate components.”
+**A:** Modular decomposition lets you isolate failures, restart components, and limit privilege (a service can run with only the rights it needs). IPC is the mechanism that lets those separately protected components coordinate without erasing their boundaries. Without IPC, modularity gives you isolated programs rather than cooperating system components.
 
 ### 3.10 Shared Memory And Message Passing Move Complexity To Different Places
 
@@ -609,16 +608,16 @@ Once processes cooperate, the main design question becomes where the complexity 
 **Mechanism**
 
 In `shared memory`, the kernel establishes and protects the shared region.
-After that, communication proceeds through ordinary memory operations.
+After setup, the communicating processes exchange data through loads and stores to that region, and user-space synchronization becomes responsible for correctness.
 
-In `message passing`, the OS or runtime remains involved in each send and receive.
-That makes the boundary explicit, but it raises per-exchange mediation cost.
+In `message passing`, the OS or runtime remains involved in each send and receive operation.
+That keeps the communication boundary explicit, but it adds mediation cost to each exchange.
 
-This tradeoff compresses to:
+The responsibility split is:
 
-`shared memory -> less per-exchange kernel work, more synchronization discipline in the processes`
+`shared memory -> the kernel sets up the region once; the processes own repeated synchronization and ordering`
 
-`message passing -> more explicit communication boundaries, more per-exchange system mediation`
+`message passing -> the system mediates each exchange; the channel semantics stay explicit at send/receive time`
 
 **Invariants**
 
@@ -711,7 +710,7 @@ These choices determine whether communication behaves more like rendezvous, queu
 
 **Problem**
 
-Once communication crosses subsystem or machine boundaries, processes still need structured coordination rather than raw byte exchange alone.
+Once communication crosses subsystem or machine boundaries, the communicating processes still need explicit rules for naming, ordering, failure handling, and interpretation rather than raw byte exchange alone.
 
 **Mechanism**
 
@@ -719,8 +718,8 @@ Once communication crosses subsystem or machine boundaries, processes still need
 `RPC` raises the abstraction level so communication resembles a procedure call.
 `Pipes` support ordered byte-stream communication, often for related local processes.
 
-These are not separate universes from IPC.
-They are IPC mechanisms or abstraction layers pushed across larger boundaries.
+These mechanisms are all IPC forms or IPC-derived abstraction layers.
+The main difference is the boundary they cross and how much protocol structure they provide above raw transport.
 
 The difficult issues remain the same:
 
@@ -898,7 +897,7 @@ Practice stating one deadlock scenario under blocking rendezvous and one overloa
 **A:** Because coordination fails even when bytes move perfectly if peers disagree about interpretation, boundaries, or ordering. IPC must preserve protocol meaning: which operation is requested, which reply corresponds, what ordering is guaranteed, and what happens on delay or failure. “Bytes delivered” is a transport property; “system behaves correctly” requires semantic agreement.
 
 10. **Q:** Why does shared memory reduce some kernel work while increasing application responsibility?
-**A:** After setup, data exchange becomes ordinary memory operations, which avoids per-message syscalls and can be very fast. But the kernel no longer mediates each handoff, so the application must enforce synchronization, visibility ordering, and invariants like “do not overwrite unread data.” Less kernel work means more protocol discipline in user space.
+**A:** After the kernel creates the shared region, the processes exchange data through loads and stores to that region instead of through a mediated send/receive on every handoff. That avoids per-message syscalls and can be very fast. But because the kernel no longer validates each exchange, the application must enforce synchronization, visibility ordering, and invariants like “do not overwrite unread data.” Less kernel mediation means more protocol responsibility in user space.
 
 11. **Q:** Why do blocking semantics and buffering rules materially change IPC behavior?
 **A:** They determine liveness and backpressure. A zero-capacity channel turns communication into a rendezvous, forcing timing coupling; bounded buffers create backpressure when full; nonblocking operations shift coordination to polling/retry logic. These rules change not only performance but also which bugs are possible (deadlocks, starvation, dropped messages).
@@ -938,7 +937,7 @@ If you are short on time:
 
 Use this file when:
 
-- you want Chapter 3 to feel like live state management rather than vocabulary
+- you want Chapter 3 to read as kernel management of live state rather than as a vocabulary review
 - you want to reason about process lifecycle, scheduling, and IPC without hiding behind API trivia
 - you want a mental model strong enough to read process or scheduler code later
 

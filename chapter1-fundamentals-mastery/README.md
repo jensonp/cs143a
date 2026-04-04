@@ -32,19 +32,20 @@ Later chapters should deepen these mechanisms, not rescue undefined language her
 
 ### 2.1 The OS Is a Control System
 
-The operating system is not mainly a bag of services.
-It is the control layer that decides who runs, who waits, who may access what, which copy of data is current, and when the kernel must take back control.
+The operating system is the machine's control layer, not merely a list of services.
+Its role is to decide which computation runs, which computation waits, which resource each computation may access, which copy of data is current, and when control must return to privileged code.
 
 If you remember only one idea, remember this:
-the OS exists because raw hardware is fast but not self-governing.
+raw hardware can execute instructions, but raw hardware cannot enforce shared rules by itself.
 
 ### 2.2 The Kernel Is the Trusted Authority
 
 The operating system in the broad sense includes many layers and tools.
-The kernel is the part that executes with hardware privilege and therefore holds the authority to enforce the rules.
+The kernel is the privileged component of that system.
+Its role is to hold authoritative machine state and enforce rules that ordinary programs cannot enforce for themselves.
 
-Applications ask.
-The kernel decides.
+Applications request work.
+The kernel validates the request and updates protected state.
 That asymmetry is the foundation of protection.
 
 ### 2.3 Concurrency Is Mostly About Scarcity
@@ -63,17 +64,10 @@ This idea shows up in caches, page caches, DMA buffers, distributed systems, and
 
 ### 2.5 Scaling Changes The Shape Of Failure
 
-More processors, more machines, and more layers do not simply increase capacity.
-They also increase coordination cost, latency variation, and failure modes.
-
-Single CPU:
-main problem is multiplexing.
-
-SMP:
-main problems become synchronization, cache coherence, and locality.
-
-Clusters and distributed systems:
-main problems become communication, partial failure, and coordination across nodes.
+Adding processors or machines changes the object being coordinated.
+On a single CPU, the OS mainly multiplexes one execution resource.
+On an SMP machine, the kernel coordinates shared-memory execution across multiple CPUs and is responsible for synchronization, cache-coherence effects, and placement.
+In a cluster or distributed system, the coordinating software manages separate machines and is responsible for communication, partial-failure handling, and cross-node agreement.
 
 ### 2.6 If You Remember Only 10 Things
 
@@ -388,11 +382,16 @@ Once one CPU or one machine is not enough, the question changes from simple shar
 
 **Mechanism**
 
-`SMP` lets multiple processors share one memory space and one kernel.
-`NUMA` adds unequal memory distance, so placement and locality matter.
-`Clusters` join multiple machines that cooperate across a network, introducing partial failure and communication delay.
-`Virtualization` inserts a privileged management layer that multiplexes hardware into isolated guests.
-`Real-time` systems add deadlines so timing becomes part of correctness.
+`SMP` is a machine organization in which multiple CPUs share one physical memory space and one kernel image.
+The kernel's role in an SMP system is to coordinate concurrent access to shared state and to place runnable work on CPUs.
+`NUMA` is a machine organization in which CPUs still share an address space, but the cost of a memory access depends on which CPU accesses which memory region.
+The kernel's role in a NUMA system is to place work and memory so that frequently interacting data stays near the CPU that uses it.
+`Clusters` are collections of separate machines connected by a network.
+The coordinating software in a cluster is responsible for communication, partial-failure handling, and cross-node agreement because there is no single shared physical memory image.
+`Virtualization` adds a hypervisor beneath the guest operating system.
+The hypervisor is the privileged component that multiplexes hardware across isolated guest kernels.
+`Real-time` systems attach deadlines to work.
+The scheduler or runtime in a real-time system is responsible for meeting those deadlines, so timing becomes part of correctness rather than only performance.
 
 ![Supplement: execution scaling models (single CPU, SMP, clusters, virtualization)](../chapter1_graphviz/fig_s5_execution_scaling_models.svg)
 
@@ -515,11 +514,13 @@ If you can explain why “enforcement must be at the authority boundary,” you 
 **Problem**
 
 The kernel spends a huge amount of time organizing, finding, and updating state.
-That means data-structure choice is often policy expressed in operational form.
+A kernel data structure is the object that stores that state.
+The role of the data structure is not only storage; it also determines scan cost, waiting order, locality, and contention behavior.
+For that reason, a data-structure choice often expresses policy in operational form.
 
 **Mechanism**
 
-Common structures and what they encode:
+Common structures encode different access patterns and different policy consequences:
 
 - lists: fast insertion/removal, linear search
 - queues: waiting order (fairness policy lives here)

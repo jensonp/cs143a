@@ -3,7 +3,7 @@
 Source: Chapter 4 of `textbook.pdf` (Operating System Concepts, 9th ed.).
 
 This file is the mastery note for Chapter 4.
-It is written to make threading feel like a concrete control and structure choice, not a language feature.
+It treats threading as a control-boundary and scheduling design choice, not as a language feature.
 
 If Chapter 3 taught you how the kernel tracks *one* execution container, Chapter 4 teaches how the kernel and runtime track *many* execution paths inside that container, and how multicore turns “concurrency” into real parallel hazards.
 
@@ -30,13 +30,13 @@ For Chapter 4, mastery means:
 
 ### 2.1 A Thread Is a Schedulable Execution Context
 
-A thread is the “control flow” piece:
+A thread is the schedulable control-flow object:
 program counter, registers, stack, and the scheduling identity needed to run.
 
-A process is the “ownership” piece:
+A process is the resource-owning container:
 address space, open files, and other resources that persist across context switches.
 
-This separation is the chapter.
+Chapter 4 depends on keeping those responsibilities separate: the process owns resources, while each thread carries one execution path through them.
 
 ### 2.2 Concurrency Is Structure; Parallelism Is Physics
 
@@ -51,7 +51,7 @@ You cannot have safe parallelism without correct concurrency structure (multicor
 If the kernel schedules only *one* kernel execution entity for the whole process, then a blocking system call blocks *everyone* in the process.
 If the kernel schedules multiple kernel threads, then one thread can block while others keep running.
 
-This single idea explains most tradeoffs between user-level threads, kernel threads, and the many-to-one / one-to-one / many-to-many models.
+Most tradeoffs between user-level threads, kernel threads, and the many-to-one / one-to-one / many-to-many models reduce to one boundary question: which execution entities can the kernel see, schedule, block, and wake independently?
 
 ### 2.4 “More Threads” Is Not Automatically “More Speed”
 
@@ -67,7 +67,7 @@ On multicore, a “correct” program can still become slow because contention f
 Explicit threading is letting the programmer create execution contexts directly.
 Implicit threading is the system providing a higher-level unit of work (tasks) and controlling how many threads actually run at once.
 
-Thread pools, fork-join frameworks, OpenMP, and GCD exist because “unbounded thread creation” is a real system failure mode.
+Thread pools, fork-join frameworks, OpenMP, and GCD exist because unbounded thread creation overwhelms memory, the scheduler, and shared resources.
 
 ## 3. Mastery Modules
 
@@ -93,12 +93,12 @@ A `thread` is a schedulable execution context inside that container:
 - thread-local storage
 
 Threads share the process’s address space and resources by default.
-That is the feature and the danger.
+That sharing is the performance advantage and the correctness hazard.
 
 **Invariants**
 
 - A process may have multiple threads, but one address space.
-- Threads share memory; therefore, “ordinary writes” become communication.
+- Threads share memory; therefore, one thread's writes can become another thread's observations and must be treated as communication.
 - Per-thread stacks must not overlap; shared heap data must be synchronized by design.
 
 **What Breaks If This Fails**
@@ -118,7 +118,7 @@ That is the feature and the danger.
 **A:** Per-thread examples: (1) registers/PC (the live control state), (2) the stack (call frames and locals), (3) TLS and per-thread scheduler identity/state. Shared examples: (1) the address space contents (heap/global data), (2) process-wide open file table/descriptor namespace, (3) process credentials and many kernel-owned resources attached to the process container. The exact list varies by OS, but “control flow state is per-thread; ownership/protection state is mostly per-process” is the invariant.
 
 2. **Q:** Why does “shared address space” make communication cheap but correctness hard?
-**A:** Cheap because communication can be ordinary reads/writes with no kernel mediation and no copying. Hard because those reads/writes now create interleavings: two threads can observe partial updates, overwrite each other, or violate invariants unless you synchronize and define ordering. Shared memory removes explicit boundaries, so you must manufacture correctness boundaries with locks, atomics, and protocols.
+**A:** Cheap because threads can exchange data through plain loads and stores with no per-message kernel mediation or copying. Hard because those same memory operations can interleave across threads: one thread can observe another thread's partial update, overwrite a value, or read data before the required ordering is established. Shared memory removes an explicit boundary, so the program must create its own correctness boundary with locks, atomics, and protocols.
 
 3. **Q:** If one thread calls `close(fd)`, what must other threads assume about that file descriptor?
 **A:** They must assume it can become invalid immediately and can even be *reused* for a different file/socket shortly after. Continuing to use it without coordination can cause EBADF at best and incorrect I/O to the wrong underlying object at worst (if the number is reused). Correct designs either synchronize close/use, duplicate file descriptors for independent lifetimes, or use higher-level ownership rules to prevent “use-after-close.”
@@ -141,8 +141,8 @@ Classic motivations for multithreading:
 - `economy`: threads are typically cheaper than processes (less state to create/switch)
 - `scalability`: threads are the unit that can map onto multiple cores
 
-The cost is that threads turn shared memory into a correctness surface.
-You do not “get concurrency”; you inherit the duty to preserve invariants under interleavings.
+The cost is that shared memory becomes a correctness surface the program must defend.
+Adding threads creates more possible interleavings, so the program becomes responsible for preserving invariants across those interleavings.
 
 **Invariants**
 
@@ -190,7 +190,8 @@ If fraction `S` is serial and fraction `1-S` is perfectly parallel, then with `N
 
 `speedup <= 1 / (S + (1-S)/N)`
 
-That bound ignores real overheads (locks, cache misses, communication), so real speedup is often lower.
+The formula describes an ideal upper bound.
+Real systems run below that bound because locks, cache misses, queueing, and communication add extra serialized or contended work.
 
 **Invariants**
 
@@ -358,8 +359,8 @@ Thread libraries typically provide:
 Common examples in the textbook:
 `Pthreads`, `Windows`, and `Java` threads.
 
-Your goal is not to memorize names.
-Your goal is to understand what semantics the library is promising and what kernel machinery it must rely on.
+The important question is not which library name appears in the textbook.
+The important question is which lifecycle and synchronization semantics the library promises and which kernel machinery it relies on to keep those promises.
 
 **Invariants**
 
@@ -403,7 +404,7 @@ Implicit threading approaches include:
 - `OpenMP`: compiler directives produce parallel regions and tasks
 - `Grand Central Dispatch (GCD)`: queues of blocks/tasks scheduled onto a pool (macOS/iOS)
 
-The unifying idea is that the system controls the *degree of concurrency*.
+The unifying idea is that the runtime accepts units of work but controls how many kernel-schedulable execution contexts compete at once.
 
 **Invariants**
 
@@ -453,8 +454,7 @@ If you delete the queue by spawning unbounded threads, you do not eliminate wait
 
 **Problem**
 
-Once a process has multiple threads, system events become ambiguous:
-which thread should receive a signal, what does it mean to fork, and how do you safely stop a thread?
+Once a process has multiple threads, the OS and runtime must decide which thread receives a signal, what state survives `fork`, and at which boundary a thread may stop safely.
 
 **Mechanism**
 
@@ -629,7 +629,7 @@ After `fork`, the child has one thread but inherits memory and lock state, so it
 | post-fork | parent continues | child must assume locks may be inconsistent | - |
 | exec | optional | replaces image | new program defines new threading |
 
-The safety story is: `fork` gives you inheritance, but it can also give you inherited inconsistency.
+The safety rule is: `fork` gives the child inherited memory and lock state, but it does not give the child the other threads that made that state consistent.
 The standard mitigation is “fork then exec quickly,” minimizing the amount of code the child runs in a potentially inconsistent lock state.
 
 ### 4.6 Deferred Cancellation With Cleanup
@@ -645,21 +645,21 @@ Cancellation is safe only if it happens at a boundary where cleanup can restore 
 | termination | - | exits | lifecycle reaped by join/detach |
 
 Treat cancellation as a two-part mechanism: a request flag and a safe stopping boundary.
-That boundary is where the program regains control to restore invariants; without it, cancellation turns into arbitrary state corruption.
+The cancellation point is the boundary where the target thread can run cleanup code and release shared resources; without that boundary, cancellation can leave shared state corrupted.
 
 ## 5. Key Questions (Answered)
 
 1. **Q:** Why is “threads share memory” both the main performance advantage and the main correctness risk?
-**A:** The advantage is that communication can be plain reads/writes with no kernel mediation and no copying. The risk is that those same reads/writes create interleavings and visibility ordering problems: two threads can observe partial updates, overwrite each other, or violate invariants unless you synchronize. Shared memory removes explicit boundaries; correctness requires you to reintroduce boundaries via locks/atomics/protocols.
+**A:** The advantage is that one thread can make data visible to another through plain memory operations with no per-exchange kernel mediation or copying. The risk is that those same operations can interleave and reorder: one thread can observe partial updates, overwrite shared state, or read data before the required ordering is established. Shared memory removes an explicit communication boundary, so correctness requires the program to reintroduce one with locks, atomics, and protocols.
 
 2. **Q:** Why does “what blocks” explain most threading-model tradeoffs?
-**A:** Because blocking determines whether the rest of the process can make progress. If the kernel sees one schedulable entity, one blocking syscall can freeze all user-level threads; if the kernel schedules threads, other threads can run while one sleeps. Most model tradeoffs reduce to: where does scheduling authority live, and what happens when a thread enters a blocking sleep?
+**A:** Because blocking reveals where scheduling responsibility actually lies. If the kernel sees one schedulable entity for the whole process, one blocking syscall parks that entity and all user-level threads stall with it. If the kernel schedules multiple threads independently, only the calling thread sleeps and the others can keep making progress. Most threading-model tradeoffs reduce to this boundary: which execution entities can the kernel block and wake independently?
 
 3. **Q:** Why can adding cores reduce performance when contention grows?
 **A:** More cores can increase contention on shared locks and data, turning “parallel work” into “parallel waiting.” Coherence traffic and lock handoff can dominate, and oversubscription can increase context switching and cache thrash. Past a point, adding cores increases coordination work faster than it increases useful work.
 
 4. **Q:** Why is a thread pool an admission-control mechanism, not only an efficiency trick?
-**A:** Because it bounds runnable concurrency so the system remains schedulable under load. Without a bound, thread-per-request can explode memory usage (stacks) and scheduler overhead, creating throughput collapse and extreme tail latency. A pool uses queues as a pressure valve: excess demand waits in a controlled place instead of becoming uncontrolled runnable threads.
+**A:** Because it bounds how many kernel-schedulable threads compete for CPU and memory at one time. Without that bound, thread-per-request can explode stack memory, scheduler overhead, and lock contention, producing throughput collapse and extreme tail latency. A pool moves excess demand into an explicit queue, so waiting happens in a controlled admission structure instead of as uncontrolled runnable-thread growth.
 
 5. **Q:** Why does 1:1 threading make blocking behavior easy to reason about but sometimes expensive?
 **A:** Easy because each user thread maps to a kernel-scheduled entity, so “thread blocks” means “that thread sleeps” in a straightforward way, and multicore parallelism is natural. Expensive because kernel threads cost memory and scheduling overhead, and large numbers of threads create oversubscription, run-queue contention, and cache thrash. 1:1 shifts complexity from “model ambiguity” to “resource scaling.”
@@ -674,7 +674,7 @@ That boundary is where the program regains control to restore invariants; withou
 **A:** Because it can terminate a thread in the middle of a critical section or while holding a lock, leaving shared invariants broken. Other threads may then deadlock or read partially updated state. Convenience is “stop now”; safety requires “stop at a point where cleanup can restore invariants.”
 
 9. **Q:** Why do signals become a policy problem (who receives) in multithreaded programs?
-**A:** Because a process may have many threads, and some signals are process-directed rather than thread-directed. The OS/runtime must decide which thread handles the signal, and threads may have different masks and safety properties. That choice affects correctness (reentrancy, which invariants are safe to touch) and therefore becomes a policy issue, not only a mechanism issue.
+**A:** Because some signals target the process as a whole rather than a specific thread, so the OS or runtime must choose which eligible thread will run the handler. Different threads may have different masks, lock states, and reentrancy risks, so that choice changes which invariants can be touched safely. Signal delivery is therefore not only a delivery mechanism; it is also a policy decision about which thread should take responsibility for the event.
 
 10. **Q:** Why does TLS reduce synchronization pressure, and what does it not solve?
 **A:** TLS reduces sharing by giving each thread its own instance of otherwise-global state (scratch buffers, per-thread error state), eliminating the need to lock that state. It does not solve synchronization for truly shared resources and invariants: shared queues, shared caches, shared file descriptors, and shared protocol state still require coordination. TLS is a tool for shrinking the shared surface, not erasing it.

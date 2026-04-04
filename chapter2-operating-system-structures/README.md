@@ -3,9 +3,10 @@
 Source: Chapter 2 of `textbook.pdf` (Operating System Concepts, 9th ed.).
 
 This file is the mastery note for Chapter 2.
-It is written to make operating-system structure feel operational rather than taxonomic.
+It treats operating-system structure as a control-boundary problem rather than as a vocabulary list.
 
-If Chapter 1 answered why the OS must exist, Chapter 2 answers how requests reach it, what boundary crossings cost, and why the OS itself must be structured carefully instead of growing as one undifferentiated blob.
+Chapter 1 explained why the operating system must exist.
+Chapter 2 explains how a request reaches the kernel, what a user-kernel transition changes, and why the kernel is divided into components instead of expanded as one tightly coupled body of privileged code.
 
 ## 1. What This File Optimizes For
 
@@ -35,36 +36,35 @@ An operating-system `service` is what capability exists.
 An `interface` is how a human or program asks for it.
 The `implementation` is the internal mechanism that actually carries it out.
 
-Confusing these layers makes Chapter 2 feel like duplicate vocabulary.
-Separating them makes the chapter coherent.
+If you treat services, interfaces, and implementations as the same thing, Chapter 2 looks repetitive.
+If you separate them, each term names a different layer of the system: capability, request surface, and mechanism.
 
 ### 2.2 The Kernel Boundary Is Also A Cost Boundary
 
-Crossing into the kernel is not free.
-It changes privilege, validation requirements, scheduling possibilities, and fault consequences.
+A transition from user space to kernel space has a cost.
+That transition changes four things: the privilege level of the executing code, the need for argument validation, the system's ability to block or reschedule the caller, and the scope of damage if the executing code fails.
 
-Every design choice in Chapter 2 compresses to one decision:
-where the code runs, and what new cost appears because it runs there.
+Many design choices in Chapter 2 reduce to one placement question: should this code run in user space or in kernel space?
+That placement determines communication cost, fault scope, and the amount of privilege the code receives.
 
 ### 2.3 APIs Package Intent; System Calls Transfer Authority
 
-An API is the programmer-facing contract.
-A system call is the privileged transition that asks the kernel to act.
+An API is a programmer-facing interface.
+A system call is not the API itself; it is the controlled transfer from user mode to kernel mode that allows the kernel to perform a protected operation.
 
-Many API calls never enter the kernel.
-Many others package arguments and then cross that boundary exactly once.
+Some API calls complete entirely in user space.
+Other API calls package arguments and cause exactly one controlled kernel entry.
 
 ### 2.4 Structure Is About Damage Containment As Much As Organization
 
-Kernel structure is not only about code cleanliness.
-It decides how far a bug can spread, how expensive internal communication becomes, and how hard it is to replace one subsystem without rewriting the whole OS.
+Kernel structure determines three things: the fault scope of a bug, the communication cost between subsystems, and the difficulty of replacing one subsystem without changing the rest of the operating system.
 
 ### 2.5 Policy And Mechanism Must Be Separable Or The System Hardens In The Wrong Places
 
-Mechanism is how something can be done.
-Policy is which choice should be made.
+A mechanism is the part of the system that makes an action possible.
+A policy is the rule that selects which action the system should take.
 
-If those are fused too early, the OS becomes difficult to tune, port, or evolve.
+If a policy is baked into the mechanism too early, the system becomes difficult to tune, port, or evolve because changing the decision requires rewriting the machinery that enforces it.
 
 ## 3. Mastery Modules
 
@@ -97,7 +97,8 @@ Those services can be reached through different interfaces:
 
 The implementation behind the interface may involve kernel code, drivers, file-system structures, schedulers, or user-space utilities.
 
-The same service can therefore have many request surfaces while still converging on one privileged mechanism.
+A single OS service can be requested through multiple interfaces, such as a GUI action, a shell command, or a library call.
+The interfaces differ, but they can all lead to the same kernel operation that performs the protected work.
 
 **Invariants**
 
@@ -125,8 +126,9 @@ When you cover this table, point to the first row where privilege is required an
 | privileged entry | utility or wrapper enters kernel | utility enters kernel | wrapper enters kernel | kernel checks permissions |
 | implementation | file-system metadata updated | file-system metadata updated | file-system metadata updated | one service, many interfaces |
 
-The important line is where the request first becomes privileged.
-Everything above that row is replaceable packaging; everything below that row must preserve filesystem invariants and protection guarantees for *every* caller, not only polite tools.
+The key row is the first row in which execution enters kernel-controlled code.
+Above that row, the request is only being expressed or packaged.
+At that row and below it, the system can enforce permissions and modify authoritative state.
 
 **Code Bridge**
 
@@ -231,8 +233,9 @@ Argument passing may use:
 - a memory block or table
 - the user stack
 
-The key idea is that API and syscall are not synonyms.
-One packages intent for programmers; the other transfers authority to the kernel.
+An API and a system call are different objects.
+The API defines the programmer-facing function surface.
+The system call performs the privilege transfer that allows the kernel to validate and update protected state.
 
 **Invariants**
 
@@ -260,8 +263,8 @@ The wrapper exists so the kernel does not need to implement language- and libc-s
 | dispatch | blocked on return | wrapper inactive | kernel identifies requested service |
 | completion | receives result | converts return convention if needed | returns status or error |
 
-Read the wrapper as a semantic adapter.
-It exists so the kernel can expose a small, stable privileged ABI while user-space libraries absorb calling conventions, convenience behavior, and compatibility over time.
+The wrapper is the user-space object that absorbs calling conventions, compatibility behavior, and convenience logic.
+Responsibility for validating and updating protected state still lies in the kernel.
 
 **Code Bridge**
 
@@ -356,8 +359,8 @@ Examples include:
 - communication utilities
 - background services or `daemons`
 
-The kernel remains the privileged core.
-System programs make it usable.
+The kernel remains the privileged component that owns protected state.
+A system program is a user-space component that packages a user-facing workflow on top of that state.
 
 **Invariants**
 
@@ -427,7 +430,9 @@ Examples:
 - queues are a mechanism
 - choosing which class runs first is policy
 
-Good OS design keeps mechanisms general enough that policies can change without reengineering the whole system.
+A general mechanism defines what state transitions are possible.
+A policy chooses among those transitions to optimize a goal.
+Good OS design keeps the mechanism general so the policy can change without rewriting privileged machinery.
 
 **Invariants**
 
@@ -471,8 +476,8 @@ A `microkernel` keeps only the most fundamental privileged primitives in kernel 
 `Loadable modules` keep a core kernel while allowing new privileged code to be linked dynamically.
 `Hybrid systems` mix these ideas.
 
-The structural question is always:
-where does this code live, and how much does it cost to communicate with it?
+Each structure choice places code in a particular protection domain.
+That placement determines the communication path, the communication cost, and the fault scope of a failure in that code.
 
 **Invariants**
 
@@ -501,9 +506,9 @@ When you memorize it, do not memorize names; memorize the trade: lower overhead 
 | microkernel | message to user-space server via kernel IPC | fault isolation and replaceability | message and context-switch overhead |
 | modular | direct in-kernel call into loaded module | extensibility with strong performance | module bug still runs privileged |
 
-The request path is the cost model.
-The fault domain is the safety model.
-Most OS structure arguments are just different ways of trading those two variables against each other.
+Code placement determines communication cost.
+Code placement also determines fault scope.
+Most arguments about kernel structure are arguments about how to trade those two consequences.
 
 **Code Bridge**
 
@@ -537,7 +542,10 @@ An OS that cannot be observed, configured for a target machine, or started relia
 `SYSGEN` configures the operating system for a specific hardware or site environment.
 `Booting` is the runtime startup path that begins at firmware, progresses through bootstrap code, and loads the kernel.
 
-These topics belong in Chapter 2 because they reveal how the system is prepared, started, and observed as a structure, not just as an abstraction.
+Tracing is the mechanism that records system behavior.
+System generation is the mechanism that configures the OS image for a target machine.
+Boot is the mechanism that transfers control from firmware to the kernel.
+Chapter 2 groups these topics together because each one determines how the OS is observed, instantiated, or started.
 
 **Invariants**
 

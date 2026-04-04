@@ -359,41 +359,27 @@ Thinking in surfaces, not isolated calls, makes the taxonomy useful. A single us
 
 **Problem**
 
-Users often experience the operating system through utilities rather than by direct awareness of the kernel.
-That can hide the distinction between privileged mechanisms and surrounding support software.
+Most of what users call “the OS” is actually user-space code—utilities and daemons—layered on top of kernel mechanisms. Blurring that line hides where authority lives and where policy can be swapped out safely.
 
 **Mechanism**
 
-`System programs` or `system utilities` run in user space and package common workflows built on top of kernel facilities.
-Examples include:
-
-- file utilities
-- editors and search tools
-- compilers and loaders
-- status tools
-- communication utilities
-- background services or `daemons`
-
-The kernel remains the privileged component that owns protected state.
-A system program is a user-space component that packages a user-facing workflow on top of that state.
+System programs (utilities, daemons, service managers) are regular user processes. They parse configs, apply policy, and call into the kernel via syscalls. The kernel owns protected state; the utility owns orchestration and presentation. Because they are just processes, they can be restarted, replaced, sandboxed, or updated without kernel changes.
 
 **Invariants**
 
 - System programs may depend on many system calls without becoming part of the kernel.
-- A daemon is still a process, not a kernel subsystem by default.
-- User experience of “the OS” is broader than the privileged core.
+- A daemon is still a process, not a kernel subsystem; it lives and dies by the scheduler and permission model.
+- User experience of “the OS” is broader than the privileged core, but authority still resides in the kernel.
 
 **What Breaks If This Fails**
 
-- If system programs are mistaken for kernel mechanisms, responsibility boundaries become blurry.
-- If utilities are forced into kernel space, extensibility and isolation both worsen.
-- If daemons are treated as trusted by default, the system boundary is misunderstood.
+- If you treat a daemon like a kernel subsystem, you over-trust it and underestimate the kernel’s guardrails.
+- If you stuff utilities into kernel space “for speed,” you bloat the trusted base and make crashes catastrophic.
+- If you assume user-facing tools are authoritative, you misdiagnose bugs and security issues—the kernel is the source of truth.
 
 **One Trace: utility layered over kernel services**
 
-This trace exists to keep the “OS” boundary honest.
-Utilities and daemons can feel like “part of the system,” but they are still user processes that orchestrate work using system calls; the kernel remains the authority that enforces protection and updates shared state.
-When you cover the table, identify which steps are pure policy/orchestration (user space) and which steps necessarily touch authoritative kernel state.
+Keep the boundary explicit: utilities orchestrate; the kernel authorizes and mutates state. In any workflow, mark which steps are policy (user space) and which steps require kernel authority.
 
 | Stage | Utility / Daemon | Kernel | Structural Meaning |
 | --- | --- | --- | --- |

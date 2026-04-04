@@ -38,6 +38,8 @@ Its role is to decide which computation runs, which computation waits, which res
 If you remember only one idea, remember this:
 raw hardware can execute instructions, but raw hardware cannot enforce shared rules by itself.
 
+![Control loop: timer/trap into the kernel, scheduler returns to user code](../chapter1_graphviz/fig_1_22_control_loop.svg)
+
 ### 2.2 The Kernel Is the Trusted Authority
 
 The operating system in the broad sense includes many layers and tools.

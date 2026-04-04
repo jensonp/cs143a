@@ -1,0 +1,21 @@
+digraph fig_1_22_control_loop {
+  rankdir=LR;
+  bgcolor="white";
+
+  graph [fontname="Latin Modern Roman" fontsize=18 labelloc="t" label="Control loop: timer, traps, and scheduling keep authority in the kernel"];
+  node [fontname="Latin Modern Roman" fontsize=12 shape=box style="rounded,filled" color="#444444" fillcolor="#F7F7F7" penwidth=1.2];
+  edge [fontname="Latin Modern Roman" fontsize=11 color="#444444" penwidth=1.1 arrowsize=0.8];
+
+  cpu [shape=box style="rounded,filled" fillcolor="#E9F2FF" label="CPU executes\nuser code"];
+  timer [shape=box style="rounded,filled" fillcolor="#FFF7E6" label="Timer interrupt\npreemption"];
+  trap [shape=box style="rounded,filled" fillcolor="#FFF7E6" label="Syscall / fault\ntrap into kernel"];
+  kernel [shape=box style="rounded,filled" fillcolor="#EAF7EA" label="Kernel scheduler\n& dispatcher"];
+  readyq [shape=box style="rounded,filled" fillcolor="#EAF7EA" label="Ready queue\n(authoritative)"];
+
+  cpu -> trap [label="syscall/fault"];
+  cpu -> timer [label="interrupt"];
+  timer -> kernel [label="enter kernel"];
+  trap -> kernel [label="enter kernel"];
+  kernel -> readyq [label="choose next"];
+  readyq -> cpu [label="return to user"];
+}

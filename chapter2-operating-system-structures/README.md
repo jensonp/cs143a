@@ -718,10 +718,14 @@ Boot is therefore part of OS structure, not an afterthought.
 Do not merely read these.
 Cover the tables and reproduce the sequence from memory.
 
+![Supplement: the four canonical boundary traces to rehearse](../chapter2_graphviz/fig_2_44_canonical_traces_overview_ch2.png)
+
 ### 4.1 CLI Command To Program Execution
 
 This is the minimal shell path from user intent to a privileged kernel request, then to a newly constructed execution context, and then back to user mode.
 When you recite it, say exactly when execution enters privileged code and what the kernel must construct (process + address space + initial context) before control can return safely.
+
+![Supplement: trace 4.1 (exec boundary is the authority pivot)](../chapter2_graphviz/fig_2_45_trace_cli_to_exec.png)
 
 | Step | User / Shell | Kernel |
 | --- | --- | --- |
@@ -738,6 +742,8 @@ That “constructed state” is the concrete meaning of “program execution ser
 
 This is the “API is not a syscall” trace.
 The wrapper is not an implementation detail to ignore; it is where user-facing conventions are reconciled with a privileged ABI boundary.
+
+![Supplement: trace 4.2 (API -> wrapper -> syscall -> authority -> return)](../chapter2_graphviz/fig_2_46_trace_api_to_syscall_return.png)
 
 | Step | Program | Wrapper | Kernel |
 | --- | --- | --- | --- |
@@ -756,6 +762,8 @@ This trace exists to force you to “feel” the extra boundary.
 Service logic runs in a user-space server, which improves fault containment but adds communication and scheduling cost.
 When you reproduce it, name where the kernel mediates IPC and where the server’s correctness becomes part of overall service correctness.
 
+![Supplement: trace 4.3 (microkernel request adds IPC + scheduling points)](../chapter2_graphviz/fig_2_47_trace_microkernel_ipc.png)
+
 | Step | Client | Microkernel | User-Space Server |
 | --- | --- | --- | --- |
 | request formed | sends message | mediates IPC | waiting |
@@ -770,6 +778,8 @@ You gain fault containment, but you pay additional scheduling and IPC overhead a
 
 Boot is the start-up structure.
 You are tracking who controls the CPU before the kernel exists and when the kernel becomes the resident authority that can then start user-space services.
+
+![Supplement: trace 4.4 (boot is an authority handoff chain)](../chapter2_graphviz/fig_2_48_trace_boot_authority_chain.png)
 
 | Step | Machine State | Controlling Code |
 | --- | --- | --- |

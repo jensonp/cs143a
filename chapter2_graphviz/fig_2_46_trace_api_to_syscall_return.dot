@@ -1,0 +1,80 @@
+digraph fig_2_46_trace_api_to_syscall_return {
+  rankdir=LR;
+  bgcolor="white";
+
+  graph [
+    fontname="Latin Modern Roman"
+    fontsize=18
+    labelloc="t"
+    label="Trace 4.2: API call -> wrapper -> syscall -> kernel -> return"
+    nodesep=0.55
+    ranksep=0.85
+  ];
+
+  node [
+    fontname="Latin Modern Roman"
+    fontsize=12
+    shape=box
+    style="rounded,filled"
+    fillcolor="#F7F7F7"
+    color="#444444"
+    penwidth=1.2
+  ];
+
+  edge [
+    fontname="Latin Modern Roman"
+    fontsize=11
+    color="#444444"
+    penwidth=1.15
+    arrowsize=0.8
+  ];
+
+  subgraph cluster_prog {
+    label="Program";
+    fontname="Latin Modern Roman";
+    fontsize=13;
+    color="#AAAAAA";
+    style="rounded";
+
+    p1 [fillcolor="#E9F2FF" label=<<B>1) call site</B><BR/><FONT POINT-SIZE="11">API invoked</FONT>>];
+    p2 [fillcolor="#E9F2FF" label=<<B>5) return</B><BR/><FONT POINT-SIZE="11">status/result received</FONT>>];
+  }
+
+  subgraph cluster_wrap {
+    label="Library wrapper";
+    fontname="Latin Modern Roman";
+    fontsize=13;
+    color="#AAAAAA";
+    style="rounded";
+
+    w1 [fillcolor="#FFF7E6" label=<<B>2) packaging</B><BR/><FONT POINT-SIZE="11">marshal args, ABI</FONT>>];
+    w2 [fillcolor="#FFF7E6" label=<<B>4) adapt return</B><BR/><FONT POINT-SIZE="11">convert conventions</FONT>>];
+  }
+
+  subgraph cluster_kernel {
+    label="Kernel (authority + bookkeeping)";
+    fontname="Latin Modern Roman";
+    fontsize=13;
+    color="#AAAAAA";
+    style="rounded";
+
+    k1 [shape=box3d fillcolor="#EAF7EA" label=<<B>3) syscall entry</B><BR/><FONT POINT-SIZE="11">mode switch</FONT>>];
+    k2 [shape=box3d fillcolor="#DFF3DF" label=<<B>service</B><BR/><FONT POINT-SIZE="11">validate pointers/lengths,<BR/>update authoritative state</FONT>>];
+    k3 [shape=box3d fillcolor="#EAF7EA" label=<<B>exit</B><BR/><FONT POINT-SIZE="11">return to user mode</FONT>>];
+    k1 -> k2 -> k3;
+  }
+
+  p1 -> w1 -> k1 [label="boundary: syscall/trap"];
+  k3 -> w2 -> p2;
+
+  note [
+    shape=note
+    style="filled"
+    fillcolor="#FFFFFF"
+    color="#777777"
+    fontcolor="#333333"
+    label="Rehearsal cue:\nAPI expresses intent; wrapper speaks the ABI;\nkernel validates and commits effects to authoritative state."
+  ];
+  note -> k2 [style=dotted arrowhead=none color="#777777"];
+}
+

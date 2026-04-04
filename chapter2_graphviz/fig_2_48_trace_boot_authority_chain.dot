@@ -1,0 +1,54 @@
+digraph fig_2_48_trace_boot_authority_chain {
+  rankdir=LR;
+  bgcolor="white";
+
+  graph [
+    fontname="Latin Modern Roman"
+    fontsize=18
+    labelloc="t"
+    label="Trace 4.4: boot authority chain (who runs next before the OS exists?)"
+    nodesep=0.55
+    ranksep=0.85
+  ];
+
+  node [
+    fontname="Latin Modern Roman"
+    fontsize=12
+    shape=box
+    style="rounded,filled"
+    fillcolor="#F7F7F7"
+    color="#444444"
+    penwidth=1.2
+  ];
+
+  edge [
+    fontname="Latin Modern Roman"
+    fontsize=11
+    color="#444444"
+    penwidth=1.1
+    arrowsize=0.8
+  ];
+
+  reset [shape=oval style="filled" fillcolor="#FFF7E6" label="Reset / power on"];
+  fw [fillcolor="#FFF7E6" label=<<B>Firmware</B><BR/><FONT POINT-SIZE="11">minimal init + diagnostics</FONT>>];
+  bl [fillcolor="#FFF7E6" label=<<B>Bootloader</B><BR/><FONT POINT-SIZE="11">locate + load kernel</FONT>>];
+  img [shape=folder fillcolor="#E9F2FF" label="Boot image\n(kernel + config)"];
+  kernel [shape=box3d style="filled" fillcolor="#EAF7EA" label=<<B>Kernel</B><BR/><FONT POINT-SIZE="11">trap tables, VM,\nscheduler, drivers</FONT>>];
+  init [fillcolor="#E9F2FF" label=<<B>Init + services</B><BR/><FONT POINT-SIZE="11">user space begins</FONT>>];
+  usable [shape=oval style="filled" fillcolor="#E9F2FF" label="Usable system"];
+
+  reset -> fw -> bl -> kernel -> init -> usable;
+  img -> bl [style=dashed label="read/verify" fontcolor="#777777" color="#777777"];
+
+  prereq [
+    shape=note
+    style="filled"
+    fillcolor="#FFFFFF"
+    color="#777777"
+    fontcolor="#333333"
+    label="Rehearsal cue:\nEach stage establishes prerequisites for the next:\nCPU mode/entry, memory setup, device discovery, disk access."
+  ];
+  prereq -> fw [style=dotted arrowhead=none color="#777777"];
+  prereq -> kernel [style=dotted arrowhead=none color="#777777"];
+}
+

@@ -1,0 +1,71 @@
+digraph fig_2_47_trace_microkernel_ipc {
+  rankdir=LR;
+  bgcolor="white";
+
+  graph [
+    fontname="Latin Modern Roman"
+    fontsize=18
+    labelloc="t"
+    label="Trace 4.3: microkernel client request (extra boundary + extra scheduling points)"
+    nodesep=0.55
+    ranksep=0.9
+  ];
+
+  node [
+    fontname="Latin Modern Roman"
+    fontsize=12
+    shape=box
+    style="rounded,filled"
+    fillcolor="#F7F7F7"
+    color="#444444"
+    penwidth=1.2
+  ];
+
+  edge [
+    fontname="Latin Modern Roman"
+    fontsize=11
+    color="#444444"
+    penwidth=1.15
+    arrowsize=0.8
+  ];
+
+  subgraph cluster_user {
+    label="User space (separate fault domains)";
+    fontname="Latin Modern Roman";
+    fontsize=13;
+    color="#AAAAAA";
+    style="rounded";
+
+    client [fillcolor="#E9F2FF" label=<<B>Client</B><BR/><FONT POINT-SIZE="11">forms request</FONT>>];
+    server [fillcolor="#E9F2FF" label=<<B>Server</B><BR/><FONT POINT-SIZE="11">service logic</FONT>>];
+  }
+
+  subgraph cluster_kernel {
+    label="Microkernel (privileged mediation)";
+    fontname="Latin Modern Roman";
+    fontsize=13;
+    color="#AAAAAA";
+    style="rounded";
+
+    send [shape=box3d fillcolor="#DFF3DF" label=<<B>1) send</B><BR/><FONT POINT-SIZE="11">IPC syscall</FONT>>];
+    route [shape=box3d fillcolor="#EAF7EA" label=<<B>2) route + check</B><BR/><FONT POINT-SIZE="11">permissions + endpoints</FONT>>];
+    sched [shape=box3d fillcolor="#EAF7EA" label=<<B>3) schedule</B><BR/><FONT POINT-SIZE="11">choose runnable server</FONT>>];
+    recv [shape=box3d fillcolor="#DFF3DF" label=<<B>4) reply</B><BR/><FONT POINT-SIZE="11">deliver result</FONT>>];
+  }
+
+  client -> send [label="request"];
+  send -> route -> sched -> server [label="deliver"];
+  server -> recv [label="reply IPC"];
+  recv -> client [label="result"];
+
+  note [
+    shape=note
+    style="filled"
+    fillcolor="#FFFFFF"
+    color="#777777"
+    fontcolor="#333333"
+    label="Why it matters:\nIsolation improves (server can crash/restart),\nbut the request path now includes IPC + context switches."
+  ];
+  note -> sched [style=dotted arrowhead=none color="#777777"];
+}
+

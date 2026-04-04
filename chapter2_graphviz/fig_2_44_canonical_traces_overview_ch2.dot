@@ -1,0 +1,63 @@
+digraph fig_2_44_canonical_traces_overview_ch2 {
+  rankdir=TB;
+  bgcolor="white";
+
+  graph [
+    fontname="Latin Modern Roman"
+    fontsize=18
+    labelloc="t"
+    label="Canonical traces (Chapter 2): the boundary stories you must be able to rehearse"
+    nodesep=0.55
+    ranksep=0.65
+  ];
+
+  node [
+    fontname="Latin Modern Roman"
+    fontsize=12
+    shape=box
+    style="rounded,filled"
+    fillcolor="#F7F7F7"
+    color="#444444"
+    penwidth=1.2
+  ];
+
+  edge [
+    fontname="Latin Modern Roman"
+    fontsize=11
+    color="#444444"
+    penwidth=1.1
+    arrowsize=0.8
+  ];
+
+  center [
+    fillcolor="#E9F2FF"
+    label=<
+      <B>Boundary-first rehearsal</B><BR/>
+      <FONT POINT-SIZE="11">
+        For each trace, name (1) the boundary crossed,<BR/>
+        (2) what authoritative state changes, and (3) the cost/fault scope.
+      </FONT>
+    >
+  ];
+
+  t1 [fillcolor="#FFF7E6" label="4.1 CLI -> exec\n(user intent -> privileged launch)"];
+  t2 [fillcolor="#FFF7E6" label="4.2 API -> wrapper -> syscall\n(intent packaging -> authority)"];
+  t3 [fillcolor="#FFF7E6" label="4.3 Microkernel request\n(IPC + extra scheduling points)"];
+  t4 [fillcolor="#FFF7E6" label="4.4 Boot authority chain\n(firmware -> loader -> kernel)"];
+
+  center -> t1;
+  center -> t2;
+  center -> t3;
+  center -> t4;
+
+  note [
+    shape=note
+    style="filled"
+    fillcolor="#FFFFFF"
+    color="#777777"
+    fontcolor="#333333"
+    label="These traces recur under new names.\nLater chapters add details; they do not change the shape."
+  ];
+  note -> center [style=dotted arrowhead=none color="#777777"];
+}
+

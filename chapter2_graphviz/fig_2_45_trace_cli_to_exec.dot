@@ -1,0 +1,74 @@
+digraph fig_2_45_trace_cli_to_exec {
+  rankdir=LR;
+  bgcolor="white";
+
+  graph [
+    fontname="Latin Modern Roman"
+    fontsize=18
+    labelloc="t"
+    label="Trace 4.1: CLI command to program execution (exec is the pivot into authority)"
+    nodesep=0.55
+    ranksep=0.85
+  ];
+
+  node [
+    fontname="Latin Modern Roman"
+    fontsize=12
+    shape=box
+    style="rounded,filled"
+    fillcolor="#F7F7F7"
+    color="#444444"
+    penwidth=1.2
+  ];
+
+  edge [
+    fontname="Latin Modern Roman"
+    fontsize=11
+    color="#444444"
+    penwidth=1.15
+    arrowsize=0.8
+  ];
+
+  subgraph cluster_user {
+    label="User space (shell/interface logic)";
+    fontname="Latin Modern Roman";
+    fontsize=13;
+    color="#AAAAAA";
+    style="rounded";
+
+    s1 [fillcolor="#E9F2FF" label=<<B>1) command entered</B><BR/><FONT POINT-SIZE="11">shell reads + parses text</FONT>>];
+    s2 [fillcolor="#E9F2FF" label=<<B>2) resolution</B><BR/><FONT POINT-SIZE="11">find executable / built-in</FONT>>];
+    s3 [fillcolor="#FFF7E6" label=<<B>3) launch request</B><BR/><FONT POINT-SIZE="11">exec-style syscall</FONT>>];
+    s4 [fillcolor="#E9F2FF" label=<<B>4) return</B><BR/><FONT POINT-SIZE="11">shell waits or continues</FONT>>];
+
+    s1 -> s2 -> s3;
+  }
+
+  subgraph cluster_kernel {
+    label="Kernel space (authoritative launch)";
+    fontname="Latin Modern Roman";
+    fontsize=13;
+    color="#AAAAAA";
+    style="rounded";
+
+    k1 [shape=box3d fillcolor="#EAF7EA" label=<<B>validate</B><BR/><FONT POINT-SIZE="11">path, perms, format</FONT>>];
+    k2 [shape=box3d fillcolor="#DFF3DF" label=<<B>construct context</B><BR/><FONT POINT-SIZE="11">PID, address space,<BR/>initial regs/stack</FONT>>];
+    k3 [shape=box3d fillcolor="#EAF7EA" label=<<B>enter user mode</B><BR/><FONT POINT-SIZE="11">start program</FONT>>];
+
+    k1 -> k2 -> k3;
+  }
+
+  s3 -> k1 [label="boundary: syscall/trap"];
+  k3 -> s4 [label="shell regains control\nlater (wait)"];
+
+  note [
+    shape=note
+    style="filled"
+    fillcolor="#FFFFFF"
+    color="#777777"
+    fontcolor="#333333"
+    label="Rehearsal cue:\nBefore exec, it is interface logic.\nAfter exec, the kernel constructs and installs the initial protected state."
+  ];
+  note -> k2 [style=dotted arrowhead=none color="#777777"];
+}
+

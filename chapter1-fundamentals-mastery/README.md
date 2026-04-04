@@ -143,6 +143,9 @@ When you rehearse this trace from memory, say out loud (1) when you cross the us
 | 5 | new process gets initial registers and stack | kernel sets return point to user entry | execution context is explicitly constructed |
 | 6 | new process begins executing | kernel returns to user mode | privilege is dropped after setup |
 
+The table is intentionally “boring”: it is the same control handoff every OS must perform.
+Mastery is being able to name the privileged *state constructed* (identity, address space, initial registers/stack) and the privileged *checks enforced* (permissions, executable format) before the kernel can safely return to user mode.
+
 **Code Bridge**
 
 - In a teaching kernel, inspect the path from shell command parsing to `exec`.
@@ -215,6 +218,9 @@ The mastery goal is to be able to explain how the OS turns an I/O wait into “s
 | completion | current CPU work interrupted | device signals done | handler records completion and wakeup | caller becomes runnable |
 | after interrupt | scheduler eventually runs caller again | idle/ready | syscall finishes and returns | running |
 
+The key learning is that “blocked” is not a feeling; it is a kernel state plus queue membership that removes the caller from CPU competition until the interrupt path re-admits it.
+If you imagine the CPU “waiting for the disk,” you will systematically misunderstand utilization and why multiprogramming works.
+
 **Code Bridge**
 
 - Later, read a trap handler and a syscall dispatcher side by side.
@@ -284,6 +290,9 @@ To reproduce this from memory, you must be able to name what gets saved (so A ca
 | switch | A context saved | active for next slice | B context loaded | B running |
 | return | B runs in user mode | armed again | kernel leaves CPU | sharing continues |
 
+Read this as an enforcement loop: without a privileged timer interrupt, the kernel has no guaranteed moment to take the CPU back and re-run the selection rule.
+The context save/restore is the concrete mechanism that makes “fairness” real: it turns a policy decision into a different instruction stream executing on the hardware.
+
 **Code Bridge**
 
 - Later, inspect process state transitions, `sleep`, `wakeup`, and scheduler selection.
@@ -347,6 +356,9 @@ When you cover the table and recite it, force yourself to answer: “If the mach
 | data used repeatedly | CPU hits a nearby fast copy | cache fills from memory | coherence rules decide whether cached data is valid |
 | data modified | process writes | cache/memory becomes dirty | writeback/journaling rules define ordering and durability |
 | persistence restored | OS writes back | memory updates disk copy | commit point defines when disk becomes authoritative |
+
+The table is a reminder that “fast” in storage systems almost always means “there are more copies,” and more copies means you must define authority and ordering.
+Later filesystem chapters are mostly details of this same story: which write becomes durable when, and what rule makes readers see the “right” version after crashes or reordering.
 
 **Code Bridge**
 
@@ -460,6 +472,9 @@ If you can explain why the kernel must validate even “well-intended” request
 | decision | access denied or process faulted | kernel records failure and returns error / signal | enforcement visible |
 | aftermath | process handles error or dies | system remains under kernel control | isolation preserved |
 
+Protection becomes visible as a constrained failure mode: an error code, a signal, or a terminated process, rather than silent corruption of the whole machine.
+If you can explain why “enforcement must be at the authority boundary,” you can later reason about why validating syscall input and checking permissions is not optional polish but the mechanism of isolation.
+
 **Code Bridge**
 
 - Later, inspect syscall argument validation, permission checks, and the path for faults caused by illegal access.
@@ -543,6 +558,9 @@ When reproducing this, make sure you can say what *must* be initialized for the 
 | init/system process starts | user-space environment prepared | services begin |
 | first user process runs | normal workloads possible | OS now in steady-state control |
 
+Say explicitly what changed at each step: which code is trusted, which code is resident in memory, and what resources are now initialized enough to support the next stage.
+If you cannot state why “kernel not yet in memory” forces firmware/bootstrap code to exist, you are memorizing labels rather than the authority story.
+
 ![Supplement: boot and early control path](../chapter1_graphviz/fig_s1_boot_interrupt_path.svg)
 
 ### 4.2 Blocking I/O With Interrupt Completion
@@ -560,6 +578,9 @@ Mastery means you can explain where the waiting condition is recorded (kernel bo
 | wakeup | scheduler may choose caller later | idle/ready | caller marked runnable |
 | return | caller resumes | no longer needed for this request | syscall returns |
 
+The “lanes” are the conceptual fix for the classic bug: thinking the CPU must sit idle during I/O.
+The OS creates overlap by (1) recording a precise waiting condition, (2) scheduling other runnable work, and (3) using the interrupt completion path to re-admit the sleeper.
+
 ### 4.3 Timer Preemption
 
 This is the minimal time-sharing loop.
@@ -573,6 +594,9 @@ When you rehearse it, explicitly name the non-negotiables: a privileged timer, a
 | decision | A stops temporarily | timer reset | scheduler chooses next runnable |
 | switch | B state loaded | ready for next timeout | kernel returns to user mode |
 
+The timer is the control knob that turns “time sharing” into an invariant instead of a hope.
+The scheduler chooses from a data structure representing runnable truth; the dispatcher is the machinery that makes the chosen context become the live CPU state.
+
 ### 4.4 Faulting Memory Access
 
 This trace is the “hardware catches you, kernel decides your fate” pattern.
@@ -585,6 +609,9 @@ If you can describe what state must be inspected to decide (faulting address, ac
 | fault detected | instruction cannot complete | exception enters kernel |
 | diagnosis | process paused | kernel decides repairable vs fatal |
 | outcome | resume or terminate | protection and correctness preserved |
+
+Faults are the “kernel decides your fate” pattern: hardware detects a violation, but only the kernel can interpret it against the current policy and mapping state.
+This is why virtual memory is an OS topic: correctness depends on privileged metadata (page tables, permissions, residency) that user code cannot be allowed to forge.
 
 ## 5. Key Questions (Answered)
 

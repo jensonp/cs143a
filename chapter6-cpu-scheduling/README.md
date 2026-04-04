@@ -129,6 +129,9 @@ When you cover this table, force yourself to point to where the runnable set cha
 | 4 | switch | dispatcher saves/restores context | decision becomes real |
 | 5 | return | kernel returns to user mode | chosen thread runs |
 
+The table is intentionally minimal because the scheduler’s job is structurally minimal: regain control, maintain runnable truth, choose, and switch.
+If you can map each row to a concrete code path (interrupt handler, wakeup, `schedule()`, context switch), scheduling stops being “an algorithm” and becomes an operating-system control loop.
+
 **Code Bridge**
 
 - Find: timer interrupt path, `schedule()`-like function, run-queue structure, context-switch assembly.
@@ -244,6 +247,9 @@ When you cover the table, explicitly separate (1) control regain, (2) state pres
 | choose | scheduler runs | next selected | policy applied |
 | restore | B context restored | return to user mode | B runs |
 
+This is the same save-decision-restore protocol as Chapter 3, now viewed from the CPU-scheduling lens.
+The subtle safety constraint is that preemption cannot occur at arbitrary points inside the kernel; the OS must define safe preemption points so invariants are not torn mid-update.
+
 **Code Bridge**
 
 - Look for: tick handler, reschedule flag, and the place the kernel decides to switch before returning to user mode.
@@ -310,6 +316,9 @@ When you cover it, relate `q` to two concrete costs: (1) context switch cost, an
 | very small | more preemptions | high overhead, cache churn |
 | very large | less preemption | poor interactivity |
 | comparable to typical burst | balanced | acceptable response + throughput |
+
+Quantum selection is where policy meets machine cost.
+If `q` is smaller than typical bursts, you buy responsiveness; if it is smaller than context-switch cost, you buy thrash.
 
 **Code Bridge**
 
@@ -380,6 +389,9 @@ When you cover it, connect each row to an explicit fear: responsiveness loss (in
 | short bursts, blocks often | interactive / I/O-bound | stays high priority |
 | long bursts, uses full quantum | CPU-bound | demoted to lower queues |
 | waits too long in low queue | risk of starvation | boosted upward periodically |
+
+Feedback schedulers are making a bet: “behavior predicts intent.”
+This is why MLFQ needs anti-starvation boosts and why real systems worry about gaming; the mechanism is simple, but the workload can adapt to the policy.
 
 **Code Bridge**
 
@@ -487,6 +499,9 @@ When you cover it, say what data is lost on migration (cache state) and what is 
 | run | CPU1 executes migrated work | - | throughput up if locality cost small |
 | stabilize | keep affinity if stable | reduce migrations | avoid thrash |
 
+This table is the locality-versus-balance trade in miniature.
+Migration turns idle capacity into service capacity, but it can also destroy cache warmth and NUMA locality; the “stabilize” step is the difference between balancing and thrashing.
+
 **Code Bridge**
 
 - Find: per-CPU run queues, migration paths, and the knobs that influence affinity (weights, pinning, NUMA policy).
@@ -544,6 +559,9 @@ When you cover the table, emphasize that under overload no algorithm can meet al
 | --- | --- | --- | --- |
 | choose | tasks have deadlines | pick earliest deadline | minimizes imminent miss risk |
 | run | execute until completion or preemption | deadline order changes as time passes | dynamic priorities |
+
+EDF works by turning time into priority, which is why it must be reevaluated continuously.
+Under overload, EDF cannot perform miracles; admission control is what keeps “deadline scheduling” inside the feasible region.
 
 **Code Bridge**
 
@@ -620,6 +638,9 @@ When you reproduce it, separate the forcing event (timer/interrupt) from the dec
 | switch | save/restore | dispatcher runs |
 | run | return to user | chosen thread executes |
 
+Practice naming which part is “policy” (choose) and which part is “mechanism” (switch).
+Most scheduler debates are policy debates, but correctness failures often happen in the mechanism and bookkeeping that make the decision real.
+
 ### 4.2 Compute Waiting/Turnaround/Response from a Gantt Chart
 
 These definitions are the vocabulary for arguing about schedules.
@@ -631,6 +652,9 @@ When you cover this table, you should be able to compute each quantity from an a
 | turnaround | arrival -> completion |
 | waiting | turnaround - CPU burst (single-burst model) |
 
+These are the translation layer between a picture (Gantt chart) and an argument (“this policy is better”).
+If you can compute them quickly, you can evaluate schedules without hand-waving about “feels faster.”
+
 ### 4.3 RR Quantum Tradeoff
 
 This is the one-line tradeoff that drives RR design.
@@ -641,6 +665,9 @@ Small `q` buys responsiveness by switching often, but it spends more time paying
 | smaller | improves | worsens |
 | larger | worsens | improves |
 
+Say the tradeoff as a sentence: smaller `q` improves interactivity by reducing time-to-first-run and time-between-turns, but increases overhead and cache churn.
+This is why RR without an explicit `q` is not a complete design.
+
 ### 4.4 Starvation and Aging (Priority Scheduling)
 
 This is the minimal starvation fix.
@@ -650,6 +677,9 @@ Strict priority encodes a total order that can permanently exclude low priority 
 | --- | --- | --- |
 | strict priority | low-priority waits forever | starvation |
 | aging | waiting raises priority | bounded waiting restored |
+
+Aging converts “time spent waiting” into a priority signal, turning an unbounded fairness failure into a bounded-waiting guarantee.
+When you see starvation in practice, it is usually a missing or ineffective version of this exact mechanism.
 
 ### 4.5 MLFQ Movement Rules
 
@@ -662,6 +692,9 @@ Reproduce them and then explain the intent: punish CPU hogs (demote), reward int
 | blocks early | keep (or promote) |
 | waits too long | periodic boost |
 
+These rules are the implementation of the “interactive vs batch” hypothesis.
+If you remember only one thing: boosts exist because any heuristic that demotes can create starvation unless something lifts long-waiting jobs back up.
+
 ### 4.6 Multiprocessor Balancing
 
 This is the minimal load-balance loop.
@@ -673,6 +706,9 @@ The key mastery check is to be able to explain when migration helps (idle core e
 | migration | push/pull work | receives work |
 | stabilize | avoid thrash | preserve locality |
 
+Reproduce this as a *control loop* with a stability problem.
+Without a stabilizing rule, load balancing can oscillate and make performance worse on more cores due to migration and coherence overhead.
+
 ### 4.7 EDF Choice
 
 EDF is the “compare deadlines, run earliest” loop.
@@ -682,6 +718,9 @@ When you reproduce it, emphasize that priorities are time-dependent and that und
 | --- | --- | --- |
 | evaluate | compare deadlines | pick earliest |
 | run | execute | adjust as deadlines approach |
+
+This is the smallest dynamic-priority trace: the “earliest” task can change as time passes and as new tasks arrive.
+To master it, always say what happens under overload: either admission control rejects work or deadlines become impossible and correctness is lost.
 
 ## 5. Key Questions (Answered)
 

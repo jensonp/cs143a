@@ -125,6 +125,9 @@ When you cover this table, point to the first row where privilege is required an
 | privileged entry | utility or wrapper enters kernel | utility enters kernel | wrapper enters kernel | kernel checks permissions |
 | implementation | file-system metadata updated | file-system metadata updated | file-system metadata updated | one service, many interfaces |
 
+The important line is where the request first becomes privileged.
+Everything above that row is replaceable packaging; everything below that row must preserve filesystem invariants and protection guarantees for *every* caller, not only polite tools.
+
 **Code Bridge**
 
 - When reading a shell or utility, ask which parts are interface logic and which parts merely package a kernel request.
@@ -184,6 +187,9 @@ When you rehearse it, the pivot is: user intent becomes privileged execution onl
 | path resolution | shell finds executable or built-in | still not authoritative yet | front-end control remains unprivileged |
 | launch request | shell issues exec-style request | validates executable and permissions | authority begins here |
 | execution starts | shell may wait or continue | creates process and returns to user mode | user interface and privileged setup stay separate |
+
+This is why shells stay out of the kernel: they are powerful interfaces, but the OS cannot afford to treat interface growth as privileged code growth.
+The kernel owns the minimal, stable authority (create execution context safely); the shell owns the fast-evolving human interface.
 
 **Code Bridge**
 
@@ -253,6 +259,9 @@ The wrapper exists so the kernel does not need to implement language- and libc-s
 | boundary crossing | special instruction executed | transfers control | enters privileged handler |
 | dispatch | blocked on return | wrapper inactive | kernel identifies requested service |
 | completion | receives result | converts return convention if needed | returns status or error |
+
+Read the wrapper as a semantic adapter.
+It exists so the kernel can expose a small, stable privileged ABI while user-space libraries absorb calling conventions, convenience behavior, and compatibility over time.
 
 **Code Bridge**
 
@@ -375,6 +384,9 @@ When you cover the table, identify which steps are pure policy/orchestration (us
 | service use | utility issues file, process, or device calls | enforces permission and performs work | utility packages policy around kernel mechanisms |
 | completion | utility reports result or keeps serving | returns status and preserves system control | convenience layer stays distinct from authority layer |
 
+If you keep this boundary clear, you can debug “the OS did X” statements precisely: was it a user-space daemon’s policy, or a kernel mechanism?
+That distinction is also why many services can be restarted or replaced without rebooting, even though the kernel stays resident.
+
 **Code Bridge**
 
 - Inspect a daemon or utility and identify which work is policy, presentation, or orchestration, and which work is handed off to the kernel.
@@ -489,6 +501,10 @@ When you memorize it, do not memorize names; memorize the trade: lower overhead 
 | microkernel | message to user-space server via kernel IPC | fault isolation and replaceability | message and context-switch overhead |
 | modular | direct in-kernel call into loaded module | extensibility with strong performance | module bug still runs privileged |
 
+The request path is the cost model.
+The fault domain is the safety model.
+Most OS structure arguments are just different ways of trading those two variables against each other.
+
 **Code Bridge**
 
 - In a real kernel, identify which subsystems communicate by direct call, which by message-like handoff, and which can be loaded or removed independently.
@@ -551,6 +567,9 @@ When you cover this trace, track the authority handoff: firmware -> bootstrap ->
 | kernel load | privileged core enters memory and starts subsystems | runtime OS structure begins |
 | normal operation | services, daemons, and user programs start | system becomes usable |
 
+This table is the “structure exists before services exist” proof: you cannot request an OS service until a trusted kernel is resident, but you cannot get the kernel resident without earlier trusted stages.
+Boot is therefore part of OS structure, not an afterthought.
+
 **Code Bridge**
 
 - Later, inspect bootloader configuration, trap setup, syscall instrumentation, and crash reporting paths.
@@ -585,6 +604,9 @@ When you recite it, say exactly when privilege changes and what the kernel must 
 | setup | shell waits or continues | creates process and address-space state |
 | return | shell regains control later if needed | returns to user mode |
 
+When practicing, say what the kernel *constructs* (process identity, address-space mapping, initial register state) before the return to user mode is allowed.
+That “constructed state” is the concrete meaning of “program execution service.”
+
 ### 4.2 API Call To System Call To Return
 
 This is the “API is not a syscall” trace.
@@ -597,6 +619,9 @@ The wrapper is not an implementation detail to ignore; it is where user-facing c
 | entry | special instruction executes | transfers control | enters handler |
 | service | blocked on result | inactive | checks, performs, records result |
 | return | receives status | converts return form if needed | exits to user mode |
+
+The syscall instruction is only the doorway; the real work is the protected bookkeeping on both sides: copy/validate arguments in, update authoritative state, and return results in a convention user code understands.
+If you can name which layer owns which responsibility, you can reason about performance and security at the boundary.
 
 ### 4.3 Microkernel Client Request Path
 
@@ -611,6 +636,9 @@ When you reproduce it, name where the kernel mediates IPC and where the server�
 | service work | waiting for reply | may schedule peers | performs service logic |
 | response | receives result | mediates return | sends reply |
 
+This is the same “service, interface, implementation” story with one extra twist: the implementation now lives in a restartable user-space server.
+You gain fault containment, but you pay additional scheduling and IPC overhead and must treat the server as part of the service’s correctness story.
+
 ### 4.4 Boot Path From Firmware To Usable System
 
 Boot is the start-up structure.
@@ -623,6 +651,9 @@ You are tracking who controls the CPU before the kernel exists and when the kern
 | loader stage | boot image located and loaded | bootstrap code |
 | kernel stage | core subsystems initialize | kernel |
 | normal use | services and user programs start | kernel plus user-space system programs |
+
+Reproduce this as an authority chain: which code can run next, and what minimal prerequisites it must establish (memory, device discovery, disk access) for the next stage.
+If you can narrate those prerequisites, “boot” stops being trivia and becomes the first structural trace in the OS.
 
 ## 5. Key Questions (Answered)
 

@@ -157,6 +157,9 @@ Deadlock is not “slow”; it is “no member can make progress without an exte
 | 2 | requests L2 (blocks) | requests L1 (blocks) |
 | 3 | waiting on B | waiting on A |
 
+The point is the cycle, not the timing.
+Once both edges exist, no amount of “better scheduling” fixes it; you must break one of the deadlock conditions (usually by changing acquisition order or by avoiding hold-and-wait).
+
 **Code Bridge**
 
 - In bug reports, reconstruct the *lock order* actually taken, not the intended order.
@@ -219,6 +222,9 @@ When you cover this, be explicit about the assumption: single-instance resources
 | 1 | Pi requests Rk | - |
 | 2 | Rk assigned to Pj | Pi -> Pj |
 | 3 | if cycle exists | deadlock (single-instance model) |
+
+This is the minimal data you need for deadlock detection: who owns what, and who is waiting on whom.
+In real systems this information is often distributed across lock owner fields and wait queues; the conceptual move is the same even when the graph is implicit.
 
 **Code Bridge**
 
@@ -312,6 +318,9 @@ When you cover this table, connect it directly to the four conditions: ordering 
 | always acquire locks in increasing ID order | cycles impossible |
 | release in reverse order | avoid exposing partial states |
 
+Ordering works because it turns “possible waits” into a directed acyclic graph.
+The rule must be global and enforced everywhere (including error paths); one violation is enough to reintroduce a possible cycle under contention.
+
 **Code Bridge**
 
 - In kernel code, look for lock classes and lockdep-like assertions that encode ordering rules.
@@ -370,6 +379,9 @@ When you cover this table, emphasize that `safe` is an existence proof and `unsa
 | 4 | `Work += Allocation[i]` | release on completion |
 | 5 | if all finishable | safe; else unsafe |
 
+This is avoidance as a proof obligation: you are checking for the existence of a completion order, not declaring the system deadlocked.
+The key distinction to keep saying out loud is: `unsafe` means “risk without guarantee,” not “no progress now.”
+
 **Code Bridge**
 
 - Banker shows up more in teaching, databases, and specialized admission-control systems than in general OS kernels.
@@ -427,6 +439,9 @@ When you cover this table, emphasize that recovery policy can itself become a st
 | 3 | abort/kill victim | resources released |
 | 4 | re-run detection | repeat until no deadlock |
 
+Detection plus recovery turns deadlock into an operational policy problem: which work do you destroy to regain progress?
+Without rollback/compensation and without fairness history, “kill to recover” can trade deadlock for corruption or starvation.
+
 **Code Bridge**
 
 - DBs: abort transaction is a clean rollback mechanism.
@@ -459,6 +474,9 @@ Name the edges: A holds L1 and requests L2; B holds L2 and requests L1; the cycl
 | request | L2 | L1 |
 | result | A waits on B | B waits on A |
 
+Reproduce this as two edges that close a cycle.
+If you can narrate the edges, you can also narrate the prevention rule: impose a lock order so edges cannot ever point “backward.”
+
 ### 4.2 Global Lock Ordering Prevents Cycles
 
 This is the simplest prevention proof.
@@ -469,6 +487,9 @@ If every acquisition follows one total order, you cannot form a cycle because yo
 | acquire in increasing order | circular wait impossible |
 | release in reverse | keeps invariants tidy |
 
+Think of ordering as building a partial order over locks that makes cycles structurally impossible.
+The tricky part in real code is completeness: every acquisition path, including nested calls and error handling, must obey the same order.
+
 ### 4.3 WFG Cycle Detection
 
 This is deadlock detection in the single-instance model.
@@ -478,6 +499,9 @@ Build wait edges from “waits for owner,” then run cycle detection (DFS/SCC) 
 | --- | --- | --- |
 | build edges | Pi -> Pj if Pi waits on Pj | WFG |
 | detect cycle | DFS / SCC | deadlock (single-instance model) |
+
+This is graph theory applied to ownership state: build edges from waiter to owner, then run cycle detection.
+In production systems, the hard part is capturing a consistent snapshot of “who waits on whom” without perturbing the system too much.
 
 ### 4.4 Banker Safety Check
 
@@ -491,6 +515,9 @@ You are not proving “no deadlock now”; you are checking whether there exists
 | find finishable | Need<=Work | can complete |
 | release | Work += Allocation | on completion |
 
+Rehearse this as a simulation: you pretend to finish someone, then grow `Work`, and repeat.
+The guarantee is only as good as the max-claim assumption; without truthful max claims, the “safe sequence” proof does not apply.
+
 ### 4.5 Detect + Kill Loop
 
 This is recovery by force.
@@ -502,6 +529,9 @@ The system regains progress by destroying work (killing a victim) and freeing re
 | choose victim | minimize cost |
 | abort | release resources |
 | repeat | until no deadlock |
+
+This is progress by force: you break the cycle by destroying some work.
+When you reproduce it, always state the two policy questions: “who to kill” (min cost, fairness) and “how to make killing safe” (rollback or acceptable failure semantics).
 
 ## 5. Key Questions (Answered)
 

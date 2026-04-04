@@ -113,6 +113,9 @@ When you cover the table, point to the gap between “read the old value” and 
 | 3 | store 1 | - | 1 |
 | 4 | - | store 1 | 1 |
 
+The important observation is that both threads were “locally correct” but globally wrong because the read-modify-write was not atomic.
+Whenever you see an update that depends on a prior read of shared state, assume there is a race surface unless a lock or atomic RMW closes it.
+
 **Code Bridge**
 
 - If you see `x = x + 1` on shared data, assume it is a multi-step read-modify-write that must be protected or made atomic.
@@ -170,6 +173,9 @@ When you cover the table, focus on the symmetry break: both can want in, but `tu
 | wait | checks `want[B] && turn==B` | checks `want[A] && turn==A` | one waits |
 | enter | one proceeds | other spins | mutual exclusion holds |
 
+This is mutual exclusion as a *protocol proof*, not as a performance recipe.
+It shows that correctness can come from symmetry breaking and explicit waiting conditions, and also why modern systems rely on hardware atomics and memory-ordering primitives rather than software-only assumptions.
+
 **Code Bridge**
 
 - Treat Peterson as a proof artifact: it teaches what must be true, not what you should ship.
@@ -225,6 +231,9 @@ When you cover the table, make sure you can explain when this is acceptable (ver
 | 1 | TAS returns 0, sets 1 | - | acquired |
 | 2 | in critical section | TAS returns 1, stays 1 | B spins |
 | 3 | releases lock (sets 0) | TAS returns 0, sets 1 | B acquires |
+
+The key cost is visible here: contention turns waiting into repeated atomic operations and cache-line bouncing.
+That is why spinlocks are reserved for short, bounded critical sections (often in kernel contexts) and why long waits demand blocking locks.
 
 **Code Bridge**
 
@@ -282,6 +291,9 @@ When you cover the table, narrate the two-phase structure: fast path for unconte
 | critical | runs | blocked | owner=A |
 | release | unlocks | wakes | B made runnable |
 | handoff | continues | acquires after scheduled | owner=B |
+
+This is the “waiting becomes state” transition: B stops burning CPU and becomes a queued kernel object until the unlock path re-admits it.
+The subtle correctness requirement is the enqueue-before-sleep ordering; get that wrong and the system can lose wakeups even though the lock itself is “correct.”
 
 **Code Bridge**
 
@@ -453,6 +465,9 @@ When you cover it, say the predicate out loud (what must become true), and expla
 | signal | - | signals condition | waiter runnable |
 | resume | wakes, reacquires mutex, re-checks | releases mutex | safe progress |
 
+Condition variables are about waiting on *meaning* (the predicate), not on signals.
+Under Mesa semantics, `signal` only makes the waiter runnable; correctness comes from re-checking the predicate under the mutex, which is why the loop is non-negotiable.
+
 **Code Bridge**
 
 - Look for `sleep`/`wakeup` that is tied to a lock: that is the core monitor idea in kernel form.
@@ -527,6 +542,9 @@ When you reproduce it, explicitly say that the bug is not “both stored 1,” b
 | store | 1 | - | 1 |
 | store | - | 1 | 1 |
 
+Rehearse this as “RMW is not atomic.”
+The bug is the interleaving window between read and write; the fix is to make that window disappear via a mutex or an atomic fetch-and-add style primitive.
+
 ### 4.2 Contended Mutex Acquire
 
 This is the blocking-lock correctness core.
@@ -539,6 +557,9 @@ The skill is to be able to explain how the waiter does not waste CPU, and why �
 | release | A unlocks | B wakes | handoff point |
 | acquire | - | B locks | mutual exclusion preserved |
 
+The mastery checkpoint is to explain why B sleeps instead of spins, and why it cannot miss the wakeup.
+The whole protocol exists to make “I am waiting” a kernel-recorded fact before the thread stops running.
+
 ### 4.3 Semaphore Wait/Signal
 
 Semaphores are “counter + queue” as one mechanism.
@@ -548,6 +569,9 @@ When you reproduce this, explicitly say what the counter means (available units)
 | --- | --- | --- | --- |
 | modify | decrement | increment | resource accounting |
 | block/wake | if unavailable, sleep | if waiters, wake one | queue semantics |
+
+Say what each component *means*: the counter is “available units,” and the queue is “who is owed progress when units appear.”
+This is why semaphores can represent capacity, permits, and bounded buffers, but are also easy to misuse if you lose track of what the counter is counting.
 
 ### 4.4 Bounded Buffer With `empty/full/mutex`
 
@@ -561,6 +585,9 @@ When you cover it, you should be able to explain which semaphore protects which 
 | exclusion | `wait(mutex)` | `wait(mutex)` | buffer structure safe |
 | publish | `signal(full)` | `signal(empty)` | handoff is explicit |
 
+This is three invariants in one pattern: capacity, exclusion, and handoff ordering.
+If you can map each semaphore to the invariant it protects, you can derive the correct sequence rather than memorizing “producer calls these functions.”
+
 ### 4.5 Condition Variable Wait
 
 Condition variables are “wait on meaning,” not “wait on time.”
@@ -572,6 +599,9 @@ When you reproduce it, say why `while` is required (Mesa semantics and spurious 
 | check | holds mutex | held | predicate false |
 | wait | releases + sleeps | released | queued |
 | wake | reacquires | held again | predicate re-checked |
+
+The table is intentionally minimal: it highlights that `wait` is an atomic “release mutex + sleep” and that wakeup is not permission to proceed.
+If you remember only one rule: always re-check the predicate under the mutex, because the signal is not a guarantee that the condition still holds.
 
 ## 5. Key Questions (Answered)
 

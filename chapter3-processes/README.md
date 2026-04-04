@@ -157,6 +157,10 @@ When you cover the table, do not recite labels; recite the cause that justifies 
 | wakeup | `waiting -> ready` | event completes |
 | exit | `running -> terminated` | execution ends |
 
+This is a kernel contract, not a labeling scheme.
+The state names matter only because they constrain what the OS is allowed to do next: who can be scheduled, who must wait, and which event can legally re-admit the process.
+If you cannot name the event that will wake a waiting process, you do not yet have an operational process model.
+
 **Code Bridge**
 
 - In scheduler code, ask where the process state field changes and which event justifies each transition.
@@ -320,6 +324,10 @@ When you cover the table, say why each move is allowed: dispatch consumes CPU se
 | I/O completes | leaves device wait queue, reenters ready queue | runnable again |
 | swapped out under pressure | leaves active competition temporarily | memory pressure managed |
 
+Notice that the table is really “scarcity -> bookkeeping.”
+CPU scarcity is encoded by ready/running; device scarcity by wait queues; memory scarcity by swap pressure mechanisms.
+Good OS structure keeps these meanings separated so one bottleneck does not destroy the semantics of scheduling and wakeup.
+
 **Code Bridge**
 
 - In scheduler code, identify which queue corresponds to which kind of scarcity: CPU, device, or memory.
@@ -386,6 +394,9 @@ When you rehearse it, explicitly name where the saved state lives (PCB / kernel 
 | choose | scheduler selects B | runnable set examined | next process chosen |
 | restore | B's state loaded | kernel returns to user mode | B becomes running |
 
+The correctness pressure here is atomicity: saving state, changing queues/state, and restoring the next context must be consistent even under interrupts and (in later chapters) multiple CPUs.
+This is why context-switch code is small and carefully structured: it is the bridge between policy (which should run) and physics (which registers and address space are live on the CPU).
+
 **Code Bridge**
 
 - In a teaching kernel, inspect the timer interrupt path and the scheduler handoff to see where save, decision, and restore each occur.
@@ -451,6 +462,9 @@ When you cover the table, force yourself to say: which aspects are inherited (fi
 | post-fork | continues or waits | starts as copy-like execution image | ancestry established |
 | exec | may remain unchanged | image replaced | child diverges into new program |
 
+The practical payoff is that user-space tools (shells, servers) can build pipelines by controlling inheritance (open files, pipes, credentials) and then selecting the program image via `exec`.
+The kernel exports the container and replacement mechanism; user space owns the orchestration policy.
+
 **Code Bridge**
 
 - Inspect where the kernel copies process metadata, where it duplicates or references resources, and where `exec` replaces the address-space image.
@@ -513,6 +527,9 @@ When you cover the table, identify what remains after exit (a small kernel recor
 | zombie phase | not executing, table entry retained | parent may still collect outcome |
 | parent waits | status retrieved | final cleanup authorized |
 | removal | table entry deleted | lifecycle complete |
+
+This is why zombies consume process-table space despite doing no computation: the kernel is preserving observability, not execution.
+The final deletion boundary is `wait`, which turns process cleanup into an explicit, ordered protocol step instead of an implicit side effect of “stopping.”
 
 **Code Bridge**
 
@@ -628,6 +645,9 @@ When you cover this table, say what synchronization primitive you would use to e
 | consume | idle or producing other data | holds readable item | reads item only when protocol says valid |
 | release | may continue producing | slot becomes reusable | signals or records consumption |
 
+A fast mental check after reproducing this trace is to name the invariant you fear most: overwriting unread data, consuming unpublished data, or losing a wakeup.
+Shared memory buys performance by removing per-exchange mediation, so you must “pay back” that missing mediation with explicit ordering and synchronization rules.
+
 **Code Bridge**
 
 - In shared-memory examples, identify which parts the kernel set up once and which parts the processes must coordinate repeatedly.
@@ -735,6 +755,9 @@ When you cover the table, explicitly state where a client could block (on send, 
 | service | waits for reply or continues | may buffer, schedule, or route | performs work |
 | reply | receives result | returns message or reply | sends outcome |
 
+Treat this as a protocol with explicit blocking points and buffering policies, not as “bytes moved.”
+If you cannot point to where correlation (which reply matches which request) and failure/timeout handling belong, you will build systems that are fast in the happy path but brittle in the real world.
+
 **Code Bridge**
 
 - In sockets or RPC code, ask where naming ends, where marshalling begins, and where failure or timeout becomes visible to the caller.
@@ -769,6 +792,9 @@ When you reproduce it, say what *event* causes each transition and what it impli
 | blocks | `waiting` | needs I/O or event |
 | completion | `ready` | event occurs and wakeup happens |
 
+Say the *cause* out loud: dispatch, block, completion.
+If you can’t name the event, you’ll confuse “waiting” with “not scheduled,” and you will misreason about hangs, idle CPUs, and why wakeups exist as explicit kernel mechanisms.
+
 ### 4.2 Timer-Driven Preemption And Context Switch
 
 Reproduce this as a protocol, not as a “jump.”
@@ -781,6 +807,9 @@ The kernel regains control, saves outgoing state so it is resumable, chooses amo
 | save and choose | stopped temporarily | stores outgoing context and selects next | chosen |
 | restore | not running | loads chosen context | now running |
 
+Rehearse the order as an invariant: regain control -> save -> choose -> restore -> return.
+The most common mistake is imagining a context switch as “just jump to another program”; in reality it is a state protocol plus kernel bookkeeping that preserves resumability and fairness.
+
 ### 4.3 Fork Then Exec Style Split
 
 Say out loud what changes at each stage.
@@ -791,6 +820,9 @@ After creation, there is a new identity and inherited bindings; after `exec`, th
 | before split | existing execution | absent |
 | after creation | continues or waits | begins with inherited execution context |
 | after exec | may remain same program | image replaced with new program |
+
+The two-phase story is the mastery point: inheritance first, then image replacement.
+Practice naming one inherited binding (e.g., file descriptors) and one replaced component (code/data image) every time you reproduce this trace.
 
 ### 4.4 Exit To Zombie To Wait To Cleanup
 
@@ -804,6 +836,9 @@ The zombie phase is the record that allows the parent to observe outcome; `wait`
 | wait | inactive | collects status | authorizes cleanup |
 | cleanup | fully removed | receives outcome | bookkeeping ends |
 
+When you reproduce this, explicitly state why the zombie exists (status/accounting observability) and what event ends it (`wait`).
+That turns “zombie” from folklore into a concrete protocol step.
+
 ### 4.5 Shared-Memory Producer / Consumer Coordination
 
 When you reproduce this trace, emphasize the protocol state, not just the buffer.
@@ -814,6 +849,9 @@ The buffer being in shared memory does not make it safe; correctness depends on 
 | create item | ready to publish | has free slot | not yet reading |
 | publish | writes and updates protocol state | contains valid data | can now consume |
 | consume | may continue or wait | item removed or slot freed | reads only when valid |
+
+Your recitation should mention the ordering constraint: publish-before-visible and release-after-consume.
+If you can name a concrete primitive that enforces it (mutex+cond, semaphores, atomics with fences), you are reasoning about mechanisms rather than only repeating a pattern.
 
 ### 4.6 Message-Passing Request / Reply
 
@@ -826,6 +864,9 @@ Track where buffering and blocking can occur, and where ordering assumptions liv
 | send | issues operation | buffers or routes | not yet handling |
 | delivery | waiting or continuing | makes message visible | receives |
 | reply | waits or receives response | routes result | returns outcome |
+
+Here the key variable is channel semantics: buffered versus rendezvous, blocking versus nonblocking, and what ordering guarantee the channel actually provides.
+Practice stating one deadlock scenario under blocking rendezvous and one overload scenario under bounded buffering; those are the real failure modes behind the abstraction.
 
 ## 5. Key Questions (Answered)
 

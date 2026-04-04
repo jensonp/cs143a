@@ -219,6 +219,9 @@ When you apply this in real systems, treat “serial fraction” as “everythin
 | 4 | `1 / (0.10 + 0.90/4) = 3.08x` | diminishing returns |
 | 16 | `1 / (0.10 + 0.90/16) = 6.40x` | even 16 cores cannot exceed 10x |
 
+Use these numbers as a debugging compass, not as a performance guarantee.
+If you cannot point to what is acting as “serial fraction” in your system (a lock, a queue, a single-threaded subsystem, I/O serialization), adding cores will mostly add waiting.
+
 **Code Bridge**
 
 - In a real system, find the “serial fraction” by locating shared locks, shared queues, or single-threaded subsystems.
@@ -274,6 +277,9 @@ When you memorize it, focus on the kernel-visible schedulable unit, because that
 | --- | --- | --- |
 | user threads, kernel sees 1 entity | process enters kernel and sleeps | B cannot run |
 | kernel threads (1:1 or M:N with kernel support) | only A sleeps | B can keep running |
+
+The table is why “cheap user threads” can still be an expensive design mistake: the kernel cannot schedule what it cannot see.
+Reason about blocking by naming the kernel-visible schedulable unit first; everything else follows.
 
 **Code Bridge**
 
@@ -423,6 +429,9 @@ When you cover this table, be explicit about where backpressure lives: the queue
 | execute | worker runs handler | useful work happens |
 | respond | worker completes and returns | thread reused for next task |
 
+The queue is the intentional backpressure surface.
+If you delete the queue by spawning unbounded threads, you do not eliminate waiting; you push it into the scheduler and memory system as thrash, which is harder to control and often worse for tail latency.
+
 **Code Bridge**
 
 - In servers, look for “accept loop + work queue + worker threads” as the structural signature of a pool.
@@ -488,6 +497,9 @@ When you cover this table, the mastery check is: can you name which invariants w
 | reach point | - | hits cancellation point | safe stop location |
 | cleanup | - | runs cleanup handlers | invariants restored |
 | termination | - | exits | join/detach protocol completes |
+
+The distinction between “request cancel” and “terminate” is the point: safe cancellation is not immediate; it is deferred to a boundary where invariants can be restored.
+If you cannot name what cleanup must happen (release which locks, free which resources), you cannot safely use cancellation.
 
 **Code Bridge**
 
@@ -559,6 +571,9 @@ Join is not “waiting because you feel like it”; it is the reaping step that 
 | exit | may keep running | returns/exits | completion status recorded |
 | join | waits for child | already done or finishes | resources reclaimed deterministically |
 
+The lifecycle does not end at `exit`; it ends when resources are reclaimed (join/detach).
+This is why leaked joins or detached threads can become real resource leaks and stability bugs even when “the work is done.”
+
 ### 4.2 Blocking System Call Under Different Models
 
 This table is the core of “what blocks” reasoning.
@@ -569,6 +584,9 @@ To master it, you must be able to say which schedulable entity the kernel sees, 
 | M:1 user threads | blocks entire process | nobody in that process |
 | 1:1 kernel threads | blocks only that thread | other threads in same process |
 | M:N (with kernel support) | blocks one kernel thread | other kernel threads, runtime may remap |
+
+Practice this as a single question: what does the kernel schedule?
+If the kernel schedules one entity, blocking sleeps the whole process; if it schedules many, blocking is localized and the process can still make progress through other runnable threads.
 
 ### 4.3 Thread Pool Request Path
 
@@ -582,6 +600,9 @@ The pool bounds runnable concurrency and uses a queue to absorb bursts, preventi
 | execute | waits or continues | item consumed | runs handler |
 | reuse | - | queue remains | worker returns to idle |
 
+Mentally separate “arrival burst” from “runnable burst.”
+Thread pools trade queueing delay for bounded runnable concurrency, which prevents scheduler overload and makes service time more predictable under load.
+
 ### 4.4 Parallel Speedup Bound (Amdahl)
 
 This is the “compute the cap, then go hunt the serial fraction” trace.
@@ -594,6 +615,9 @@ When you reproduce it, explicitly name what counts as serial in real code (conte
 | compute bound | `1/(S + (1-S)/N)` | maximum ideal speedup |
 | interpret | diminishing returns | more cores help less as N grows |
 
+This is why performance work so often becomes “reduce contention” work.
+In practice, shrinking the effective serial fraction usually means narrowing critical sections, sharding queues, improving locality, or redesigning a single shared bottleneck.
+
 ### 4.5 Fork In A Multithreaded Process -> Exec
 
 This trace exists because `fork` is not “copy the whole process and keep going” in a multithreaded world.
@@ -604,6 +628,9 @@ After `fork`, the child has one thread but inherits memory and lock state, so it
 | fork issued | one thread calls fork | only calling thread exists | - |
 | post-fork | parent continues | child must assume locks may be inconsistent | - |
 | exec | optional | replaces image | new program defines new threading |
+
+The safety story is: `fork` gives you inheritance, but it can also give you inherited inconsistency.
+The standard mitigation is “fork then exec quickly,” minimizing the amount of code the child runs in a potentially inconsistent lock state.
 
 ### 4.6 Deferred Cancellation With Cleanup
 
@@ -616,6 +643,9 @@ Cancellation is safe only if it happens at a boundary where cleanup can restore 
 | cancellation point | - | checks pending | safe stop boundary |
 | cleanup | - | releases locks/frees resources | shared invariants restored |
 | termination | - | exits | lifecycle reaped by join/detach |
+
+Treat cancellation as a two-part mechanism: a request flag and a safe stopping boundary.
+That boundary is where the program regains control to restore invariants; without it, cancellation turns into arbitrary state corruption.
 
 ## 5. Key Questions (Answered)
 

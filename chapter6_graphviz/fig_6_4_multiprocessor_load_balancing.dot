@@ -1,0 +1,32 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.45, ranksep=0.65, splines=polyline, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75, fontname="Helvetica", fontsize=11];
+
+  subgraph cluster_cpu0 {
+    label="CPU 0";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+    rq0 [label="run queue 0", fillcolor="#D5EDF7"];
+    core0 [label="core executes\nnext runnable", fillcolor="#BFE2F1"];
+    rq0 -> core0 [label="pick next"];
+  }
+
+  subgraph cluster_cpu1 {
+    label="CPU 1";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+    rq1 [label="run queue 1", fillcolor="#D5EDF7"];
+    core1 [label="core executes\nnext runnable", fillcolor="#BFE2F1"];
+    rq1 -> core1 [label="pick next"];
+  }
+
+  rq0 -> rq1 [label="push migration\n(balance load)", style=dashed];
+  rq1 -> rq0 [label="pull migration\n(steal work)", style=dashed];
+
+  aff [label="processor affinity\n(cache locality)", fillcolor="#F5F5F5"];
+  aff -> rq0 [style=dotted, label="prefer stay"];
+  aff -> rq1 [style=dotted, label="prefer stay"];
+}

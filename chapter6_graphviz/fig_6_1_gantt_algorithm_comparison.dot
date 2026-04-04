@@ -1,0 +1,60 @@
+digraph G {
+  graph [rankdir=TB, pad=0.2, bgcolor="white"];
+  node [shape=plain, fontname="Helvetica"];
+
+  gantt [label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="6" COLOR="#5B6B73">
+      <TR>
+        <TD BGCOLOR="#F5F5F5"><B>Algorithm</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Schedule for the same workload (all arrive at t=0)</B></TD>
+      </TR>
+
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>FCFS</B></TD>
+        <TD>
+          <TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="6">
+            <TR>
+              <TD BGCOLOR="#D5EDF7">P1<br/>0-8</TD>
+              <TD BGCOLOR="#D5EDF7">P2<br/>8-12</TD>
+              <TD BGCOLOR="#D5EDF7">P3<br/>12-21</TD>
+              <TD BGCOLOR="#D5EDF7">P4<br/>21-26</TD>
+            </TR>
+          </TABLE>
+        </TD>
+      </TR>
+
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>SJF</B></TD>
+        <TD>
+          <TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="6">
+            <TR>
+              <TD BGCOLOR="#BFE2F1">P2<br/>0-4</TD>
+              <TD BGCOLOR="#BFE2F1">P4<br/>4-9</TD>
+              <TD BGCOLOR="#BFE2F1">P1<br/>9-17</TD>
+              <TD BGCOLOR="#BFE2F1">P3<br/>17-26</TD>
+            </TR>
+          </TABLE>
+        </TD>
+      </TR>
+
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>RR (q=4)</B></TD>
+        <TD>
+          <TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="6">
+            <TR>
+              <TD BGCOLOR="#F0E6FF">P1<br/>0-4</TD>
+              <TD BGCOLOR="#F0E6FF">P2<br/>4-8</TD>
+              <TD BGCOLOR="#F0E6FF">P3<br/>8-12</TD>
+              <TD BGCOLOR="#F0E6FF">P4<br/>12-16</TD>
+              <TD BGCOLOR="#F0E6FF">P1<br/>16-20</TD>
+              <TD BGCOLOR="#F0E6FF">P3<br/>20-24</TD>
+              <TD BGCOLOR="#F0E6FF">P4<br/>24-25</TD>
+              <TD BGCOLOR="#F0E6FF">P3<br/>25-26</TD>
+            </TR>
+          </TABLE>
+        </TD>
+      </TR>
+    </TABLE>
+  >];
+}
+

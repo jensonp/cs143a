@@ -1,0 +1,18 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.35, ranksep=0.55, splines=polyline, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75, fontname="Helvetica", fontsize=11];
+
+  run [label="process runs\n(on CPU)", fillcolor="#D5EDF7"];
+  tick [label="timer interrupt\n(preemption point)", fillcolor="#BFE2F1"];
+  save [label="save outgoing context\n(PCB / thread state)", fillcolor="#BFE2F1"];
+  choose [label="scheduler selects next\n(runnable set)", fillcolor="#DDEAF1"];
+  dispatch [label="dispatcher restores context\n+ returns to user mode", fillcolor="#DDEAF1"];
+
+  run -> tick [label="quantum expires\nor higher priority arrives"];
+  tick -> save [label="kernel regains control"];
+  save -> choose [label="make decision"];
+  choose -> dispatch [label="handoff"];
+  dispatch -> run [label="new process runs"];
+}
+

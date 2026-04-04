@@ -1,0 +1,43 @@
+digraph G {
+  graph [rankdir=TB, pad=0.25, nodesep=0.35, ranksep=0.55, splines=polyline, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75, fontname="Helvetica", fontsize=11];
+
+  subgraph cluster_q0 {
+    label="Q0: highest priority\n(short quantum)";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+    q0 [label="ready queue", fillcolor="#D5EDF7"];
+  }
+
+  subgraph cluster_q1 {
+    label="Q1: medium priority\n(longer quantum)";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+    q1 [label="ready queue", fillcolor="#DDEAF1"];
+  }
+
+  subgraph cluster_q2 {
+    label="Q2: lowest priority\n(FIFO or very long quantum)";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+    q2 [label="ready queue", fillcolor="#F5F5F5"];
+  }
+
+  cpu [label="CPU", fillcolor="#BFE2F1"];
+  io [label="I/O wait\n(blocked)", fillcolor="#F5F5F5"];
+
+  q0 -> cpu [label="dispatch from highest nonempty queue"];
+  q1 -> cpu [style=dashed];
+  q2 -> cpu [style=dashed];
+
+  cpu -> q1 [label="uses full quantum\n(demote)"];
+  q1 -> q2 [label="uses full quantum\n(demote)"];
+
+  cpu -> io [label="blocks early\n(keeps priority)", style=dotted];
+  io -> q0 [label="wakeup / boost\n(anti-starvation)", style=dotted];
+}
+

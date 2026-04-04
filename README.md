@@ -9,6 +9,7 @@ This repo is organized so each note lives in its own directory as a `README.md`,
 - [Chapter 3 Processes Mastery](chapter3-processes/)
 - [Chapter 4 Threads and Concurrency Mastery](chapter4-threads-and-concurrency/)
 - [Chapter 5 Process Synchronization Mastery](chapter5-process-synchronization/)
+- [Chapter 6 CPU Scheduling Mastery](chapter6-cpu-scheduling/)
 
 ## Shared Assets
 
@@ -17,6 +18,7 @@ This repo is organized so each note lives in its own directory as a `README.md`,
 - [Chapter 3 Graphviz Figures](chapter3_graphviz/)
 - [Chapter 4 Graphviz Figures](chapter4_graphviz/)
 - [Chapter 5 Graphviz Figures](chapter5_graphviz/)
+- [Chapter 6 Graphviz Figures](chapter6_graphviz/)
 - [Graphviz Learning Heuristic Template](graphviz-learning-heuristic/)
 
 ## Structure

@@ -1,0 +1,40 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.35, ranksep=0.55, splines=polyline, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75, fontname="Helvetica", fontsize=11];
+
+  subgraph cluster_proc {
+    label="process (resource container, shared)";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+
+    aspace [label="address space\n(code + data + heap + mappings)", fillcolor="#DDEAF1"];
+    files [label="open files / sockets", fillcolor="#DDEAF1"];
+    creds [label="identity + permissions", fillcolor="#DDEAF1"];
+  }
+
+  subgraph cluster_threads {
+    label="threads (execution contexts, per-thread)";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+
+    t1 [label="thread 1\nPC + registers\nstack\nTLS", fillcolor="#D5EDF7"];
+    t2 [label="thread 2\nPC + registers\nstack\nTLS", fillcolor="#D5EDF7"];
+    t3 [label="thread 3\nPC + registers\nstack\nTLS", fillcolor="#D5EDF7"];
+  }
+
+  aspace -> t1 [style=dashed];
+  aspace -> t2 [style=dashed];
+  aspace -> t3 [style=dashed];
+
+  files -> t1 [style=dashed];
+  files -> t2 [style=dashed];
+  files -> t3 [style=dashed];
+
+  creds -> t1 [style=dashed];
+  creds -> t2 [style=dashed];
+  creds -> t3 [style=dashed];
+}
+

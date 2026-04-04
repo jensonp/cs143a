@@ -1,0 +1,46 @@
+digraph G {
+  graph [rankdir=TB, pad=0.2, bgcolor="white"];
+  node [shape=plain, fontname="Helvetica"];
+
+  cmp [label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#5B6B73">
+      <TR>
+        <TD BGCOLOR="#F5F5F5"><B>Question</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Many-to-one (M:1)</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>One-to-one (1:1)</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Many-to-many (M:N)</B></TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>What does the kernel schedule?</B></TD>
+        <TD>one kernel thread for the whole process</TD>
+        <TD>one kernel thread per user thread</TD>
+        <TD>N kernel threads; runtime multiplexes M user threads</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Parallelism on multicore?</B></TD>
+        <TD>no (cannot run two user threads at once)</TD>
+        <TD>yes (threads may run on different cores)</TD>
+        <TD>yes (bounded by number of kernel threads)</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Blocking system call</B></TD>
+        <TD>blocks the whole process</TD>
+        <TD>blocks only the calling thread</TD>
+        <TD>blocks one kernel thread; runtime may remap runnable work</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Main advantage</B></TD>
+        <TD>cheap user-level thread ops</TD>
+        <TD>simple reasoning, good OS integration</TD>
+        <TD>flexibility: many user threads with bounded kernel cost</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Main cost</B></TD>
+        <TD>poor multicore + poor blocking behavior</TD>
+        <TD>kernel overhead + memory per thread</TD>
+        <TD>complex runtime-kernel coordination</TD>
+      </TR>
+    </TABLE>
+  >];
+}
+

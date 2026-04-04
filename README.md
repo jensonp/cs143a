@@ -7,12 +7,14 @@ This repo is organized so each note lives in its own directory as a `README.md`,
 - [Chapter 1 Fundamentals Mastery](chapter1-fundamentals-mastery/)
 - [Chapter 2 Operating-System Structures Mastery](chapter2-operating-system-structures/)
 - [Chapter 3 Processes Mastery](chapter3-processes/)
+- [Chapter 4 Threads and Concurrency Mastery](chapter4-threads-and-concurrency/)
 
 ## Shared Assets
 
 - [Chapter 1 Graphviz Figures](chapter1_graphviz/)
 - [Chapter 2 Graphviz Figures](chapter2_graphviz/)
 - [Chapter 3 Graphviz Figures](chapter3_graphviz/)
+- [Chapter 4 Graphviz Figures](chapter4_graphviz/)
 - [Graphviz Learning Heuristic Template](graphviz-learning-heuristic/)
 
 ## Structure

@@ -1,0 +1,53 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.35, ranksep=0.55, splines=polyline, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75, fontname="Helvetica", fontsize=11];
+
+  subgraph cluster_clients {
+    label="producers (unbounded demand)";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+
+    c1 [label="client / task source", fillcolor="#F5F5F5"];
+    c2 [label="client / task source", fillcolor="#F5F5F5"];
+    c3 [label="client / task source", fillcolor="#F5F5F5"];
+  }
+
+  subgraph cluster_pool {
+    label="thread pool (bounded runnable work)";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+
+    q [label="work queue", fillcolor="#DDEAF1"];
+    w1 [label="worker thread", fillcolor="#D5EDF7"];
+    w2 [label="worker thread", fillcolor="#D5EDF7"];
+    w3 [label="worker thread", fillcolor="#D5EDF7"];
+  }
+
+  subgraph cluster_service {
+    label="service logic";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+
+    h [label="handler executes\n(useful work)", fillcolor="#BFE2F1"];
+    out [label="result / response", fillcolor="#F5F5F5"];
+  }
+
+  c1 -> q [label="submit"];
+  c2 -> q [label="submit"];
+  c3 -> q [label="submit"];
+
+  q -> w1 [label="dequeue"];
+  q -> w2 [label="dequeue"];
+  q -> w3 [label="dequeue"];
+
+  w1 -> h;
+  w2 -> h;
+  w3 -> h;
+
+  h -> out [label="complete"];
+}
+

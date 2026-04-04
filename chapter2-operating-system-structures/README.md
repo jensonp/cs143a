@@ -329,9 +329,9 @@ Thinking in surfaces, not isolated calls, makes the taxonomy useful. A single us
 
 **What Breaks If This Fails**
 
-- If process creation is treated like a local library event, scheduling and cleanup state disappear conceptually.
-- If devices are treated like unprotected byte streams, direct hardware control leaks into user space.
-- If protection calls are treated as optional metadata, access control stops being enforceable.
+- If process creation is treated like a plain library call, you miss that the kernel must allocate a PID, wire the child into scheduling queues, inherit/close resources, and guarantee exit-time cleanup—none of which a user library can enforce.
+- If devices are treated like unprotected byte streams, direct hardware control leaks into user space and bypasses the driver’s privilege checks and interrupt coordination.
+- If protection calls are treated as optional metadata, access control becomes advisory; credentials, ACLs, and memory protections would no longer be authoritative.
 
 **Code Bridge**
 

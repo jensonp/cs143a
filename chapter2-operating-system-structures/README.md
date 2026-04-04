@@ -311,25 +311,22 @@ Responsibility for validating and updating protected state still lies in the ker
 
 **Problem**
 
-The kernel must regulate many different kinds of privileged state, and the syscall taxonomy shows which surfaces it must own.
+Syscalls are the only sanctioned boundary crossings into privileged code. The categories matter because each one is a control surface where user intent meets protected state.
 
 **Mechanism**
 
-The textbook groups system calls into categories such as:
+Think of the six categories as a loop around the kernel boundary (clockwise from top in the figure):
 
-- process control
-- file management
-- device management
-- information maintenance
-- communication
-- protection
+- **Process control**: create, exec, wait—who runs.
+- **File management**: open/read/write, metadata—what bytes get touched and named.
+- **Device management**: ioctl/driver hooks—how user code reaches hardware-backed endpoints.
+- **Communication**: pipes/sockets/ipc—how principals exchange data.
+- **Information maintenance**: time, rusage, system stats—how truth about the system is revealed.
+- **Protection**: credentials, mmap protections, ACL changes—who is allowed to act and with what memory permissions.
 
 ![System-call categories as control surfaces, laid out around the kernel authority boundary](../chapter2_graphviz/fig_2_20_syscall_categories.png)
 
-Each category is a distinct control surface where user intent enters privileged code. Process control governs creating, replacing, and waiting on execution contexts. File management covers naming, metadata, and byte-stream access. Device management is the shim into drivers and hardware-facing hooks. Information maintenance exposes time, resource accounting, and introspection. Communication handles pipes, sockets, and IPC rendezvous. Protection owns credentials, memory permissions, and ACL updates. The kernel validates arguments and policy at each surface before mutating authoritative state.
-
-These are not just memorization bins.
-They are the main places where user intent collides with authoritative system state.
+Why the taxonomy matters: every category is a chokepoint where the kernel validates arguments and policy before updating authoritative state. The grouping isn’t trivia; it’s a map of where security, correctness, and performance enforcement live.
 
 For example:
 

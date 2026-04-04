@@ -613,26 +613,51 @@ An OS that cannot be observed, configured for a target machine, or started relia
 
 **Mechanism**
 
+Chapter 2 treats these as *structure*, not “extra tools,” because they close the operational loop around the kernel:
+you must be able to start the system (boot), ensure the image matches the machine (system generation / configuration), observe boundary events (tracing/profiling), and capture state when something fails (dumps).
+
 ![Supplement: operational completeness requires observability, dumps, system generation, and boot](../chapter2_graphviz/fig_2_31_operational_completeness.png)
 
-`Tracing`, `profiling`, and instrumentation probes expose system behavior over time.
+Read this figure top-to-bottom.
+The center box (“runtime kernel services”) is what most people mean by “the OS,” but it is not operable by itself.
+The surrounding boxes are the capabilities that let an engineer deploy, start, observe, and diagnose that runtime kernel on real hardware.
+In other words: without these, the OS exists on paper but not as an operable system.
+
+**Observability: instrument the boundary, not the symptom**
+
+`Tracing`, `profiling`, and probe points matter only if they sit on the edges where kernel state changes: syscall entry/exit, scheduling decisions, I/O start/completion (interrupt paths), and faults/exceptions.
+Those are the moments when the kernel updates authoritative state (queues, mappings, buffer ownership), so those are the moments you must be able to measure and record.
 
 ![Supplement: observability pipeline from boundary events to traces to diagnosis](../chapter2_graphviz/fig_2_32_observability_pipeline.png)
 
-`Core dumps` capture failed user-process state.
-`Crash dumps` capture failed kernel state.
+Read left-to-right: boundary events feed probes; probes write into cheap buffers (ring buffers/logs); tools turn that stream into explanations (profiles, flamegraphs, histograms).
+The constraint note in the diagram is the key design requirement: observability must be cheap enough to leave in.
+If every investigation requires rebuilding the kernel or inserting ad-hoc logging, the OS becomes operationally brittle and you will ship blind changes.
+
+**Failure capture: what failed determines what you can trust**
+
+`Core dumps` capture failed user-process state while the kernel is still healthy enough to manage I/O and write a file.
+`Crash dumps` capture failed kernel state when the authority itself has failed, so normal subsystems (filesystems, drivers, scheduler) may be untrustworthy at the moment you want evidence most.
 
 ![Supplement: core dump vs crash dump (what failed changes what you can trust)](../chapter2_graphviz/fig_2_33_core_vs_crash_dump.png)
 
-`SYSGEN` configures the operating system for a specific hardware or site environment.
-`Booting` is the runtime startup path that begins at firmware, progresses through bootstrap code, and loads the kernel.
+Read this as two trust stories.
+Core dumps assume the kernel is healthy and therefore can capture a single process’s memory + registers as a normal “kernel service.”
+Crash dumping assumes the kernel may already be corrupted, which is why real systems need reserved memory, special dump paths, or out-of-band capture mechanisms.
+
+**System generation vs boot: prepare vs activate**
+
+`SYSGEN` (and modern equivalents like kernel configuration + module selection + image/initramfs building) configures the OS image for a target hardware/site environment: which drivers exist, which modules are included, and which parameters/defaults are set.
+`Booting` is the runtime startup chain at each power-on: firmware -> loader -> kernel -> early user-space services.
 
 ![Supplement: SYSGEN prepares an image; boot activates it on a machine](../chapter2_graphviz/fig_2_34_sysgen_vs_boot.png)
 
-Tracing is the mechanism that records system behavior.
-System generation is the mechanism that configures the OS image for a target machine.
-Boot is the mechanism that transfers control from firmware to the kernel.
-Chapter 2 groups these topics together because each one determines how the OS is observed, instantiated, or started.
+Read the diagram top-to-bottom as “prepare” versus “activate.”
+Separating these prevents a common conceptual error: treating “the OS” as something that springs fully formed at power-on.
+In reality, choices about what *can* run are made before runtime, while boot is the authority handoff chain that makes those choices live on a specific machine.
+
+Tracing records runtime behavior; dumps preserve evidence across failure; system generation configures what will be run; boot transfers control until the kernel becomes the resident authority.
+Chapter 2 groups them because they determine how the OS is instantiated, observed, and debugged in practice.
 
 **Invariants**
 
@@ -655,6 +680,11 @@ Before the kernel is in memory, there must be code that can initialize enough ha
 When you cover this trace, track the authority handoff: firmware -> bootstrap -> kernel -> user-space services, and name what each stage must make possible for the next one.
 
 ![Supplement: boot handoff chain from firmware to kernel to services](../chapter2_graphviz/fig_2_35_boot_handoff.png)
+
+Read the diagram left-to-right as a control and trust handoff.
+Each solid arrow is “which code runs next” before the normal OS environment exists.
+The dashed arrow from disk image to the bootloader is the moment persistent configuration becomes executable memory.
+The 3D “kernel” box is the pivot: once the kernel is resident, it can install the trap tables, page tables, scheduler state, and driver scaffolding that make protection and sharing enforceable.
 
 | Stage | Machine State | Structural Meaning |
 | --- | --- | --- |

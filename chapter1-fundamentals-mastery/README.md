@@ -5,7 +5,7 @@ Source: Chapter 1 of `textbook.pdf` (Operating System Concepts, 9th ed.).
 This is the canonical Chapter 1 note in this repo.
 It is written for operational mastery: mechanisms, invariants, failure modes, and traces you can reproduce from memory.
 
-If you are short on time, skim `## 2. Mental Models To Know Cold` and reproduce the traces in `## 4. Canonical Traces To Reproduce From Memory`.
+If you are short on time, skim `## 2. Mental Models To Know Cold`, reproduce the traces in `## 4. Canonical Traces To Reproduce From Memory`, and cover the `One Trace: launching a program` table in `### 3.1` once.
 
 ## 1. What This File Optimizes For
 
@@ -89,6 +89,10 @@ main problems become communication, partial failure, and coordination across nod
 10. Distributed systems, virtualization, cloud systems, and embedded real-time systems are different answers to the same control question.
 
 ![Supplementary concept map](../chapter1_graphviz/fig_s2_ch1_fundamentals_map.svg)
+
+Use this map as a retrieval tool, not as a poster.
+Pick one node (e.g., “timer preemption” or “copies/authority”), then explain the mechanism, the invariant, and the failure mode it introduces in your own words without looking.
+If you can traverse the map and justify the edges (“why does this imply that?”), you have Chapter 1 mastery.
 
 ## 3. Mastery Modules
 
@@ -563,6 +567,9 @@ If you cannot state why “kernel not yet in memory” forces firmware/bootstrap
 
 ![Supplement: boot and early control path](../chapter1_graphviz/fig_s1_boot_interrupt_path.svg)
 
+Use this figure to visualize the authority handoff and the minimal “control path” that must exist before any OS service can be requested.
+If you can narrate the handoff without relying on brand names, you understand boot structurally.
+
 ### 4.2 Blocking I/O With Interrupt Completion
 
 Use the “lanes” to prevent a common misunderstanding: the CPU lane and device lane proceed on different clocks.
@@ -689,6 +696,7 @@ If you are short on time:
 
 - Read `## 2. Mental Models To Know Cold` once.
 - Reproduce `## 4. Canonical Traces To Reproduce From Memory`.
+- Also reproduce the `One Trace: launching a program` table in `### 3.1` once (it is the simplest “authority boundary” trace).
 
 If you want Chapter 1 to become reasoning skill:
 

@@ -1,0 +1,66 @@
+digraph fig_2_31_operational_completeness {
+  rankdir=TB;
+  bgcolor="white";
+
+  graph [
+    fontname="Latin Modern Roman"
+    fontsize=18
+    labelloc="t"
+    label="Operational completeness: structure beyond runtime services"
+    nodesep=0.5
+    ranksep=0.6
+  ];
+
+  node [
+    fontname="Latin Modern Roman"
+    fontsize=12
+    shape=box
+    style="rounded,filled"
+    fillcolor="#F7F7F7"
+    color="#444444"
+    penwidth=1.2
+  ];
+
+  edge [
+    fontname="Latin Modern Roman"
+    fontsize=11
+    color="#444444"
+    penwidth=1.1
+    arrowsize=0.8
+  ];
+
+  runtime [
+    fillcolor="#EAF7EA"
+    label="Runtime kernel services\n(syscalls, scheduling, VM, VFS, drivers)"
+  ];
+
+  obs [fillcolor="#E9F2FF" label="Observability\n(tracing/profiling/probes)"];
+  dbg [fillcolor="#E9F2FF" label="Debugging capture\n(core dumps / crash dumps)"];
+  gen [fillcolor="#E9F2FF" label="System generation\n(configure image for target)"];
+  boot [fillcolor="#E9F2FF" label="Boot chain\n(firmware -> loader -> kernel)"];
+
+  ops [
+    shape=oval
+    style="filled"
+    fillcolor="#FFF7E6"
+    label="Operator/engineer\ncan deploy, start,\nobserve, and diagnose"
+  ];
+
+  { rank=same; obs; dbg; gen; boot; }
+  obs -> runtime;
+  dbg -> runtime;
+  gen -> runtime;
+  boot -> runtime;
+
+  runtime -> ops [label="usable in practice"];
+
+  note [
+    shape=note
+    style="filled"
+    fillcolor="#FFFFFF"
+    color="#777777"
+    fontcolor="#333333"
+    label="These are structural capabilities:\nwithout them, the OS exists on paper\nbut cannot be operated reliably."
+  ];
+  note -> runtime [style=dotted arrowhead=none color="#777777"];
+}

@@ -1,0 +1,71 @@
+digraph fig_2_33_core_vs_crash_dump {
+  rankdir=LR;
+  bgcolor="white";
+
+  graph [
+    fontname="Latin Modern Roman"
+    fontsize=18
+    labelloc="t"
+    label="Core dump vs crash dump: what failed determines what you can trust"
+    nodesep=0.6
+    ranksep=0.9
+  ];
+
+  node [
+    fontname="Latin Modern Roman"
+    fontsize=12
+    shape=box
+    style="rounded,filled"
+    fillcolor="#F7F7F7"
+    color="#444444"
+    penwidth=1.2
+  ];
+
+  edge [
+    fontname="Latin Modern Roman"
+    fontsize=11
+    color="#444444"
+    penwidth=1.1
+    arrowsize=0.8
+  ];
+
+  subgraph cluster_user_fail {
+    label="User-process failure";
+    fontname="Latin Modern Roman";
+    fontsize=13;
+    color="#AAAAAA";
+    style="rounded";
+
+    proc [fillcolor="#E9F2FF" label="User process\nsegfault/assert"];
+    healthy [fillcolor="#EAF7EA" label="Kernel still healthy\n(can write files)"];
+    core [fillcolor="#E9F2FF" label="Core dump\n(process memory + regs)"];
+    dbg [shape=oval style="filled" fillcolor="#FFF7E6" label="Debugger\n(gdb/lldb)"];
+
+    proc -> healthy -> core -> dbg;
+  }
+
+  subgraph cluster_kernel_fail {
+    label="Kernel failure";
+    fontname="Latin Modern Roman";
+    fontsize=13;
+    color="#AAAAAA";
+    style="rounded";
+
+    panic [fillcolor="#FFE6E6" label="Kernel panic/oops\n(authority failed)"];
+    broken [fillcolor="#FFE6E6" label="Normal subsystems\nmay be untrustworthy"];
+    crash [fillcolor="#E9F2FF" label="Crash dump\n(kernel state + memory)"];
+    offline [shape=oval style="filled" fillcolor="#FFF7E6" label="Offline analysis\n(crash tool)"];
+
+    panic -> broken -> crash -> offline;
+  }
+
+  note [
+    shape=note
+    style="filled"
+    fillcolor="#FFFFFF"
+    color="#777777"
+    fontcolor="#333333"
+    label="Implication:\nCrash dumping often needs reserved memory,\nseparate dump paths, or out-of-band capture."
+  ];
+  note -> crash [style=dotted arrowhead=none color="#777777"];
+}

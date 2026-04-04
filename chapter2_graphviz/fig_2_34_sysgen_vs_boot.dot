@@ -1,0 +1,71 @@
+digraph fig_2_34_sysgen_vs_boot {
+  rankdir=TB;
+  bgcolor="white";
+
+  graph [
+    fontname="Latin Modern Roman"
+    fontsize=18
+    labelloc="t"
+    label="System generation vs boot: prepare the image vs activate it"
+    nodesep=0.55
+    ranksep=0.65
+  ];
+
+  node [
+    fontname="Latin Modern Roman"
+    fontsize=12
+    shape=box
+    style="rounded,filled"
+    fillcolor="#F7F7F7"
+    color="#444444"
+    penwidth=1.2
+  ];
+
+  edge [
+    fontname="Latin Modern Roman"
+    fontsize=11
+    color="#444444"
+    penwidth=1.1
+    arrowsize=0.8
+  ];
+
+  subgraph cluster_prepare {
+    label="Before runtime (infrequent)";
+    fontname="Latin Modern Roman";
+    fontsize=13;
+    color="#AAAAAA";
+    style="rounded";
+
+    sysgen [fillcolor="#E9F2FF" label="SYSGEN\n(select drivers/modules,\nset parameters)"];
+    image [shape=folder fillcolor="#E9F2FF" label="Configured OS image\n(kernel + modules + config)"];
+    sysgen -> image [label="build/package"];
+  }
+
+  subgraph cluster_boot {
+    label="Each startup (every boot)";
+    fontname="Latin Modern Roman";
+    fontsize=13;
+    color="#AAAAAA";
+    style="rounded";
+
+    firmware [fillcolor="#FFF7E6" label="Firmware"];
+    loader [fillcolor="#FFF7E6" label="Bootloader"];
+    kernel [fillcolor="#EAF7EA" label="Kernel in memory\n(subsystems start)"];
+    services [fillcolor="#E9F2FF" label="User-space services\n(daemons, login)"];
+
+    firmware -> loader -> kernel -> services;
+  }
+
+  image -> loader [style=dashed label="loader locates image" fontcolor="#777777" color="#777777"];
+
+  note [
+    shape=note
+    style="filled"
+    fillcolor="#FFFFFF"
+    color="#777777"
+    fontcolor="#333333"
+    label="SYSGEN: choose what the OS contains.\nBoot: execute that configured structure on a machine."
+  ];
+  note -> sysgen [style=dotted arrowhead=none color="#777777"];
+  note -> kernel [style=dotted arrowhead=none color="#777777"];
+}

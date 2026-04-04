@@ -1,0 +1,65 @@
+digraph fig_2_32_observability_pipeline {
+  rankdir=LR;
+  bgcolor="white";
+
+  graph [
+    fontname="Latin Modern Roman"
+    fontsize=18
+    labelloc="t"
+    label="Observability pipeline: boundary events -> traces -> diagnosis"
+    nodesep=0.55
+    ranksep=0.75
+  ];
+
+  node [
+    fontname="Latin Modern Roman"
+    fontsize=12
+    shape=box
+    style="rounded,filled"
+    fillcolor="#F7F7F7"
+    color="#444444"
+    penwidth=1.2
+  ];
+
+  edge [
+    fontname="Latin Modern Roman"
+    fontsize=11
+    color="#444444"
+    penwidth=1.1
+    arrowsize=0.8
+  ];
+
+  subgraph cluster_boundaries {
+    label="Where state transitions happen";
+    fontname="Latin Modern Roman";
+    fontsize=13;
+    color="#AAAAAA";
+    style="rounded";
+
+    syscalls [fillcolor="#EAF7EA" label="Syscall entry/exit"];
+    sched [fillcolor="#EAF7EA" label="Scheduling decisions\n(ready/blocked)"];
+    io [fillcolor="#EAF7EA" label="I/O start/completion\n(interrupt paths)"];
+    faults [fillcolor="#EAF7EA" label="Faults/exceptions\n(page faults, traps)"];
+  }
+
+  probes [fillcolor="#E9F2FF" label="Instrumentation probes\n(tracepoints, counters)"];
+  buffer [fillcolor="#E9F2FF" label="Trace/log buffer\n(ring buffers, logs)"];
+  tools [fillcolor="#E9F2FF" label="Analysis tools\n(profile, flamegraph,\nlatency histograms)"];
+  outcome [shape=oval style="filled" fillcolor="#FFF7E6" label="Diagnosis + tuning\n(explain slowness,\nvalidate changes)"];
+
+  syscalls -> probes;
+  sched -> probes;
+  io -> probes;
+  faults -> probes;
+  probes -> buffer -> tools -> outcome;
+
+  overhead [
+    shape=note
+    style="filled"
+    fillcolor="#FFFFFF"
+    color="#777777"
+    fontcolor="#333333"
+    label="Design constraint:\nObservability must be\ncheap enough to leave in,\nnot a kernel rewrite per bug."
+  ];
+  overhead -> probes [style=dotted arrowhead=none color="#777777"];
+}

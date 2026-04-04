@@ -562,12 +562,21 @@ An OS that cannot be observed, configured for a target machine, or started relia
 
 **Mechanism**
 
+![Supplement: operational completeness requires observability, dumps, system generation, and boot](../chapter2_graphviz/fig_2_31_operational_completeness.png)
+
 `Tracing`, `profiling`, and instrumentation probes expose system behavior over time.
+
+![Supplement: observability pipeline from boundary events to traces to diagnosis](../chapter2_graphviz/fig_2_32_observability_pipeline.png)
+
 `Core dumps` capture failed user-process state.
 `Crash dumps` capture failed kernel state.
 
+![Supplement: core dump vs crash dump (what failed changes what you can trust)](../chapter2_graphviz/fig_2_33_core_vs_crash_dump.png)
+
 `SYSGEN` configures the operating system for a specific hardware or site environment.
 `Booting` is the runtime startup path that begins at firmware, progresses through bootstrap code, and loads the kernel.
+
+![Supplement: SYSGEN prepares an image; boot activates it on a machine](../chapter2_graphviz/fig_2_34_sysgen_vs_boot.png)
 
 Tracing is the mechanism that records system behavior.
 System generation is the mechanism that configures the OS image for a target machine.
@@ -593,6 +602,8 @@ Chapter 2 groups these topics together because each one determines how the OS is
 Boot is the ultimate proof that structure exists for operational reasons.
 Before the kernel is in memory, there must be code that can initialize enough hardware to find and load it, and that early code must be trusted even though it is not “the OS” yet.
 When you cover this trace, track the authority handoff: firmware -> bootstrap -> kernel -> user-space services, and name what each stage must make possible for the next one.
+
+![Supplement: boot handoff chain from firmware to kernel to services](../chapter2_graphviz/fig_2_35_boot_handoff.png)
 
 | Stage | Machine State | Structural Meaning |
 | --- | --- | --- |

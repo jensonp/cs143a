@@ -1,0 +1,53 @@
+digraph fig_2_35_boot_handoff {
+  rankdir=LR;
+  bgcolor="white";
+
+  graph [
+    fontname="Latin Modern Roman"
+    fontsize=18
+    labelloc="t"
+    label="Boot handoff: authority before the kernel, then the kernel becomes authority"
+    nodesep=0.55
+    ranksep=0.8
+  ];
+
+  node [
+    fontname="Latin Modern Roman"
+    fontsize=12
+    shape=box
+    style="rounded,filled"
+    fillcolor="#F7F7F7"
+    color="#444444"
+    penwidth=1.2
+  ];
+
+  edge [
+    fontname="Latin Modern Roman"
+    fontsize=11
+    color="#444444"
+    penwidth=1.1
+    arrowsize=0.8
+  ];
+
+  power [shape=oval style="filled" fillcolor="#FFF7E6" label="Power on"];
+  fw [fillcolor="#FFF7E6" label="Firmware\n(UEFI/BIOS)\nminimal init"];
+  bl [fillcolor="#FFF7E6" label="Bootloader\n(locates image,\nloads kernel)"];
+  disk [shape=folder fillcolor="#E9F2FF" label="Disk OS image"];
+  kernel [shape=box3d style="filled" fillcolor="#EAF7EA" label="Kernel\n(trap tables, VM,\nscheduler, drivers)"];
+  init [fillcolor="#E9F2FF" label="Init + services\n(user space starts)"];
+  apps [shape=oval style="filled" fillcolor="#E9F2FF" label="User programs"];
+
+  power -> fw -> bl -> kernel -> init -> apps;
+  disk -> bl [style=dashed label="read/verify" fontcolor="#777777" color="#777777"];
+
+  note [
+    shape=note
+    style="filled"
+    fillcolor="#FFFFFF"
+    color="#777777"
+    fontcolor="#333333"
+    label="Key idea:\nBefore the kernel is resident,\nsome trusted code must still\nprepare hardware and load it.\nAfterward, the kernel is the\nauthority for protection."
+  ];
+  note -> fw [style=dotted arrowhead=none color="#777777"];
+  note -> kernel [style=dotted arrowhead=none color="#777777"];
+}

@@ -311,30 +311,15 @@ Responsibility for validating and updating protected state still lies in the ker
 
 **Problem**
 
-Syscalls are the only sanctioned crossings into privileged code. The categories are not trivia; they are the six surfaces where untrusted intent hits authoritative state.
+Syscalls are the only sanctioned crossings into privileged code. The six categories are not a memorization trick; they are the specific surfaces where untrusted intent meets authoritative kernel state.
 
 **Mechanism (read with the figure)**
 
-Follow the loop clockwise; each hop answers a different question about control:
-
-- **Process control (who runs):** `fork/exec/wait` create or replace execution contexts; lifecycle policy is enforced here.
-- **File management (what bytes change):** `open/read/write/stat` govern naming, metadata, and byte streams on persistent objects.
-- **Device management (how hardware is reached):** `ioctl` and driver entry points tunnel user intent to device-facing code.
-- **Communication (who talks):** pipes, sockets, and IPC form rendezvous surfaces that connect principals.
-- **Information maintenance (what truth is exposed):** `gettimeofday`, `rusage`, and system stats reveal measured state without letting callers mutate it.
-- **Protection (who may act, with what memory):** `setuid`, `capset`, `mprotect`, `acl` updates change identities, permissions, and memory protections.
+Move clockwise around the diagram: process control governs who runs (`fork/exec/wait`) and when contexts end; file management decides which named bytes and metadata can change; device management is the tunnel into hardware-facing drivers (`ioctl` and friends); communication surfaces (pipes, sockets, IPC) let distinct principals exchange data; information maintenance exposes measured truth such as time and resource usage without letting callers mutate it; protection calls (`setuid`, `mprotect`, ACL updates) change identity, permissions, and memory protections.
 
 ![System-call categories as control surfaces, laid out around the kernel authority boundary](../chapter2_graphviz/fig_2_20_syscall_categories.png)
 
-Taken together, the categories map every privileged mutation to a chokepoint. Argument validation, policy checks, and accounting all live on these surfaces; everything else is user-space convention.
-
-For example:
-
-- process control changes execution entities
-- file calls change persistent named state
-- device calls touch active I/O endpoints
-- communication calls coordinate separate computations
-- protection calls change access relationships
+Seen together, the taxonomy is a map of chokepoints: every privileged mutation enters through one of these surfaces, where the kernel validates arguments, enforces policy, and accounts for the work. Everything else is user-space convention layered on top.
 
 **Invariants**
 

@@ -1,0 +1,76 @@
+digraph fig_2_6_shell_exec_boundary_trace {
+  rankdir=LR;
+  bgcolor="white";
+
+  graph [
+    fontname="Latin Modern Roman"
+    fontsize=18
+    labelloc="t"
+    label="Boundary placement: user-space shell vs. privileged exec"
+    nodesep=0.5
+    ranksep=0.7
+  ];
+
+  node [
+    fontname="Latin Modern Roman"
+    fontsize=12
+    shape=box
+    style="rounded,filled"
+    fillcolor="#F7F7F7"
+    color="#444444"
+    penwidth=1.2
+  ];
+
+  edge [
+    fontname="Latin Modern Roman"
+    fontsize=11
+    color="#444444"
+    penwidth=1.2
+    arrowsize=0.8
+  ];
+
+  subgraph cluster_user {
+    label="User space (unprivileged)";
+    fontname="Latin Modern Roman";
+    fontsize=13;
+    color="#AAAAAA";
+    style="rounded";
+
+    step1 [label=<<B>command entered</B><BR/><FONT POINT-SIZE="11">shell reads &amp; parses text</FONT>> fillcolor="#E9F2FF"];
+    step2 [label=<<B>path resolution</B><BR/><FONT POINT-SIZE="11">find executable or built-in</FONT>> fillcolor="#E9F2FF"];
+    step3 [label=<<B>launch request</B><BR/><FONT POINT-SIZE="11">shell issues exec-style call</FONT>> fillcolor="#FFF7E6"];
+    step4 [label=<<B>execution starts</B><BR/><FONT POINT-SIZE="11">shell may wait or continue</FONT>> fillcolor="#E9F2FF"];
+  }
+
+  subgraph cluster_kernel {
+    label="Kernel space (privileged authority)";
+    fontname="Latin Modern Roman";
+    fontsize=13;
+    color="#AAAAAA";
+    style="rounded";
+
+    kern_idle [label=<<B>idle</B><BR/><FONT POINT-SIZE="11">until asked</FONT>> shape=box fillcolor="#EAF7EA"];
+    kern_check [label=<<B>validate exec</B><BR/><FONT POINT-SIZE="11">permissions, binary format</FONT>> shape=box fillcolor="#EAF7EA"];
+    kern_create [label=<<B>create process</B><BR/><FONT POINT-SIZE="11">install privilege-separated state</FONT>> shape=box fillcolor="#EAF7EA"];
+  }
+
+  step1 -> step2 [label="front-end logic"];
+  step2 -> step3 [label="still unprivileged"];
+  step3 -> kern_check [label="intent crosses boundary"];
+  kern_check -> kern_create [label="authority begins"];
+  kern_create -> step4 [label="returns to user mode"];
+
+  kern_idle -> kern_check [style=dashed label="woken by exec request" fontcolor="#777777" color="#777777"];
+
+  invariant [
+    shape=note
+    style="filled"
+    fillcolor="#FFFFFF"
+    color="#777777"
+    fontcolor="#333333"
+    label="Why it matters:\n• Interface growth stays unprivileged\n• Kernel remains minimal authority\n• Pivot is the exec boundary"
+  ];
+
+  invariant -> step3 [style=dashed arrowhead=none color="#777777"];
+  invariant -> kern_create [style=dashed arrowhead=none color="#777777"];
+}

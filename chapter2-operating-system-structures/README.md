@@ -195,6 +195,8 @@ When you rehearse it, the pivot is: user intent first reaches privileged kernel 
 | launch request | shell issues exec-style request | validates executable and permissions | authority begins here |
 | execution starts | shell may wait or continue | creates process and returns to user mode | user interface and privileged setup stay separate |
 
+![Mental model: exec is the pivot where user-space shell hands intent to privileged kernel](../chapter2_graphviz/fig_2_6_shell_exec_boundary_trace.png)
+
 This is why shells stay out of the kernel: they are powerful interfaces, but the OS cannot afford to treat interface growth as privileged code growth.
 The kernel owns the minimal, stable authority (create execution context safely); the shell owns the fast-evolving human interface.
 

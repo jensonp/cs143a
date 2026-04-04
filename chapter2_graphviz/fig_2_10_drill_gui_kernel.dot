@@ -1,0 +1,17 @@
+digraph fig_2_10_drill_gui_kernel {
+  rankdir=LR;
+  bgcolor="white";
+
+  graph [fontname="Latin Modern Roman" fontsize=18 labelloc="t" label="GUI layer vs kernel authority"];
+  node [fontname="Latin Modern Roman" fontsize=12 shape=box style="rounded,filled" fillcolor="#F7F7F7" color="#444444" penwidth=1.2];
+  edge [fontname="Latin Modern Roman" fontsize=11 color="#444444" penwidth=1.2 arrowsize=0.8];
+
+  gui [fillcolor="#E9F2FF" label="GUI toolkit\ninterface layer"];
+  requests [fillcolor="#E9F2FF" label="packaged requests\n(user space)"];
+  kernel [shape=box3d fillcolor="#EAF7EA" label="kernel structure\nprivileged mechanisms"];
+
+  gui -> requests -> kernel;
+
+  note [shape=note style="filled" fillcolor="#FFFFFF" color="#777777" fontcolor="#333333" label="Swap GUIs without changing kernel semantics;\nputting UI inside the kernel would enlarge\nprivileged attack surface."];
+  note -> kernel [style=dashed arrowhead=none color="#777777"];
+}

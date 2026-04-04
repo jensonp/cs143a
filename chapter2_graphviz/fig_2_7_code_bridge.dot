@@ -1,0 +1,19 @@
+digraph fig_2_7_code_bridge {
+  rankdir=LR;
+  bgcolor="white";
+
+  graph [fontname="Latin Modern Roman" fontsize=18 labelloc="t" label="Teaching OS: follow the path to exec"];
+  node [fontname="Latin Modern Roman" fontsize=12 shape=box style="rounded,filled" fillcolor="#F7F7F7" color="#444444" penwidth=1.2];
+  edge [fontname="Latin Modern Roman" fontsize=11 color="#444444" penwidth=1.2 arrowsize=0.8];
+
+  user [shape=oval fillcolor="#E9F2FF" label="shell prompt\n(user mode)"];
+  parse [fillcolor="#E9F2FF" label="parse + script logic\n(user space)"];
+  resolve [fillcolor="#E9F2FF" label="path resolution\n(user space)"];
+  exec_call [fillcolor="#FFF7E6" label="exec() request\n(boundary)"];
+  kernel [shape=box3d fillcolor="#EAF7EA" label="kernel: create process,\nload program, set state"];
+
+  user -> parse -> resolve -> exec_call -> kernel;
+
+  note [shape=note style="filled" fillcolor="#FFFFFF" color="#777777" fontcolor="#333333" label="Most logic stays outside the kernel\nuntil the exec boundary."];
+  note -> parse [style=dashed arrowhead=none color="#777777"];
+}

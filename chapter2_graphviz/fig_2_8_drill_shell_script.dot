@@ -1,0 +1,18 @@
+digraph fig_2_8_drill_shell_script {
+  rankdir=LR;
+  bgcolor="white";
+
+  graph [fontname="Latin Modern Roman" fontsize=18 labelloc="t" label="Shell script ≠ kernel logic"];
+  node [fontname="Latin Modern Roman" fontsize=12 shape=box style="rounded,filled" fillcolor="#F7F7F7" color="#444444" penwidth=1.2];
+  edge [fontname="Latin Modern Roman" fontsize=11 color="#444444" penwidth=1.2 arrowsize=0.8];
+
+  script [shape=folder fillcolor="#E9F2FF" label="shell script\n(text)"];
+  interpreter [fillcolor="#E9F2FF" label="user-space interpreter\n(shell/runtime)"];
+  syscalls [shape=box3d fillcolor="#EAF7EA" label="kernel\n(system calls only)"];
+
+  script -> interpreter [label="parsed & executed"];
+  interpreter -> syscalls [label="fork/exec, I/O, wait"];
+
+  note [shape=note style="filled" fillcolor="#FFFFFF" color="#777777" fontcolor="#333333" label="Kernel never 'understands' the script;\nprivilege checks guard every syscall."];
+  note -> syscalls [style=dashed arrowhead=none color="#777777"];
+}

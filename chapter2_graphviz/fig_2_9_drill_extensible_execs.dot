@@ -1,0 +1,18 @@
+digraph fig_2_9_drill_extensible_execs {
+  rankdir=LR;
+  bgcolor="white";
+
+  graph [fontname="Latin Modern Roman" fontsize=18 labelloc="t" label="New commands as ordinary executables"];
+  node [fontname="Latin Modern Roman" fontsize=12 shape=box style="rounded,filled" fillcolor="#F7F7F7" color="#444444" penwidth=1.2];
+  edge [fontname="Latin Modern Roman" fontsize=11 color="#444444" penwidth=1.2 arrowsize=0.8];
+
+  repo [shape=folder fillcolor="#E9F2FF" label="install new tool\n(user space)"];
+  execfile [fillcolor="#E9F2FF" label="executable file\nunprivileged"];
+  shell [fillcolor="#E9F2FF" label="shell dispatches\nlike any program"];
+  kernel [shape=box3d fillcolor="#EAF7EA" label="kernel\nunchanged trusted core"];
+
+  repo -> execfile -> shell -> kernel;
+
+  note [shape=note style="filled" fillcolor="#FFFFFF" color="#777777" fontcolor="#333333" label="Extensibility without privilege:\ntrusted computing base stays small; bugs\nin new tools don't expand kernel code."];
+  note -> kernel [style=dashed arrowhead=none color="#777777"];
+}

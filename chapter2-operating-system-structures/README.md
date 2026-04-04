@@ -205,16 +205,24 @@ The kernel owns the minimal, stable authority (create execution context safely);
 - In a teaching OS, inspect the path from shell parsing to program launch.
 - Notice how much logic lives in user space before the kernel is asked to do anything authoritative.
 
+![Mental model: most of the launch path lives in user space until the exec boundary](../chapter2_graphviz/fig_2_7_code_bridge.png)
+
 **Drills (With Answers)**
 
 1. **Q:** Why is a shell script not evidence that the shell is part of the kernel?
 **A:** A script is executed by a user-space interpreter (the shell or another runtime). The kernel is only involved through system calls (process creation, file I/O, waiting) and does not “understand” the script language. The shell has no privileged instructions; it cannot bypass kernel checks or directly control protected hardware state.
 
+![Mental model: script stays in user space; kernel only sees syscalls](../chapter2_graphviz/fig_2_8_drill_shell_script.png)
+
 2. **Q:** What benefit appears when new commands are ordinary executables instead of kernel features?
 **A:** Extensibility without privilege. New tools can be installed, updated, and replaced like normal programs without changing the trusted kernel core. That keeps the trusted computing base smaller, reduces the blast radius of bugs, and lets the command ecosystem evolve quickly without turning the kernel into a constantly changing UI platform.
 
+![Mental model: new executables extend capabilities without touching kernel code](../chapter2_graphviz/fig_2_9_drill_extensible_execs.png)
+
 3. **Q:** Why is GUI support a different concern from kernel structure?
 **A:** A GUI is an interface layer: it packages human intent into requests. Kernel structure is about how privileged mechanisms are organized and how authoritative state is protected and updated. You can swap GUIs entirely without changing the kernel’s semantics, but moving UI complexity into privileged code would increase security risk and maintenance cost.
+
+![Mental model: GUI layers can swap freely; kernel authority stays stable](../chapter2_graphviz/fig_2_10_drill_gui_kernel.png)
 
 ### 3.3 API, Library Wrappers, And System Calls
 

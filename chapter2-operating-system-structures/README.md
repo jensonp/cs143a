@@ -311,15 +311,15 @@ Responsibility for validating and updating protected state still lies in the ker
 
 **Problem**
 
-Syscalls are the only sanctioned crossings into privileged code. The six categories are not a memorization trick; they are the specific surfaces where untrusted intent meets authoritative kernel state.
+Syscalls are the only sanctioned crossings into privileged code. These six categories are the specific “control surfaces” where untrusted intent is converted into authoritative state change. If you do not know which surface you are touching, you cannot reason about protection, performance, or failure modes.
 
 **Mechanism (read with the figure)**
 
-Move clockwise around the diagram: process control governs who runs (`fork/exec/wait`) and when contexts end; file management decides which named bytes and metadata can change; device management is the tunnel into hardware-facing drivers (`ioctl` and friends); communication surfaces (pipes, sockets, IPC) let distinct principals exchange data; information maintenance exposes measured truth such as time and resource usage without letting callers mutate it; protection calls (`setuid`, `mprotect`, ACL updates) change identity, permissions, and memory protections.
+Imagine walking around the kernel boundary in a circle. First you hit **process control**, which decides who runs and when contexts begin or end (`fork/exec/wait`). Sliding clockwise you reach **file management**, where named bytes and metadata live (`open/read/write/stat`). The path bends into **device management**—the tunnel into hardware-facing drivers via `ioctl` and related hooks. Next is **communication**: pipes, sockets, and other rendezvous points that connect principals. **Information maintenance** sits nearby; it reveals measured truth such as clocks and resource usage without letting callers mutate it (`gettimeofday`, `rusage`). Wrapping back toward the top is **protection**, which changes identities, permissions, and memory protections (`setuid`, `mprotect`, ACL updates). All six surfaces feed into the same kernel core, which validates arguments, enforces policy, and updates authoritative data structures.
 
 ![System-call categories as control surfaces, laid out around the kernel authority boundary](../chapter2_graphviz/fig_2_20_syscall_categories.png)
 
-Seen together, the taxonomy is a map of chokepoints: every privileged mutation enters through one of these surfaces, where the kernel validates arguments, enforces policy, and accounts for the work. Everything else is user-space convention layered on top.
+Thinking in surfaces, not isolated calls, makes the taxonomy useful. A single user workflow (copy a file to a USB device over SSH) touches process control (the copy tool), file management (source and destination paths), device management (USB mass-storage driver), communication (SSH stream), information (timestamps and progress stats), and protection (UID/permission checks). Every privileged mutation enters through one of these chokepoints; everything else is user-space convention layered on top.
 
 **Invariants**
 

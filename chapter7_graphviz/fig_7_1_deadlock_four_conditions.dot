@@ -1,0 +1,16 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.45, ranksep=0.65, splines=polyline, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.1, arrowsize=0.8, fontname="Helvetica", fontsize=11];
+
+  me [label="1. Mutual exclusion\n(some resource is nonshareable)", fillcolor="#D5EDF7"];
+  hw [label="2. Hold and wait\n(hold one, wait for another)", fillcolor="#D5EDF7"];
+  np [label="3. No preemption\n(resources not forcibly taken)", fillcolor="#D5EDF7"];
+  cw [label="4. Circular wait\n(P1 waits on P2 ... waits on P1)", fillcolor="#D5EDF7"];
+
+  me -> hw -> np -> cw -> me [label="all four required"];
+
+  note [label="To prevent deadlock:\nbreak at least one condition", fillcolor="#FFF3CD", color="#B58900", fontcolor="#4D3B00"];
+  cw -> note [style=dashed, arrowhead=none];
+}
+

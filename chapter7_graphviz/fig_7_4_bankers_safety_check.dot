@@ -1,0 +1,54 @@
+digraph G {
+  graph [rankdir=TB, pad=0.2, bgcolor="white"];
+  node [shape=plain, fontname="Helvetica"];
+
+  table [label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#5B6B73">
+      <TR>
+        <TD BGCOLOR="#F5F5F5"><B>Process</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Allocation</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Max</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Need = Max-Alloc</B></TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>P0</B></TD>
+        <TD>(0, 1, 0)</TD>
+        <TD>(7, 5, 3)</TD>
+        <TD>(7, 4, 3)</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>P1</B></TD>
+        <TD>(2, 0, 0)</TD>
+        <TD>(3, 2, 2)</TD>
+        <TD>(1, 2, 2)</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>P2</B></TD>
+        <TD>(3, 0, 2)</TD>
+        <TD>(9, 0, 2)</TD>
+        <TD>(6, 0, 0)</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>P3</B></TD>
+        <TD>(2, 1, 1)</TD>
+        <TD>(2, 2, 2)</TD>
+        <TD>(0, 1, 1)</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>P4</B></TD>
+        <TD>(0, 0, 2)</TD>
+        <TD>(4, 3, 3)</TD>
+        <TD>(4, 3, 1)</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#FFF3CD"><B>Available</B></TD>
+        <TD COLSPAN="3">(3, 3, 2)</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#FFF3CD"><B>Safe sequence (one example)</B></TD>
+        <TD COLSPAN="3">P1 → P3 → P4 → P0 → P2</TD>
+      </TR>
+    </TABLE>
+  >];
+}
+

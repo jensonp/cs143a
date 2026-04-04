@@ -1,0 +1,17 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.6, ranksep=0.75, splines=polyline, bgcolor="white"];
+  node [shape=oval, style="filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238", fillcolor="#D5EDF7"];
+  edge [color="#5B6B73", penwidth=1.1, arrowsize=0.8, fontname="Helvetica", fontsize=11];
+
+  p1 [label="P1"];
+  p2 [label="P2"];
+  p3 [label="P3"];
+
+  p1 -> p2 [label="waiting for"];
+  p2 -> p3 [label="waiting for"];
+  p3 -> p1 [label="waiting for"];
+
+  legend [shape=note, fillcolor="#FFF3CD", color="#B58900", fontcolor="#4D3B00",
+          label="Wait-for graph (single-instance resources)\nCycle implies deadlock."];
+}
+

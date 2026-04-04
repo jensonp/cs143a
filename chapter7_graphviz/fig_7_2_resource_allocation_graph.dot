@@ -1,0 +1,25 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.45, ranksep=0.75, splines=polyline, bgcolor="white"];
+  node [style="filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.1, arrowsize=0.8, fontname="Helvetica", fontsize=11];
+
+  # Processes (ovals)
+  p1 [label="P1", shape=oval, fillcolor="#D5EDF7"];
+  p2 [label="P2", shape=oval, fillcolor="#D5EDF7"];
+
+  # Resources (boxes) - single instance for illustration
+  r1 [label="R1 (1 instance)", shape=box, fillcolor="#DDEAF1"];
+  r2 [label="R2 (1 instance)", shape=box, fillcolor="#DDEAF1"];
+
+  # Request edges: P -> R
+  p1 -> r2 [label="requests"];
+  p2 -> r1 [label="requests"];
+
+  # Assignment edges: R -> P
+  r1 -> p1 [label="assigned"];
+  r2 -> p2 [label="assigned"];
+
+  legend [shape=note, fillcolor="#FFF3CD", color="#B58900", fontcolor="#4D3B00",
+          label="Resource-allocation graph (single-instance example)\nA cycle here implies deadlock."];
+}
+

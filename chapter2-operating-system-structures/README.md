@@ -437,57 +437,54 @@ That distinction is also why many services can be restarted or replaced without 
 
 **Problem**
 
-An OS must be convenient, reliable, efficient, maintainable, and extensible, but those goals often conflict.
+An OS must be convenient, reliable, safe, fast, maintainable, and extensible, but these goals conflict. Without naming which goal you are optimizing (and what you are trading away), design discussions collapse into vague "better" claims.
 
 **Mechanism**
 
-The chapter separates:
+This section gives you a clean classification tool:
 
-- `user goals`: convenience, reliability, safety, responsiveness
-- `system goals`: ease of implementation, maintainability, flexibility, efficiency
+- A `design goal` is a target outcome (latency, throughput, safety, simplicity, portability).
+- A `mechanism` is what the system makes *possible*: a set of primitives and state transitions with invariants enforced by the kernel.
+- A `policy` is the decision rule that chooses *which* allowed action the mechanism should take for a particular case.
 
-It also separates:
+The quick test is the swap test: if you can change the rule without changing the privileged machinery and its invariants, it is policy. If changing it requires new privileged state, new entry paths, or new invariants, it is mechanism.
 
-- `mechanism`: the apparatus the system provides for carrying out a class of actions
-- `policy`: the rule that chooses which allowed action the system should take
+Concrete examples (high fidelity, not slogan):
 
-Examples:
+| Domain | Mechanism (what is possible) | Policy (which choice) |
+| --- | --- | --- |
+| CPU sharing | timer preemption + runnable queues + context switch | time-slice length, priority rules, fairness vs throughput |
+| Virtual memory | page tables + faults + mapping/unmapping primitives | replacement algorithm, working-set heuristics, prefetch choices |
+| Files/caching | page cache + writeback machinery + VFS rules | write-through vs write-back, eviction heuristics, dirty limits |
 
-- timer interrupts are a mechanism
-- deciding the time-slice policy is policy
-- queues are a mechanism
-- choosing which class runs first is policy
-
-A general mechanism defines what state transitions are possible.
-A policy chooses among those transitions to optimize a goal.
-Good OS design keeps the mechanism general so the policy can change without rewriting privileged machinery.
+Good OS design keeps mechanisms general and stable so policies can change with hardware and workloads without rewriting (or expanding) privileged code.
 
 **Invariants**
 
-- Mechanism should not hardcode short-lived policy decisions when avoidable.
-- System goals and user goals must both be considered because convenience and maintainability can conflict.
-- Changing policy should not require rebuilding the deepest kernel machinery unless the mechanism itself changes.
+- Mechanisms enforce invariants regardless of policy (validation, isolation, accounting).
+- Policies should be adjustable without widening the trusted computing base.
+- When arguing about structure choices, state the goal being optimized and the cost being accepted (latency vs throughput, isolation vs overhead, flexibility vs complexity).
 
 **What Breaks If This Fails**
 
-- If policy is buried inside the mechanism, tuning and portability become expensive.
-- If efficiency is optimized without regard to maintainability, the system ossifies.
-- If user goals dominate entirely, internal complexity may become unmanageable.
+- If policy is buried inside mechanism, tuning becomes a kernel rewrite problem and portability collapses (the "right" decisions differ across machines and workloads).
+- If goals are unstated, the system accumulates inconsistent rules and becomes hard to reason about ("fast here, fragile there").
+- If efficiency is optimized by entangling subsystems, the system can be fast but structurally brittle: small changes ripple through privileged code.
 
 **Code Bridge**
 
-- In scheduler or VM code, ask which parts define the possibility of a decision and which parts encode the decision rule itself.
+- In scheduler/VM/FS code, separate "state + transitions + invariants" (mechanism) from "comparators + heuristics + knobs" (policy).
 
 **Drills (With Answers)**
 
 1. **Q:** Why is “shorter time slice for interactive work” policy rather than mechanism?
-**A:** The mechanism is “the kernel can preempt using a timer and choose among runnable work.” The time-slice length and who gets which slice are decision rules chosen to optimize a goal (responsiveness, throughput, fairness). Changing the slice length does not change what is *possible*; it changes which outcomes are preferred.
+**A:** The mechanism is "the kernel can preempt via a timer, save context, and choose a runnable context." Slice length and which tasks get shorter slices are decision rules to trade latency against throughput/fairness. Changing the number does not change what is possible; it changes which outcomes you prefer.
 
 2. **Q:** Why does keeping policy outside mechanism usually improve portability?
-**A:** Different machines and workloads want different decisions: laptops vs servers, interactive vs batch, fast SSD vs slow disk. If the kernel mechanism is general, the policy can adapt through configuration or pluggable schedulers without rewriting core machinery. Portability is the ability to retune decisions while keeping invariants stable.
+**A:** Different machines and workloads want different decisions: laptops vs servers, interactive vs batch, fast SSD vs slow disk. If the mechanism is general, the system can retune policy without changing the privileged invariants. Portability is being able to change decisions while keeping the enforcement boundary stable.
 
 3. **Q:** How can a system be efficient and still structurally brittle?
-**A:** It can be optimized around one set of assumptions (hardware topology, workloads, latency budgets) in ways that entangle subsystems tightly. That can produce excellent performance today but make future changes risky or expensive because small modifications ripple through privileged code. Brittle systems often “work fast” until the environment changes, then become hard to fix safely.
+**A:** It can hardcode assumptions (workload mix, CPU topology, I/O latency) into privileged code paths so that performance is great under one regime. The cost is coupling: changing a scheduler rule, VM heuristic, or driver behavior now risks breaking hidden invariants across subsystems. Brittle systems often "work fast" until the environment changes, then become difficult to modify safely.
 
 ### 3.7 Kernel Structures: Monolithic, Layered, Microkernel, Modular, Hybrid
 

@@ -130,6 +130,10 @@ Operational definitions that stay stable across OSes:
 
 **One Trace: launching a program**
 
+Read this as a control and authority trace, not as “shell trivia.”
+The shell expresses intent (parse a command, choose an executable), but the kernel is the only actor that can create a new execution context and install the initial machine state that makes the program *run*.
+When you rehearse this trace from memory, say out loud (1) when you cross the user/kernel boundary, and (2) what privileged state is being constructed or validated at each kernel step.
+
 | Step | User / Process Side | Kernel Side | Why It Matters |
 | --- | --- | --- | --- |
 | 1 | user enters a command in a shell | kernel is idle until asked | work begins in user space |
@@ -199,6 +203,10 @@ The kernel still must coordinate ownership of buffers, record completion, and wa
 
 **One Trace: blocking read with device completion**
 
+This trace is the “synchronous request + asynchronous completion” pattern you will see everywhere.
+The `read` system call is synchronous in the sense that *the instruction stream causes the entry* into the kernel, but the completion is asynchronous: a device finishes later and signals the CPU with an interrupt.
+The mastery goal is to be able to explain how the OS turns an I/O wait into “someone else runs” (blocked vs runnable) without losing the waiting thread’s identity, buffer ownership, or resumption point.
+
 | Stage | CPU | Device | Kernel | Process State |
 | --- | --- | --- | --- | --- |
 | before request | process executing in user mode | idle | not yet involved | running |
@@ -264,6 +272,10 @@ This forces the kernel to maintain:
 
 **One Trace: timer-based preemption**
 
+The key idea is that the kernel is not “watching” user code continuously.
+Instead, the hardware timer creates a forced re-entry into the kernel so the OS can apply a scheduling policy at bounded intervals.
+To reproduce this from memory, you must be able to name what gets saved (so A can resume), what decision is made (which runnable context is next), and why the return to user mode is itself a privileged, intentional act.
+
 | Stage | Running Process | Timer | Kernel / Scheduler | Result |
 | --- | --- | --- | --- | --- |
 | slice begins | process A running | armed | kernel already chose A | A progresses |
@@ -323,6 +335,10 @@ not only where data is stored, but what *rules* define the current authoritative
 - Without free-space and allocation policy, storage becomes unusable even if bits remain available.
 
 **One Trace: data moving through the hierarchy**
+
+This table is about *copies* and *authority*, not about memorizing “disk vs RAM vs cache.”
+Every row is a place where the system must define which copy is authoritative, when another copy is stale, and what rule makes an update visible or durable.
+When you cover the table and recite it, force yourself to answer: “If the machine loses power right after this row, which copy wins and why?”
 
 | Stage | Logical View | Physical Movement | Correctness Rule You Must Know |
 | --- | --- | --- | --- |
@@ -433,6 +449,10 @@ Mechanisms that make protection enforceable:
 
 **One Trace: forbidden operation**
 
+Treat this as a “proof” that protection is enforcement, not convention.
+The user process does not get to “try harder”; the hardware and kernel together define a boundary where illegal access turns into a trap, a policy decision, and an observable outcome (error code, signal, termination).
+If you can explain why the kernel must validate even “well-intended” requests, you understand why syscall handling is an attack surface.
+
 | Stage | User Process | Hardware / Kernel | Result |
 | --- | --- | --- | --- |
 | attempt | process tries privileged action or protected access | boundary crossing detected | request cannot proceed directly |
@@ -511,6 +531,10 @@ Cover the tables and reproduce the sequence from memory.
 
 ### 4.1 Boot To First User Process
 
+Boot is a sequence of authority handoffs.
+You are not memorizing brand names (“BIOS”, “UEFI”) here; you are tracking which code is trusted to run next before an OS exists, and when the kernel finally becomes the resident authority.
+When reproducing this, make sure you can say what *must* be initialized for the next stage to be possible (disk access, memory setup, device discovery) and why that initialization cannot start inside the full OS yet.
+
 | Step | Machine State | Kernel Role |
 | --- | --- | --- |
 | power on/reset | only firmware-resident code immediately available | kernel not yet in memory |
@@ -523,6 +547,10 @@ Cover the tables and reproduce the sequence from memory.
 
 ### 4.2 Blocking I/O With Interrupt Completion
 
+Use the “lanes” to prevent a common misunderstanding: the CPU lane and device lane proceed on different clocks.
+While a process is blocked, the device may be actively transferring, and the CPU may be running something else entirely.
+Mastery means you can explain where the waiting condition is recorded (kernel bookkeeping), what event makes it true (interrupt completion), and why this is better than spinning (saves CPU, improves throughput, preserves fairness).
+
 | Step | CPU Lane | Device Lane | Kernel Lane |
 | --- | --- | --- | --- |
 | request | user issues `read` | idle | validates request |
@@ -534,6 +562,10 @@ Cover the tables and reproduce the sequence from memory.
 
 ### 4.3 Timer Preemption
 
+This is the minimal time-sharing loop.
+The timer is the enforcement mechanism that prevents “CPU capture,” and the dispatcher is the mechanism that makes a scheduling decision real by saving and restoring architectural state.
+When you rehearse it, explicitly name the non-negotiables: a privileged timer, a saved context that is sufficient to resume, and a consistent runnable set to choose from.
+
 | Step | Running Process | Hardware | Kernel |
 | --- | --- | --- | --- |
 | slice active | process A runs | timer counts down | not on CPU yet |
@@ -542,6 +574,10 @@ Cover the tables and reproduce the sequence from memory.
 | switch | B state loaded | ready for next timeout | kernel returns to user mode |
 
 ### 4.4 Faulting Memory Access
+
+This trace is the “hardware catches you, kernel decides your fate” pattern.
+The CPU detects that an access violates the current mapping/protection rules, raises an exception, and the kernel decides whether the fault is repairable (e.g., demand paging) or fatal (e.g., illegal access).
+If you can describe what state must be inspected to decide (faulting address, access type, mapping state) you are ready for virtual memory and page faults later.
 
 | Step | Process View | Hardware / Kernel View |
 | --- | --- | --- |
@@ -632,4 +668,3 @@ If you want Chapter 1 to become reasoning skill:
 - Work the `## 3. Mastery Modules` slowly: problem -> mechanism -> invariants -> failure modes.
 - Reproduce the traces from memory and explain why each step exists.
 - Use the answered questions in `## 5` as “explain it out loud” checkpoints.
-

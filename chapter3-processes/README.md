@@ -10,14 +10,14 @@ If Chapter 1 established why the OS must control execution and Chapter 2 explain
 ## 1. What This File Optimizes For
 
 The goal is not to memorize process vocabulary.
-The goal is to be able to answer questions like these without guessing:
+The goal is to be able to do the following without guessing:
 
-- What makes a process more than a program file?
-- Why are process states descriptions of what can happen next rather than labels to memorize?
-- Why does the PCB have to exist if execution can be interrupted?
-- Why is a context switch a save-decision-restore protocol rather than a magical jump?
-- Why are creation and termination lifecycle protocols instead of isolated API calls?
-- Why is IPC about preserving meaning and order, not just moving bytes?
+- Explain what makes a process more than a program file.
+- Explain why process states describe what the computation can do next, not what it did last.
+- Explain why the PCB must exist if execution can be interrupted, blocked, or resumed.
+- Trace a context switch as a save-decision-restore protocol with explicit kernel responsibilities.
+- Trace creation and termination as lifecycle protocols (identity, inheritance, cleanup), not isolated API trivia.
+- Explain why IPC is about preserving meaning, order, and progress, not just moving bytes.
 
 For Chapter 3, mastery means:
 
@@ -91,11 +91,16 @@ Each execution has different live state even when the code is identical.
 
 - When reading a kernel's process descriptor, identify which fields belong to CPU state, memory state, and owned resources.
 
-**Drills**
+**Drills (With Answers)**
 
-1. Why can one executable file correspond to many processes?
-2. Why is the heap part of the process but not part of the program file in the same way?
-3. Why is a JVM process still a real process even though it hosts another runtime inside it?
+1. **Q:** Why can one executable file correspond to many processes?
+**A:** The executable file is a template: code plus initial data. A process is an *instance* with its own live CPU context (PC/registers/stack), its own kernel identity (PID, scheduling state), and its own owned resources (open files, credentials, mappings). Many processes can map the same program text while remaining distinct computations because the instance state is what differentiates them.
+
+2. **Q:** Why is the heap part of the process but not part of the program file in the same way?
+**A:** The program file contains the initial image: code and static data. The heap is created and grown at runtime through allocation, demand paging, and mapping decisions, and its contents depend on the program’s execution history. The kernel must track the heap as part of the address space, but it is not a static artifact that exists “in the file” before execution.
+
+3. **Q:** Why is a JVM process still a real process even though it hosts another runtime inside it?
+**A:** Because the kernel still schedules and isolates the outer process, not the language runtime. The JVM is user-space code living inside one OS process; its threads and GC are ultimately implemented using OS threads, syscalls, and memory mappings. The presence of a runtime does not weaken the kernel’s role: the OS process remains the unit of protection, resource ownership, and kernel-resumable state.
 
 ![Supplement: passive program file, active process image, CPU context, and PCB](../chapter3_graphviz/fig_3_1_process_image_anatomy.svg)
 
@@ -140,6 +145,10 @@ The scheduler and wakeup paths depend on these distinctions.
 
 **One Trace: basic lifecycle under scheduler control**
 
+Read this as a “what can happen next” trace.
+Each transition corresponds to a kernel-recognized cause (dispatch, block, completion, exit), and the state label is only meaningful because it constrains what the scheduler and wakeup paths are allowed to do next.
+When you cover the table, do not recite labels; recite the cause that justifies each transition and the invariant it preserves (no CPU time for blocked work, no progress without dispatch).
+
 | Step | State | Cause |
 | --- | --- | --- |
 | creation | `new` | process admitted |
@@ -152,11 +161,16 @@ The scheduler and wakeup paths depend on these distinctions.
 
 - In scheduler code, ask where the process state field changes and which event justifies each transition.
 
-**Drills**
+**Drills (With Answers)**
 
-1. Why is `ready` not just “almost running”?
-2. Why is `waiting` not the same thing as “inactive”?
-3. Why do state transitions need causes rather than just labels?
+1. **Q:** Why is `ready` not just “almost running”?
+**A:** `Ready` means “eligible to run if scheduled,” not “already running with a delay.” The distinction matters because only `running` consumes CPU now, while `ready` competes for CPU through the scheduler. Treating them as the same erases the meaning of dispatch and makes it impossible to reason about fairness, queueing, and response time.
+
+2. **Q:** Why is `waiting` not the same thing as “inactive”?
+**A:** `Waiting` has a specific wakeup condition: some event (I/O completion, lock release, timer) must occur before progress is possible. The kernel must remember *what* the process is waiting for and place it in the right wait structure; it is paused but not gone. “Inactive” is vague; `waiting` is operationally precise.
+
+3. **Q:** Why do state transitions need causes rather than just labels?
+**A:** Because the kernel’s invariants depend on causality. A process becomes `waiting` because it cannot proceed until an event occurs; it becomes `ready` because that event happened and the kernel recorded it. If you allow arbitrary relabeling, you can schedule blocked work, lose wakeups, or clean up live processes, all of which are correctness failures.
 
 ![Supplement: process states are defined by what the process can do next](../chapter3_graphviz/fig_3_2_process_state_machine.svg)
 
@@ -197,11 +211,16 @@ the PCB is where the kernel remembers enough to resume or clean up the process c
 
 - In Linux-like code, ask how identity, saved CPU context, run-queue membership, and open-resource state are represented in the task structure.
 
-**Drills**
+**Drills (With Answers)**
 
-1. Why is the PCB not just optional bookkeeping?
-2. What is the minimum information a PCB must preserve for resumption?
-3. Why is resource metadata part of the PCB story instead of only CPU state?
+1. **Q:** Why is the PCB not just optional bookkeeping?
+**A:** Because preemption and blocking make execution discontinuous. If the kernel can stop a computation and later resume it, the kernel must have an authoritative record that survives the stop. The PCB is that record: it is the kernel’s representation of the process as a resumable entity, and without it the OS cannot safely schedule, block, wake, or clean up processes.
+
+2. **Q:** What is the minimum information a PCB must preserve for resumption?
+**A:** Enough architectural and kernel state to continue the same instruction stream correctly: saved CPU context (PC, SP, registers, status flags), identity (PID), and the address-space handle (page table pointer or equivalent). In practice it also includes kernel stack/context, scheduling metadata (state, priority, run-queue links), and pointers to the process’s owned resources so invariants remain consistent after resumption.
+
+3. **Q:** Why is resource metadata part of the PCB story instead of only CPU state?
+**A:** Because a process is a resource-owning contract, not only a CPU snapshot. Open files, memory mappings, IPC endpoints, credentials, and pending signals determine what the computation is allowed to do and what it is waiting on. If you only save registers, you can “resume” into a world where ownership and protection are wrong, which breaks isolation and cleanup.
 
 ### 3.4 Threads Refine The Process Model Rather Than Replacing It
 
@@ -241,11 +260,16 @@ This is why the process/thread distinction is really a distinction between:
 
 - In thread-aware kernels or runtimes, ask which state belongs per-thread and which remains process-wide.
 
-**Drills**
+**Drills (With Answers)**
 
-1. Why is a thread cheaper than a full process in many systems?
-2. Why does shared address space not make two threads the same execution path?
-3. Why does the process still matter after threads are introduced?
+1. **Q:** Why is a thread cheaper than a full process in many systems?
+**A:** Threads share the process container: address space, open files, and other resources are not duplicated. Creating and switching threads often avoids the heaviest costs of process creation (new address space, large metadata, full isolation setup) and can reduce context-switch cost (less MMU/TLB churn). The trade is that sharing increases coordination burden and failure coupling inside the process.
+
+2. **Q:** Why does shared address space not make two threads the same execution path?
+**A:** Because “execution path” is defined by control state, not only by memory. Each thread has its own PC/register set and its own stack, and the scheduler can run them independently, at different points in the code, or simultaneously on different cores. Shared memory is shared *ownership*, not shared *control flow*.
+
+3. **Q:** Why does the process still matter after threads are introduced?
+**A:** The process remains the unit of protection and resource ownership: it defines what memory is accessible, which files are open, and what privileges apply. Threads are schedulable execution contexts living inside that container. Without the process abstraction, you cannot explain isolation boundaries, address-space management, or why threads can corrupt each other’s invariants by racing on shared state.
 
 ### 3.5 Queues And Schedulers Exist Because Processes Compete For Service
 
@@ -284,6 +308,10 @@ This is best understood as queue selection under resource scarcity.
 
 **One Trace: queue movement under normal operation**
 
+This trace is about the operational meaning of “state.”
+Queue membership is not bookkeeping trivia; it encodes which scarcity the process is currently subject to (CPU scarcity in the ready queue, device scarcity in a wait queue, memory scarcity when swapped).
+When you cover the table, say why each move is allowed: dispatch consumes CPU service, block records a wait condition, completion re-admits runnable work, and swapping changes who competes under memory pressure.
+
 | Step | Queue / State Change | Meaning |
 | --- | --- | --- |
 | process admitted | enters job set then ready queue | now eligible for future CPU service |
@@ -296,11 +324,16 @@ This is best understood as queue selection under resource scarcity.
 
 - In scheduler code, identify which queue corresponds to which kind of scarcity: CPU, device, or memory.
 
-**Drills**
+**Drills (With Answers)**
 
-1. Why is a queue not just an implementation detail but part of the process model?
-2. Why does the long-term scheduler change system behavior even though it runs infrequently?
-3. Why is a healthy process mix important for overall utilization?
+1. **Q:** Why is a queue not just an implementation detail but part of the process model?
+**A:** Because queue membership is how the kernel represents *what kind of progress is possible*. A ready queue means “eligible for CPU service now”; a device wait queue means “cannot progress until this event fires”; a swap structure means “not currently competing due to memory pressure.” If you treat queues as implementation detail, you lose the semantics that make scheduling, wakeups, and fairness explainable.
+
+2. **Q:** Why does the long-term scheduler change system behavior even though it runs infrequently?
+**A:** Admission controls the degree of multiprogramming: how many processes are actively competing for RAM and CPU. Even rare decisions change the system’s steady-state mix, which affects paging pressure, cache behavior, throughput, and interactive latency. A “too many admitted” system can thrash even if short-term scheduling is perfect.
+
+3. **Q:** Why is a healthy process mix important for overall utilization?
+**A:** Because different processes stress different resources. A mix of CPU-bound and I/O-bound work lets the OS overlap CPU execution with device latency instead of leaving one resource idle. If all work blocks on the same scarce device, the CPU can go idle; if all work is CPU-bound, devices can be underutilized and interactive response can degrade.
 
 ![Supplement: admission, dispatch, blocking, completion, and swap pressure create the queue structure](../chapter3_graphviz/fig_3_3_scheduler_queues.svg)
 
@@ -341,6 +374,10 @@ it preserves the illusion of concurrent progress rather than advancing user work
 
 **One Trace: timer-driven preemption**
 
+This is the minimal save-decision-restore loop that makes time sharing real.
+The timer interrupt creates a forced kernel entry, then the kernel must (1) save enough state to resume A, (2) decide which runnable context is next, and (3) restore B so the decision becomes real.
+When you rehearse it, explicitly name where the saved state lives (PCB / kernel stack) and why “choose” must occur between save and restore.
+
 | Step | Running Process | Kernel / Scheduler | Result |
 | --- | --- | --- | --- |
 | slice active | process A uses CPU | timer counts down | A makes progress |
@@ -353,11 +390,16 @@ it preserves the illusion of concurrent progress rather than advancing user work
 
 - In a teaching kernel, inspect the timer interrupt path and the scheduler handoff to see where save, decision, and restore each occur.
 
-**Drills**
+**Drills (With Answers)**
 
-1. Why is a context switch not itself useful work for the user computation?
-2. What exact state must survive preemption?
-3. Why does timer-driven preemption require both interrupt logic and scheduler logic?
+1. **Q:** Why is a context switch not itself useful work for the user computation?
+**A:** Because it does not advance the user program’s instruction stream; it preserves and transfers control so *someone* can run. Saving and restoring registers, updating kernel bookkeeping, and switching stacks are overhead paid to create the illusion of concurrent progress and to enforce fairness and responsiveness. You do it to share the machine, not to compute the program’s output.
+
+2. **Q:** What exact state must survive preemption?
+**A:** The architectural CPU context needed to resume correctly: PC, SP, general registers, and status/flags (often plus FP/SIMD state). The kernel must also preserve the identity and execution container mapping: which address space to restore (page table pointer) and the kernel bookkeeping that makes the thread schedulable (state, priority, run-queue links, kernel stack). “Saved registers only” is not enough if the restored mapping and identity are wrong.
+
+3. **Q:** Why does timer-driven preemption require both interrupt logic and scheduler logic?
+**A:** Interrupt logic provides the forced entry that regains control even if the process never yields. Scheduler logic decides which runnable work should run next. Without interrupts, you cannot enforce preemption; without scheduling, you can preempt but you cannot choose a correct next owner of the CPU (or maintain fairness and responsiveness).
 
 ![Supplement: a context switch is a save-decision-restore protocol, not a mysterious jump](../chapter3_graphviz/fig_3_4_context_switch_trace.svg)
 
@@ -398,6 +440,10 @@ That separation is the main conceptual point, not the exact API names.
 
 **One Trace: fork then exec style divergence**
 
+This trace exists to separate “new identity” from “new program image.”
+`fork` (conceptually) creates a new execution container with inherited context and resources, while `exec` replaces the address-space image so the child can become a different program.
+When you cover the table, force yourself to say: which aspects are inherited (files/credentials by default) and which aspect changes at `exec` (the code/data image and entry point).
+
 | Step | Parent | Child | Kernel Meaning |
 | --- | --- | --- | --- |
 | before creation | running existing image | absent | one execution context exists |
@@ -409,11 +455,16 @@ That separation is the main conceptual point, not the exact API names.
 
 - Inspect where the kernel copies process metadata, where it duplicates or references resources, and where `exec` replaces the address-space image.
 
-**Drills**
+**Drills (With Answers)**
 
-1. Why are `fork()` and `exec()` structurally different actions?
-2. Why is parent-child ancestry not the same thing as sharing a future program image?
-3. What resource decisions must the OS make during process creation?
+1. **Q:** Why are `fork()` and `exec()` structurally different actions?
+**A:** `fork` is about creating a new identity and execution container: a new PID, new schedulable entity, and inherited resource bindings. `exec` is about replacing the program image inside an existing container: new code/data, new entry point, potentially new address-space layout. Separating them makes the model compositional: “create a process” and “choose what it runs” are different problems.
+
+2. **Q:** Why is parent-child ancestry not the same thing as sharing a future program image?
+**A:** Ancestry is the creation relationship: who created whom, and therefore who can `wait` for whom and who inherits what initially. The future program image is a runtime choice: after `exec`, the child may run a completely different program than the parent. Confusing these leads to wrong assumptions like “child runs parent’s code forever,” which breaks reasoning about shells, pipelines, and servers.
+
+3. **Q:** What resource decisions must the OS make during process creation?
+**A:** Which open files and descriptors are inherited (and which are marked close-on-exec), what credentials/identity are inherited, what memory mappings are duplicated or shared (copy-on-write vs deep copy), what scheduling attributes apply, and how parent/child relationships are recorded. These decisions define both correctness (what the child can access) and performance (how expensive “duplication” actually is).
 
 ![Supplement: fork then exec is controlled duplication, then image replacement](../chapter3_graphviz/fig_3_7_fork_exec_trace.svg)
 
@@ -452,6 +503,10 @@ On UNIX-like systems, orphans are typically reparented so someone can still coll
 
 **One Trace: exit to final cleanup**
 
+Termination is a lifecycle protocol, not an instant erase.
+The key structural reason for the “zombie” phase is that the parent may need to observe outcome (exit status, resource usage) after the child has already stopped executing.
+When you cover the table, identify what remains after exit (a small kernel record) and what must already be gone (CPU execution, most resources).
+
 | Step | Process State | Kernel Meaning |
 | --- | --- | --- |
 | execution ends | child stops running | status becomes final |
@@ -463,11 +518,16 @@ On UNIX-like systems, orphans are typically reparented so someone can still coll
 
 - Look for where exit status is stored, where wait consumes it, and where the final table entry is removed.
 
-**Drills**
+**Drills (With Answers)**
 
-1. Why is a zombie not just “a dead process” in the most naive sense?
-2. Why are zombie and orphan different failure or lifecycle outcomes?
-3. Why does final cleanup often happen after execution has already ended?
+1. **Q:** Why is a zombie not just “a dead process” in the most naive sense?
+**A:** A zombie is dead in the sense that it no longer executes and cannot be scheduled. But it still has a kernel table entry because its exit status (and possibly accounting info) must remain observable to the parent. It is “lingering bookkeeping,” not “lingering computation,” and that distinction matters for resource leaks and lifecycle correctness.
+
+2. **Q:** Why are zombie and orphan different failure or lifecycle outcomes?
+**A:** Zombie means “child terminated first; parent has not reaped status yet.” Orphan means “parent disappeared first; child may still be running or may later exit.” They have different fixes and invariants: zombies are cleaned by `wait` (or reaping), while orphans require reassignment of cleanup responsibility (reparenting) so someone can eventually observe and reap status.
+
+3. **Q:** Why does final cleanup often happen after execution has already ended?
+**A:** Because cleanup is coordinated with observation. The kernel cannot discard all traces if the parent has a right to collect outcome, and the parent may not call `wait` immediately. The OS therefore splits “stop executing” from “reclaim the final record,” ensuring both correctness (status observable) and bounded resource reclamation (eventually reaped).
 
 ![Supplement: exit preserves status via a zombie phase until wait authorizes final cleanup](../chapter3_graphviz/fig_3_8_exit_wait_trace.svg)
 
@@ -512,11 +572,16 @@ The producer-consumer pattern matters here because it shows that shared data wit
 
 - In OS labs, identify where the kernel sets up the communication channel and where user processes must enforce the higher-level protocol themselves.
 
-**Drills**
+**Drills (With Answers)**
 
-1. Why is IPC necessary even on one machine?
-2. Why is the producer-consumer problem about coordination as much as data storage?
-3. Why is modularity one of the strongest reasons to allow process cooperation?
+1. **Q:** Why is IPC necessary even on one machine?
+**A:** Because processes are isolated by design. If you split a system into multiple processes for modularity, fault containment, or privilege separation, those processes still need to exchange information and coordinate progress. IPC is the disciplined way to cooperate without dissolving isolation by “just sharing everything.”
+
+2. **Q:** Why is the producer-consumer problem about coordination as much as data storage?
+**A:** Because the correctness hazard is not “where do we put bytes,” but “when is an item valid,” “who owns the slot,” and “what ordering and capacity guarantees exist.” Without a protocol, the consumer can read uninitialized/stale data or miss updates, and the producer can overwrite unread items. Producer-consumer is the minimal model that forces you to reason about visibility, atomicity, and bounded capacity.
+
+3. **Q:** Why is modularity one of the strongest reasons to allow process cooperation?
+**A:** Modular decomposition lets you isolate failures, restart components, and limit privilege (a service can run with only the rights it needs). IPC is what turns modular structure into working behavior: it preserves the boundaries while still allowing the system to function as one coherent whole. Without IPC, modularity becomes “separate programs” rather than “separate components.”
 
 ### 3.10 Shared Memory And Message Passing Move Complexity To Different Places
 
@@ -552,6 +617,10 @@ This tradeoff compresses to:
 
 **One Trace: producer-consumer via shared memory**
 
+Shared memory makes the data path cheap, but it makes the protocol path your responsibility.
+The important step is `publish`: you must establish an ordering rule that makes “data is in the slot” become true *before* “the slot is marked valid” becomes visible to the consumer (and vice versa for release).
+When you cover this table, say what synchronization primitive you would use to enforce those orderings (mutex+cond, semaphores, atomics), and what breaks if `publish` is not atomic with respect to the consumer's checks.
+
 | Step | Producer | Shared Buffer | Consumer |
 | --- | --- | --- | --- |
 | produce | creates item | empty or has space | waiting or doing other work |
@@ -563,11 +632,16 @@ This tradeoff compresses to:
 
 - In shared-memory examples, identify which parts the kernel set up once and which parts the processes must coordinate repeatedly.
 
-**Drills**
+**Drills (With Answers)**
 
-1. Why can shared memory be faster and still be harder to get right?
-2. Why does message passing shift some complexity back into the OS or runtime?
-3. Where does synchronization responsibility live in each model?
+1. **Q:** Why can shared memory be faster and still be harder to get right?
+**A:** It is faster because communication becomes loads/stores after setup, avoiding per-exchange syscalls and copies. It is harder because correctness now depends on synchronization and memory-ordering discipline between peers: you must prevent races, preserve invariants, and ensure visibility ordering across cores. The kernel stops mediating each exchange, so the application must supply the protocol.
+
+2. **Q:** Why does message passing shift some complexity back into the OS or runtime?
+**A:** Because each send/receive becomes an explicit mediated event: the system may buffer, block, queue, route, and wake threads. That adds overhead, but it can simplify application correctness because there is less shared mutable state and the communication boundary is explicit. Complexity moves from “shared memory discipline” to “channel semantics and scheduling behavior.”
+
+3. **Q:** Where does synchronization responsibility live in each model?
+**A:** In shared memory, most synchronization responsibility lives in the communicating processes (locks/atomics/conditions) because the kernel is not involved per exchange. In message passing, some synchronization is embedded in the mechanism (blocking send/receive, buffering capacity, ordered delivery), but higher-level protocol responsibility still remains in user space (what a message means, when to retry, how to handle timeouts/failures).
 
 ### 3.11 Naming, Blocking, And Buffering Determine How Message Passing Behaves
 
@@ -602,11 +676,16 @@ These choices determine whether communication behaves more like rendezvous, queu
 
 - In any IPC API, ask three questions first: who names the peer, who can block, and where can messages accumulate?
 
-**Drills**
+**Drills (With Answers)**
 
-1. Why does a zero-capacity channel behave like a rendezvous?
-2. Why is indirect communication structurally looser than direct communication?
-3. Why does bounded buffering create backpressure?
+1. **Q:** Why does a zero-capacity channel behave like a rendezvous?
+**A:** With zero buffering, a send cannot “deposit” a message and leave. The send must wait until a receiver is present to take the message immediately, which couples the two parties in time. This is a synchronization event as much as a data transfer.
+
+2. **Q:** Why is indirect communication structurally looser than direct communication?
+**A:** Direct communication names the peer explicitly, coupling sender and receiver identities. Indirect communication targets a mailbox/port/channel, so senders and receivers can change independently as long as they agree on the mailbox identity and semantics. This decoupling is powerful, but it also raises questions about ownership, access control, and message routing policy.
+
+3. **Q:** Why does bounded buffering create backpressure?
+**A:** Because when the buffer fills, senders must either block, fail, or drop messages. That pressure forces producers to slow down or coordinate with consumers, preventing unbounded memory growth. Bounded buffering turns “capacity” into a correctness and performance property, not just a storage detail.
 
 ### 3.12 Client-Server, Sockets, RPC, And Pipes Extend IPC Across Larger Boundaries
 
@@ -645,6 +724,10 @@ The difficult issues remain the same:
 
 **One Trace: request/reply over message-oriented IPC**
 
+This is the generic client-server coordination pattern.
+The channel/kernel/runtime mediates delivery (and often buffering and wakeups), while the server supplies the service semantics; the reply makes the request meaningful to the caller as an atomic-looking operation.
+When you cover the table, explicitly state where a client could block (on send, on reply), where buffering could hide latency, and what ordering assumptions the server relies on to interpret requests correctly.
+
 | Step | Client | Kernel / Runtime | Server |
 | --- | --- | --- | --- |
 | request formed | prepares operation and args | channel exists or is created | waiting |
@@ -656,20 +739,28 @@ The difficult issues remain the same:
 
 - In sockets or RPC code, ask where naming ends, where marshalling begins, and where failure or timeout becomes visible to the caller.
 
-**Drills**
+**Drills (With Answers)**
 
-1. Why is RPC conceptually an IPC mechanism with a higher-level interface?
-2. Why do sockets still need a protocol above raw bytes?
-3. Why is the local-versus-remote distinction less important than many students first assume?
+1. **Q:** Why is RPC conceptually an IPC mechanism with a higher-level interface?
+**A:** RPC is still request/reply message passing, but it hides message framing behind a procedure-call illusion. It adds marshaling/unmarshaling, naming/binding, and failure/timeout handling conventions. The core IPC problem remains: you are coordinating two execution contexts across a boundary while preserving meaning, order, and progress.
+
+2. **Q:** Why do sockets still need a protocol above raw bytes?
+**A:** A socket gives you a byte stream (or datagrams), not structured meaning. Applications must define framing, message boundaries (if needed), request identifiers, and semantic contracts (what a sequence of bytes represents). Without a protocol, you can transmit bytes successfully and still have a broken system because the receiver cannot interpret, order, or validate them consistently.
+
+3. **Q:** Why is the local-versus-remote distinction less important than many students first assume?
+**A:** Remote communication adds latency and partial failure, but the conceptual problems begin locally: naming, buffering, blocking, ordering, backpressure, and interpretation. If you cannot design correct local IPC, “networking” will not rescue you. RPC and sockets are IPC pushed across a larger boundary; they amplify existing coordination issues rather than replacing them with a new category of problems.
 
 ![Supplement: communication models differ mainly in where coordination and mediation live](../chapter3_graphviz/fig_3_6_communication_models.svg)
 
 ## 4. Canonical Traces To Reproduce From Memory
 
 Do not merely read these.
-Cover the table and reproduce the lifecycle or handoff from memory.
+Cover the tables and reproduce the lifecycle or handoff from memory.
 
 ### 4.1 Ready To Running To Waiting To Ready
+
+This is the minimal scheduler-visible lifecycle loop.
+When you reproduce it, say what *event* causes each transition and what it implies about future progress: `ready` competes for CPU, `running` consumes CPU, `waiting` cannot progress until a specific event occurs.
 
 | Step | State | Cause |
 | --- | --- | --- |
@@ -680,6 +771,9 @@ Cover the table and reproduce the lifecycle or handoff from memory.
 
 ### 4.2 Timer-Driven Preemption And Context Switch
 
+Reproduce this as a protocol, not as a “jump.”
+The kernel regains control, saves outgoing state so it is resumable, chooses among runnable contexts, and restores the chosen one so the decision becomes execution.
+
 | Step | Outgoing Process | Kernel | Incoming Process |
 | --- | --- | --- | --- |
 | before timeout | running | timer armed | ready |
@@ -689,6 +783,9 @@ Cover the table and reproduce the lifecycle or handoff from memory.
 
 ### 4.3 Fork Then Exec Style Split
 
+Say out loud what changes at each stage.
+After creation, there is a new identity and inherited bindings; after `exec`, the program image changes while the identity (the process container) persists.
+
 | Step | Parent | Child |
 | --- | --- | --- |
 | before split | existing execution | absent |
@@ -696,6 +793,9 @@ Cover the table and reproduce the lifecycle or handoff from memory.
 | after exec | may remain same program | image replaced with new program |
 
 ### 4.4 Exit To Zombie To Wait To Cleanup
+
+This trace exists to prove that “done executing” and “done existing” are different.
+The zombie phase is the record that allows the parent to observe outcome; `wait` is the authorization to remove that final record.
 
 | Step | Child | Parent | Kernel |
 | --- | --- | --- | --- |
@@ -706,6 +806,9 @@ Cover the table and reproduce the lifecycle or handoff from memory.
 
 ### 4.5 Shared-Memory Producer / Consumer Coordination
 
+When you reproduce this trace, emphasize the protocol state, not just the buffer.
+The buffer being in shared memory does not make it safe; correctness depends on “publish before consume” ordering and on preventing overwrite of unread data.
+
 | Step | Producer | Buffer | Consumer |
 | --- | --- | --- | --- |
 | create item | ready to publish | has free slot | not yet reading |
@@ -714,6 +817,9 @@ Cover the table and reproduce the lifecycle or handoff from memory.
 
 ### 4.6 Message-Passing Request / Reply
 
+This is the smallest client-server message pattern.
+Track where buffering and blocking can occur, and where ordering assumptions live (channel guarantees vs server protocol).
+
 | Step | Sender | Channel / Kernel | Receiver |
 | --- | --- | --- | --- |
 | request | forms message | idle or ready | waiting |
@@ -721,20 +827,43 @@ Cover the table and reproduce the lifecycle or handoff from memory.
 | delivery | waiting or continuing | makes message visible | receives |
 | reply | waits or receives response | routes result | returns outcome |
 
-## 5. Questions That Push Beyond Recall
+## 5. Key Questions (Answered)
 
-1. Why is a process conceptually closer to a resumable contract with the kernel than to a file on disk?
-2. Why do process states describe future possibilities rather than past history?
-3. Why is the PCB the kernel's authoritative record instead of just a convenient cache?
-4. Why does the scheduler need queues that distinguish CPU scarcity from device scarcity?
-5. Why is a context switch best understood as a protocol rather than as a single event?
-6. Why does `fork` plus `exec` teach more about process structure than either call in isolation?
-7. Why can a terminated process still need a table entry?
-8. Why are zombie and orphan fundamentally different lifecycle outcomes?
-9. Why is IPC about preserving meaning and order rather than just transferring bytes?
-10. Why does shared memory reduce some kernel work while increasing application responsibility?
-11. Why do blocking semantics and buffering rules materially change IPC behavior?
-12. Why are sockets and RPC best understood as IPC across a larger boundary rather than as unrelated networking trivia?
+1. **Q:** Why is a process conceptually closer to a resumable contract with the kernel than to a file on disk?
+**A:** Because the defining feature of a process is that the kernel agrees to treat it as a schedulable, interruptible, and resumable computation with owned resources. That “contract” includes identity, protection, scheduling eligibility, and cleanup obligations. A file on disk is passive; it does not contain the live execution context or resource bindings that must survive preemption and blocking.
+
+2. **Q:** Why do process states describe future possibilities rather than past history?
+**A:** Because the state is used to decide what the kernel is allowed to do next. `Ready` means “can run if scheduled,” `waiting` means “cannot run until an event happens,” and `terminated` means “should not run again.” Past history can influence *policy* (e.g., priority), but state exists to encode immediate admissible transitions for scheduling and wakeup correctness.
+
+3. **Q:** Why is the PCB the kernel's authoritative record instead of just a convenient cache?
+**A:** Because after preemption, the CPU register file no longer contains the process’s state, and user memory may not be trusted or even resident. The kernel must have a canonical, protected record to resume the exact computation and to enforce ownership and protection consistently. If the PCB were “just a cache,” correctness would be optional; in reality, resumability and cleanup depend on it.
+
+4. **Q:** Why does the scheduler need queues that distinguish CPU scarcity from device scarcity?
+**A:** Because “ready to compete for CPU” and “blocked on an external event” are fundamentally different scarcity conditions. CPU scarcity is resolved by selecting among runnable work; device scarcity is resolved by waiting for completion and waking the right blocked work. Mixing them destroys meaning: you either waste CPU scheduling blocked work or you lose wakeup structure that preserves liveness.
+
+5. **Q:** Why is a context switch best understood as a protocol rather than as a single event?
+**A:** Because it has an order that must be correct: save outgoing state before it is clobbered, make a scheduling decision based on truthful runnable state, then restore incoming state consistently. The protocol also includes bookkeeping updates (state fields, queue membership, accounting) that must remain atomic with respect to interrupts and concurrent CPUs. Treating it as “one event” hides the invariants that prevent corruption and lost wakeups.
+
+6. **Q:** Why does `fork` plus `exec` teach more about process structure than either call in isolation?
+**A:** Together they expose the two major axes of process structure: identity/inheritance (process container) and program image (what code/data is executed). `fork` teaches what it means to create a new container with inherited bindings; `exec` teaches that the container can persist while the program image is replaced. This separation is the conceptual core: “create a process” and “choose the program” are different problems.
+
+7. **Q:** Why can a terminated process still need a table entry?
+**A:** Because outcome is an observable part of the lifecycle. The parent may need exit status and accounting information after the child has stopped executing, and the kernel must preserve that information until it is collected. The “zombie” table entry is the minimal record that preserves correctness without preserving execution.
+
+8. **Q:** Why are zombie and orphan fundamentally different lifecycle outcomes?
+**A:** Zombie is “child ended; parent hasn’t reaped status,” so the fix is to collect status (`wait`) and reclaim the final record. Orphan is “parent ended first,” so the fix is to reassign cleanup responsibility (reparenting) while the child may still execute. They arise from opposite orderings of parent/child termination and therefore imply different invariants and recovery actions.
+
+9. **Q:** Why is IPC about preserving meaning and order rather than just transferring bytes?
+**A:** Because coordination fails even when bytes move perfectly if peers disagree about interpretation, boundaries, or ordering. IPC must preserve protocol meaning: which operation is requested, which reply corresponds, what ordering is guaranteed, and what happens on delay or failure. “Bytes delivered” is a transport property; “system behaves correctly” requires semantic agreement.
+
+10. **Q:** Why does shared memory reduce some kernel work while increasing application responsibility?
+**A:** After setup, data exchange becomes ordinary memory operations, which avoids per-message syscalls and can be very fast. But the kernel no longer mediates each handoff, so the application must enforce synchronization, visibility ordering, and invariants like “do not overwrite unread data.” Less kernel work means more protocol discipline in user space.
+
+11. **Q:** Why do blocking semantics and buffering rules materially change IPC behavior?
+**A:** They determine liveness and backpressure. A zero-capacity channel turns communication into a rendezvous, forcing timing coupling; bounded buffers create backpressure when full; nonblocking operations shift coordination to polling/retry logic. These rules change not only performance but also which bugs are possible (deadlocks, starvation, dropped messages).
+
+12. **Q:** Why are sockets and RPC best understood as IPC across a larger boundary rather than as unrelated networking trivia?
+**A:** Because they solve the same core problem as local IPC: structured communication between isolated execution contexts. The larger boundary adds latency, addressing, and partial failure, but the fundamental questions remain: naming, buffering, ordering, interpretation, and progress. Seeing sockets/RPC as IPC helps you reason uniformly about coordination rather than memorizing “networking features.”
 
 ## 6. Suggested Bridge Into Real Kernels
 

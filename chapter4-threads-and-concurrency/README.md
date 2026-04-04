@@ -10,14 +10,14 @@ If Chapter 3 taught you how the kernel tracks *one* execution container, Chapter
 ## 1. What This File Optimizes For
 
 The goal is not to memorize thread API calls.
-The goal is to be able to answer questions like these without guessing:
+The goal is to be able to do the following without guessing:
 
-- What is *shared* between threads, and what is *not* shared?
-- Why does “a blocked thread” sometimes imply “a blocked process” and sometimes not?
-- Why does a multicore machine make correctness harder even when it makes performance possible?
-- When should threads be created explicitly, and when should they be implicit (thread pools, tasks)?
-- What is the real difference between many-to-one, one-to-one, and many-to-many threading models?
-- Why do fork/exec, signals, and cancellation become “protocol problems” in multithreaded programs?
+- Distinguish what is shared between threads and what remains per-thread state.
+- Predict when “one thread blocks” implies “the whole process blocks” (and when it does not).
+- Explain why multicore turns concurrency into real parallel correctness hazards and performance cliffs.
+- Choose when to create threads explicitly versus using implicit threading (pools, tasks, fork-join).
+- Compare M:1, 1:1, and M:N threading models by blocking behavior, overhead, and achievable parallelism.
+- Explain why fork/exec, signals, and cancellation become lifecycle and protocol problems in multithreaded programs.
 
 For Chapter 4, mastery means:
 
@@ -112,11 +112,16 @@ That is the feature and the danger.
 - In POSIX, identify what `pthread_create` must allocate (stack + thread metadata) versus what already exists (address space).
 - In Linux-like kernels, notice that “threads” often look like “tasks that share an address space.”
 
-**Drills**
+**Drills (With Answers)**
 
-1. Name three kinds of state that are per-thread and three that are shared across threads.
-2. Why does “shared address space” make communication cheap but correctness hard?
-3. If one thread calls `close(fd)`, what must other threads assume about that file descriptor?
+1. **Q:** Name three kinds of state that are per-thread and three that are shared across threads.
+**A:** Per-thread examples: (1) registers/PC (the live control state), (2) the stack (call frames and locals), (3) TLS and per-thread scheduler identity/state. Shared examples: (1) the address space contents (heap/global data), (2) process-wide open file table/descriptor namespace, (3) process credentials and many kernel-owned resources attached to the process container. The exact list varies by OS, but “control flow state is per-thread; ownership/protection state is mostly per-process” is the invariant.
+
+2. **Q:** Why does “shared address space” make communication cheap but correctness hard?
+**A:** Cheap because communication can be ordinary reads/writes with no kernel mediation and no copying. Hard because those reads/writes now create interleavings: two threads can observe partial updates, overwrite each other, or violate invariants unless you synchronize and define ordering. Shared memory removes explicit boundaries, so you must manufacture correctness boundaries with locks, atomics, and protocols.
+
+3. **Q:** If one thread calls `close(fd)`, what must other threads assume about that file descriptor?
+**A:** They must assume it can become invalid immediately and can even be *reused* for a different file/socket shortly after. Continuing to use it without coordination can cause EBADF at best and incorrect I/O to the wrong underlying object at worst (if the number is reused). Correct designs either synchronize close/use, duplicate file descriptors for independent lifetimes, or use higher-level ownership rules to prevent “use-after-close.”
 
 ![Supplement: threads share process resources but keep distinct execution context](../chapter4_graphviz/fig_4_1_process_threads_container.svg)
 
@@ -154,11 +159,16 @@ You do not “get concurrency”; you inherit the duty to preserve invariants un
 
 - In a server, identify which data is per-request (safe to keep thread-local) and which data is global (requires synchronization).
 
-**Drills**
+**Drills (With Answers)**
 
-1. Why can a single bug in a shared invariant produce “rare” failures instead of consistent failures?
-2. What is one example where responsiveness improves but throughput worsens after adding threads?
-3. What is the most common place you accidentally share data in a threaded program?
+1. **Q:** Why can a single bug in a shared invariant produce “rare” failures instead of consistent failures?
+**A:** Because the bug is triggered by a specific interleaving, not by deterministic single-thread logic. Most schedules may “accidentally” avoid the harmful ordering, especially on light load or on a single core. As load, core count, or timing changes, the probability of the bad interleaving rises, which is why races often look like “rare, spooky failures.”
+
+2. **Q:** What is one example where responsiveness improves but throughput worsens after adding threads?
+**A:** A UI or request handler that spawns background threads can remain responsive, but overall throughput can drop if threads contend on a lock, thrash caches, or spend time context-switching instead of computing. Another classic case is “thread per request” under load: latency for early requests may improve, but as concurrency explodes, the scheduler overhead and memory pressure reduce total completed work per second.
+
+3. **Q:** What is the most common place you accidentally share data in a threaded program?
+**A:** Anything that looks “global” or reusable: shared caches, singletons, static variables, shared queues, and shared buffers reused across requests. File descriptors and sockets are also frequently shared implicitly (because they are process-scoped). The failure mode is usually not “I meant to share”; it is “I forgot this object outlives one thread and is touched by another.”
 
 ### 3.3 Multicore Programming: Turning Concurrency Into Parallel Work
 
@@ -198,6 +208,10 @@ That bound ignores real overheads (locks, cache misses, communication), so real 
 
 Assume `S = 0.10` (10% serial).
 
+Read this table as a warning about *where* your speedup goes.
+The serial fraction (including contended locks, single-threaded subsystems, and unavoidable sequential work) is a hard cap: as `N` grows, the parallel portion shrinks in marginal value and the serial portion dominates.
+When you apply this in real systems, treat “serial fraction” as “everything that is effectively serialized by design,” not just one obvious loop.
+
 | Cores N | Ideal bound | Interpretation |
 | --- | --- | --- |
 | 1 | 1.0x | baseline |
@@ -209,11 +223,16 @@ Assume `S = 0.10` (10% serial).
 
 - In a real system, find the “serial fraction” by locating shared locks, shared queues, or single-threaded subsystems.
 
-**Drills**
+**Drills (With Answers)**
 
-1. Why can removing one contended lock outperform adding more cores?
-2. What’s the difference between “parallelizable work exists” and “parallel speedup is achieved”?
-3. Name one performance cliff that appears only after moving from 1 core to many cores.
+1. **Q:** Why can removing one contended lock outperform adding more cores?
+**A:** A contended lock turns large regions of work into an effectively serial section, increasing the serial fraction `S` that caps speedup. Adding cores cannot break a serialization bottleneck; it can only add more threads waiting on it. Removing or narrowing the lock reduces the serialized region, lowers `S`, and can unlock real parallel speedup that additional hardware alone cannot deliver.
+
+2. **Q:** What’s the difference between “parallelizable work exists” and “parallel speedup is achieved”?
+**A:** Parallelizable work exists when the algorithm can be decomposed into independent pieces. Speedup is achieved only when the runtime execution actually keeps cores busy with low overhead: balanced work distribution, minimal contention, good locality, and bounded coordination cost. Many programs have parallelizable work on paper but fail to speed up due to synchronization, cache coherence, or imbalance.
+
+3. **Q:** Name one performance cliff that appears only after moving from 1 core to many cores.
+**A:** Cache-coherence and contention cliffs. For example, a single shared counter or queue that is fine on one core can become a coherence hot spot on many cores, causing massive cache-line bouncing. False sharing (independent variables on the same cache line) is another classic multicore-only cliff: logic is correct, but performance collapses as cores fight over coherence ownership.
 
 ### 3.4 User Threads vs Kernel Threads: Who Schedules What?
 
@@ -247,6 +266,10 @@ The key distinction is what happens on a blocking system call:
 
 **One Trace: one thread blocks on I/O**
 
+Use this table to reason about “who can run next” when one thread blocks.
+If the kernel sees only one schedulable entity for the process, then a blocking syscall parks that entity and all user-level threads stall; if the kernel schedules threads, only the calling thread sleeps.
+When you memorize it, focus on the kernel-visible schedulable unit, because that alone determines blocking behavior.
+
 | Model | Thread A does blocking `read()` | Thread B outcome |
 | --- | --- | --- |
 | user threads, kernel sees 1 entity | process enters kernel and sleeps | B cannot run |
@@ -256,11 +279,16 @@ The key distinction is what happens on a blocking system call:
 
 - In POSIX, identify which calls are “cancellation points” or likely to block, then reason about how that interacts with the model.
 
-**Drills**
+**Drills (With Answers)**
 
-1. Why is “fast thread creation” not enough to make user-only threads a good idea?
-2. What new cost appears when the kernel schedules many threads directly?
-3. How can a runtime avoid blocking the entire process in the presence of blocking I/O?
+1. **Q:** Why is “fast thread creation” not enough to make user-only threads a good idea?
+**A:** Because the failure mode is not creation cost; it is blocking and preemption. If the kernel schedules only one entity, any blocking system call blocks the whole process, and the user-level scheduler cannot run to “switch threads” while blocked. You also lose true multicore parallelism because the kernel can run only one kernel-visible entity at a time.
+
+2. **Q:** What new cost appears when the kernel schedules many threads directly?
+**A:** Kernel-visible threads consume kernel resources: per-thread kernel stacks/metadata, scheduler run-queue operations, and more context switches under oversubscription. More runnable threads also increase contention on scheduling and synchronization paths. You gain correct blocking and true parallelism, but you pay in memory footprint and scheduling overhead if you create too many.
+
+3. **Q:** How can a runtime avoid blocking the entire process in the presence of blocking I/O?
+**A:** By ensuring blocking I/O does not park the only kernel-visible execution entity. Options include using kernel threads (1:1), using nonblocking or async I/O so user threads do not enter a blocking sleep, or using an M:N model with kernel cooperation so the runtime can remap user threads onto kernel threads that remain runnable. The key is: preserve at least one runnable kernel-visible entity when one thread blocks.
 
 ### 3.5 Multithreading Models: Many-to-One, One-to-One, Many-to-Many
 
@@ -293,11 +321,16 @@ Many-to-many often relies on kernel support to coordinate scheduling decisions b
 
 - When you read a runtime later, ask: is it mapping tasks to kernel threads directly, or does it maintain its own user-level scheduler?
 
-**Drills**
+**Drills (With Answers)**
 
-1. Why does M:1 fundamentally prevent parallelism on multicore?
-2. Why can 1:1 become a memory and scheduling problem with “thread per request”?
-3. What kernel signal would a user-level scheduler want to know about blocked kernel threads?
+1. **Q:** Why does M:1 fundamentally prevent parallelism on multicore?
+**A:** Because all user threads are multiplexed onto one kernel thread. The kernel can schedule that one kernel thread on only one core at a time, so even if your user-level scheduler time-slices among user threads, you cannot occupy multiple cores simultaneously. Concurrency exists (interleaving), but parallelism is impossible.
+
+2. **Q:** Why can 1:1 become a memory and scheduling problem with “thread per request”?
+**A:** Each thread typically has a sizable stack and kernel bookkeeping, so thousands of threads become a memory-pressure problem. Oversubscription also turns into a scheduling problem: the kernel spends time context-switching and managing run queues rather than executing useful work, and caches thrash as many thread working sets compete. Throughput can fall even though you “added parallelism.”
+
+3. **Q:** What kernel signal would a user-level scheduler want to know about blocked kernel threads?
+**A:** It would want to know when a kernel thread blocks and when it becomes runnable again, so it can remap user threads and avoid stalling the runtime. Historically this appears as scheduler activations / upcalls or other kernel-to-runtime notifications: “this execution resource is now unavailable/available.” Without such signals, M:N becomes fragile because the runtime cannot make correct scheduling decisions under blocking.
 
 ![Supplement: threading models differ mainly in parallelism, blocking behavior, and overhead](../chapter4_graphviz/fig_4_2_threading_models_comparison.svg)
 
@@ -338,11 +371,16 @@ Your goal is to understand what semantics the library is promising and what kern
 - On Linux-like systems, follow `pthread_create` into the kernel boundary it uses (often `clone`-like).
 - On JVMs, ask where threads become OS threads and where green-thread scheduling might occur (implementation-dependent).
 
-**Drills**
+**Drills (With Answers)**
 
-1. Why does “join” feel like `wait()` from Chapter 3?
-2. What’s one reason a thread library might avoid “create a kernel thread every time”?
-3. What lifecycle invariant does detach enforce?
+1. **Q:** Why does “join” feel like `wait()` from Chapter 3?
+**A:** Because it is the thread lifecycle analog of reaping: “wait until the child finishes, then reclaim its resources and (often) retrieve its outcome.” Like `wait`, join is about coordinating termination and cleanup so resources are reclaimed deterministically. The conceptual pattern is the same: completion information may need to outlive execution.
+
+2. **Q:** What’s one reason a thread library might avoid “create a kernel thread every time”?
+**A:** Creation overhead and resource pressure. Spawning kernel threads repeatedly can allocate stacks, kernel objects, and scheduling state, and it can create bursty load and cache disruption. Pools and task schedulers amortize this by reusing threads, bounding runnable concurrency, and smoothing demand.
+
+3. **Q:** What lifecycle invariant does detach enforce?
+**A:** Detach enforces “no join will occur,” so the system is allowed (and required) to reclaim thread resources automatically at termination. It prevents leaks caused by forgotten joins, but it also means you cannot later synchronize on that thread’s completion via join. The invariant is a clear ownership rule for cleanup responsibility.
 
 ### 3.7 Implicit Threading: Pools, Tasks, and Fork-Join
 
@@ -374,6 +412,10 @@ The unifying idea is that the system controls the *degree of concurrency*.
 
 **One Trace: thread pool request handling**
 
+This is the admission-control story in four moves.
+A pool turns unbounded demand (“requests arrive arbitrarily”) into bounded runnable concurrency (“only this many workers contend for CPU at once”), trading some queueing delay for stability.
+When you cover this table, be explicit about where backpressure lives: the queue is the pressure valve that prevents the scheduler and memory system from being overloaded by unlimited thread creation.
+
 | Step | Component | Meaning |
 | --- | --- | --- |
 | submit | producer enqueues work item | request becomes schedulable work |
@@ -385,11 +427,16 @@ The unifying idea is that the system controls the *degree of concurrency*.
 
 - In servers, look for “accept loop + work queue + worker threads” as the structural signature of a pool.
 
-**Drills**
+**Drills (With Answers)**
 
-1. Why is a thread pool an OS-level performance and stability mechanism, not just a style choice?
-2. What’s the difference between “tasks” and “threads” in a fork-join framework?
-3. Why can a bounded pool reduce tail latency even if it reduces peak parallelism?
+1. **Q:** Why is a thread pool an OS-level performance and stability mechanism, not just a style choice?
+**A:** Because it bounds the number of runnable kernel threads that compete for CPU, memory, and locks. Without that bound, the OS scheduler and memory system can be overwhelmed (too many stacks, too many context switches, too much contention), causing throughput collapse and extreme tail latency. A pool is therefore an admission-control layer that shapes load into something the kernel can schedule predictably.
+
+2. **Q:** What’s the difference between “tasks” and “threads” in a fork-join framework?
+**A:** A task is a unit of work; a thread is an execution resource (a schedulable context with a stack and registers). Fork-join frameworks create many tasks but run them on a bounded set of threads, using work-stealing or queues to balance load. This separation is the key: you can express abundant parallel structure without creating abundant OS threads.
+
+3. **Q:** Why can a bounded pool reduce tail latency even if it reduces peak parallelism?
+**A:** Because unlimited parallelism under load often creates contention and scheduling thrash that makes the slowest requests extremely slow. Bounding concurrency reduces lock contention, cache churn, and run-queue overload, which can make per-request service time more predictable. Tail latency is often dominated by overload behaviors, and pools prevent those overload pathologies.
 
 ![Supplement: thread pools convert unbounded demand into bounded runnable work](../chapter4_graphviz/fig_4_3_thread_pool_flow.svg)
 
@@ -431,6 +478,10 @@ Key issue clusters:
 
 **One Trace: deferred cancellation**
 
+Deferred cancellation is “stop, but only at a safe boundary.”
+The cancel request is not the termination; termination happens at a cancellation point where the thread can run cleanup code to release locks and restore invariants.
+When you cover this table, the mastery check is: can you name which invariants would be destroyed by asynchronous cancellation at each stage?
+
 | Step | Canceler | Target thread | Meaning |
 | --- | --- | --- | --- |
 | request | sends cancel request | continues running | cancellation is pending |
@@ -442,11 +493,16 @@ Key issue clusters:
 
 - In POSIX, find cancellation points in blocking calls and identify what cleanup must happen to preserve invariants.
 
-**Drills**
+**Drills (With Answers)**
 
-1. Why is “only the calling thread remains after fork” a safety choice?
-2. Why is deferred cancellation safer than asynchronous cancellation?
-3. Name one use of TLS that reduces synchronization needs.
+1. **Q:** Why is “only the calling thread remains after fork” a safety choice?
+**A:** Because `fork` copies the process image, including lock states, but it does not copy other threads in a way that guarantees consistent invariants in the child. The child could inherit a mutex as “locked” by a thread that no longer exists, creating immediate deadlock or invariant corruption. Restricting the child to one thread minimizes the inconsistent-state surface and encourages the safe pattern: `fork` then immediately `exec`.
+
+2. **Q:** Why is deferred cancellation safer than asynchronous cancellation?
+**A:** Deferred cancellation stops a thread only at defined safe points, where it can run cleanup handlers and release shared resources. Asynchronous cancellation can terminate in the middle of a critical section, leaving locks held, partially updated data structures, and broken invariants that other threads depend on. Safety comes from choosing a stop boundary that preserves global correctness.
+
+3. **Q:** Name one use of TLS that reduces synchronization needs.
+**A:** Per-thread scratch buffers (formatting, parsing, temporary storage) are a common TLS use: each thread has its own buffer, so there is no shared mutable object to lock. Thread-local error state (like `errno`-style patterns) is another. TLS reduces sharing pressure, but it does not solve synchronization for truly shared data structures or invariants that must be global.
 
 ### 3.9 Operating-System Examples: What “Thread” Means In Practice
 
@@ -474,18 +530,27 @@ Practical anchors:
 
 - In Linux-like kernels: search for task structures, clone/fork variants, and scheduler run queues.
 
-**Drills**
+**Drills (With Answers)**
 
-1. If your runtime uses tasks, what is the kernel actually scheduling?
-2. How would you detect “M:1 behavior” in performance symptoms?
-3. Why is thread representation a kernel data-structure choice that can change performance?
+1. **Q:** If your runtime uses tasks, what is the kernel actually scheduling?
+**A:** Kernel-visible threads (OS threads / kernel threads). Tasks are multiplexed in user space onto that bounded set of threads, so the kernel only sees the underlying schedulable entities. This is why task schedulers exist: you can have millions of tasks while the kernel schedules dozens of threads.
+
+2. **Q:** How would you detect “M:1 behavior” in performance symptoms?
+**A:** You would see limited core utilization (often one core pegged) even when there is abundant “logical concurrency,” and you would see “one blocks, all stall” behavior when any task performs a blocking system call. Latency spikes under blocking I/O are a tell, as is an inability to scale throughput with additional cores despite having many user-level threads/tasks.
+
+3. **Q:** Why is thread representation a kernel data-structure choice that can change performance?
+**A:** Because the scheduler’s hot path is largely data-structure operations: run-queue management, wakeups, priority updates, load balancing, and context save/restore metadata. Layout affects cache locality, contention, and the cost of common operations. A representation that is correct but lock-heavy or cache-unfriendly can dominate runtime cost even if the application logic is efficient.
 
 ## 4. Canonical Traces To Reproduce From Memory
 
 Do not merely read these.
-Cover the table and reproduce the sequence from memory.
+Cover the tables and reproduce the sequence from memory.
 
 ### 4.1 Create -> Run -> Exit -> Join
+
+This is the minimal thread lifecycle protocol.
+When you reproduce it, separate the *control* events (start running, stop running) from the *cleanup* events (status recorded, resources reclaimed).
+Join is not “waiting because you feel like it”; it is the reaping step that makes lifecycle resources deterministic.
 
 | Step | Parent thread | Child thread | Kernel / runtime meaning |
 | --- | --- | --- | --- |
@@ -496,6 +561,9 @@ Cover the table and reproduce the sequence from memory.
 
 ### 4.2 Blocking System Call Under Different Models
 
+This table is the core of “what blocks” reasoning.
+To master it, you must be able to say which schedulable entity the kernel sees, because that alone determines whether blocking parks one thread or the entire process.
+
 | Model | Blocking call effect | Who can still run? |
 | --- | --- | --- |
 | M:1 user threads | blocks entire process | nobody in that process |
@@ -503,6 +571,9 @@ Cover the table and reproduce the sequence from memory.
 | M:N (with kernel support) | blocks one kernel thread | other kernel threads, runtime may remap |
 
 ### 4.3 Thread Pool Request Path
+
+Reproduce this as “demand shaping.”
+The pool bounds runnable concurrency and uses a queue to absorb bursts, preventing overload collapse in the scheduler and memory subsystem.
 
 | Step | Producer | Queue | Worker |
 | --- | --- | --- | --- |
@@ -513,6 +584,9 @@ Cover the table and reproduce the sequence from memory.
 
 ### 4.4 Parallel Speedup Bound (Amdahl)
 
+This is the “compute the cap, then go hunt the serial fraction” trace.
+When you reproduce it, explicitly name what counts as serial in real code (contended locks, single-threaded queues, I/O serialization), not only “a loop that can’t be parallelized.”
+
 | Step | Quantity | Meaning |
 | --- | --- | --- |
 | identify serial fraction | `S` | part that cannot be parallelized |
@@ -522,6 +596,9 @@ Cover the table and reproduce the sequence from memory.
 
 ### 4.5 Fork In A Multithreaded Process -> Exec
 
+This trace exists because `fork` is not “copy the whole process and keep going” in a multithreaded world.
+After `fork`, the child has one thread but inherits memory and lock state, so it must treat the inherited state as potentially inconsistent until `exec` replaces the image.
+
 | Step | Parent (many threads) | Child after fork | After exec |
 | --- | --- | --- | --- |
 | fork issued | one thread calls fork | only calling thread exists | - |
@@ -530,6 +607,9 @@ Cover the table and reproduce the sequence from memory.
 
 ### 4.6 Deferred Cancellation With Cleanup
 
+This is the “request, then stop safely” protocol.
+Cancellation is safe only if it happens at a boundary where cleanup can restore shared invariants (locks released, resources freed, protocol state consistent).
+
 | Step | Canceler | Target | Invariant preserved |
 | --- | --- | --- | --- |
 | request cancel | sets pending flag | continues | state not torn mid-critical-section |
@@ -537,20 +617,43 @@ Cover the table and reproduce the sequence from memory.
 | cleanup | - | releases locks/frees resources | shared invariants restored |
 | termination | - | exits | lifecycle reaped by join/detach |
 
-## 5. Questions That Push Beyond Recall
+## 5. Key Questions (Answered)
 
-1. Why is “threads share memory” both the main performance advantage and the main correctness risk?
-2. Why does “what blocks” explain most threading-model tradeoffs?
-3. Why can adding cores reduce performance when contention grows?
-4. Why is a thread pool an admission-control mechanism, not only an efficiency trick?
-5. Why does 1:1 threading make blocking behavior easy to reason about but sometimes expensive?
-6. Why is M:N hard to implement without kernel cooperation?
-7. Why does fork in a multithreaded process require special rules?
-8. Why is asynchronous cancellation dangerous even if it seems convenient?
-9. Why do signals become a policy problem (who receives) in multithreaded programs?
-10. Why does TLS reduce synchronization pressure, and what does it not solve?
-11. What is one concrete way that cache coherence can dominate multicore performance?
-12. If a parallel program is correct, why might it still be nondeterministic in timing and output order?
+1. **Q:** Why is “threads share memory” both the main performance advantage and the main correctness risk?
+**A:** The advantage is that communication can be plain reads/writes with no kernel mediation and no copying. The risk is that those same reads/writes create interleavings and visibility ordering problems: two threads can observe partial updates, overwrite each other, or violate invariants unless you synchronize. Shared memory removes explicit boundaries; correctness requires you to reintroduce boundaries via locks/atomics/protocols.
+
+2. **Q:** Why does “what blocks” explain most threading-model tradeoffs?
+**A:** Because blocking determines whether the rest of the process can make progress. If the kernel sees one schedulable entity, one blocking syscall can freeze all user-level threads; if the kernel schedules threads, other threads can run while one sleeps. Most model tradeoffs reduce to: where does scheduling authority live, and what happens when a thread enters a blocking sleep?
+
+3. **Q:** Why can adding cores reduce performance when contention grows?
+**A:** More cores can increase contention on shared locks and data, turning “parallel work” into “parallel waiting.” Coherence traffic and lock handoff can dominate, and oversubscription can increase context switching and cache thrash. Past a point, adding cores increases coordination work faster than it increases useful work.
+
+4. **Q:** Why is a thread pool an admission-control mechanism, not only an efficiency trick?
+**A:** Because it bounds runnable concurrency so the system remains schedulable under load. Without a bound, thread-per-request can explode memory usage (stacks) and scheduler overhead, creating throughput collapse and extreme tail latency. A pool uses queues as a pressure valve: excess demand waits in a controlled place instead of becoming uncontrolled runnable threads.
+
+5. **Q:** Why does 1:1 threading make blocking behavior easy to reason about but sometimes expensive?
+**A:** Easy because each user thread maps to a kernel-scheduled entity, so “thread blocks” means “that thread sleeps” in a straightforward way, and multicore parallelism is natural. Expensive because kernel threads cost memory and scheduling overhead, and large numbers of threads create oversubscription, run-queue contention, and cache thrash. 1:1 shifts complexity from “model ambiguity” to “resource scaling.”
+
+6. **Q:** Why is M:N hard to implement without kernel cooperation?
+**A:** Because the runtime must know when its kernel execution resources block or resume to make correct scheduling decisions for user threads. Without kernel-to-runtime signals (upcalls/activations), the runtime can believe it has runnable capacity while all kernel threads are sleeping, causing stalls and unfairness. Cooperation is needed to align user scheduling with kernel blocking and preemption realities.
+
+7. **Q:** Why does fork in a multithreaded process require special rules?
+**A:** Because the child inherits memory and lock state but does not inherit a consistent “snapshot” of other threads’ progress. Locks can be held by threads that no longer exist in the child, leaving invariants permanently broken. Special rules (only calling thread exists; fork-then-exec patterns) reduce the inconsistent-state surface and restore a clean execution image quickly.
+
+8. **Q:** Why is asynchronous cancellation dangerous even if it seems convenient?
+**A:** Because it can terminate a thread in the middle of a critical section or while holding a lock, leaving shared invariants broken. Other threads may then deadlock or read partially updated state. Convenience is “stop now”; safety requires “stop at a point where cleanup can restore invariants.”
+
+9. **Q:** Why do signals become a policy problem (who receives) in multithreaded programs?
+**A:** Because a process may have many threads, and some signals are process-directed rather than thread-directed. The OS/runtime must decide which thread handles the signal, and threads may have different masks and safety properties. That choice affects correctness (reentrancy, which invariants are safe to touch) and therefore becomes a policy issue, not only a mechanism issue.
+
+10. **Q:** Why does TLS reduce synchronization pressure, and what does it not solve?
+**A:** TLS reduces sharing by giving each thread its own instance of otherwise-global state (scratch buffers, per-thread error state), eliminating the need to lock that state. It does not solve synchronization for truly shared resources and invariants: shared queues, shared caches, shared file descriptors, and shared protocol state still require coordination. TLS is a tool for shrinking the shared surface, not erasing it.
+
+11. **Q:** What is one concrete way that cache coherence can dominate multicore performance?
+**A:** A shared hot variable (like a global counter or a lock-protected queue head) can cause a cache line to bounce between cores on every update. The program remains correct, but performance collapses because cores spend time on coherence traffic rather than on computation. False sharing is a particularly nasty version: independent variables on the same cache line create coherence storms even though logic never “shares” the variables intentionally.
+
+12. **Q:** If a parallel program is correct, why might it still be nondeterministic in timing and output order?
+**A:** Correctness often permits multiple valid interleavings. The OS scheduler, core timing, and cache effects can change which thread runs first and when, so timing and output order (logs, response ordering) can vary even when invariants are preserved. Determinism requires stronger constraints than correctness (explicit ordering), and those constraints often cost performance.
 
 ## 6. Suggested Bridge Into Real Kernels
 

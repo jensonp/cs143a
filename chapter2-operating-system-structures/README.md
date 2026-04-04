@@ -10,14 +10,14 @@ If Chapter 1 answered why the OS must exist, Chapter 2 answers how requests reac
 ## 1. What This File Optimizes For
 
 The goal is not to remember a list of interfaces or kernel shapes.
-The goal is to be able to answer questions like these without guessing:
+The goal is to be able to do the following without guessing:
 
-- Why is a service not the same thing as an interface?
-- Why is an API not the same thing as a system call?
-- Why does moving code across the kernel boundary change both performance and fault scope?
-- Why is a shell part of the user experience of the OS without being the kernel?
-- Why do monolithic, layered, microkernel, and modular systems make different tradeoffs?
-- Why are debugging, boot, and system generation structural concerns rather than side topics?
+- Explain why a service is not the same thing as an interface.
+- Explain why an API is not the same thing as a system call.
+- Predict how moving code across the kernel boundary changes both performance and fault scope.
+- Explain why a shell shapes the OS user experience while still being an ordinary user process.
+- Compare monolithic, layered, microkernel, modular, and hybrid systems in terms of fault scope and communication cost.
+- Explain why debugging/observability, boot, and system generation are structural concerns rather than side topics.
 
 For Chapter 2, mastery means:
 
@@ -43,8 +43,8 @@ Separating them makes the chapter coherent.
 Crossing into the kernel is not free.
 It changes privilege, validation requirements, scheduling possibilities, and fault consequences.
 
-Every design choice in Chapter 2 can be compressed to one question:
-where should this code run, and what new cost appears if it runs there?
+Every design choice in Chapter 2 compresses to one decision:
+where the code runs, and what new cost appears because it runs there.
 
 ### 2.3 APIs Package Intent; System Calls Transfer Authority
 
@@ -114,6 +114,10 @@ The same service can therefore have many request surfaces while still converging
 
 **One Trace: deleting a file through different interfaces**
 
+This is a “one service, many interfaces” comparison.
+The GUI, CLI, and API all package the same intent, but the privileged part is the same in every path: the kernel must validate permissions and update authoritative file-system metadata.
+When you cover this table, point to the first row where privilege is required and explain why no amount of user-space polish can replace that enforcement.
+
 | Step | GUI Path | CLI Path | Programmatic Path | Shared OS Meaning |
 | --- | --- | --- | --- | --- |
 | request expressed | user clicks delete | user runs `rm` | code calls an API | intent is file removal |
@@ -126,11 +130,16 @@ The same service can therefore have many request surfaces while still converging
 - When reading a shell or utility, ask which parts are interface logic and which parts merely package a kernel request.
 - When reading kernel code, ask which user-visible surfaces can converge on the same implementation path.
 
-**Drills**
+**Drills (With Answers)**
 
-1. Why is `rm` not the service itself?
-2. How can one service have several interfaces without changing what the OS guarantees?
-3. Why is the implementation layer the real site of protection enforcement?
+1. **Q:** Why is `rm` not the service itself?
+**A:** `rm` is one user-space interface (a utility) that *requests* file removal. The service is the OS-guaranteed capability: removing a name, updating directory entries and metadata, enforcing permissions, and preserving filesystem invariants. You can replace `rm`, call the syscall from another program, or delete via a GUI; the service remains the same because the kernel implements and enforces it.
+
+2. **Q:** How can one service have several interfaces without changing what the OS guarantees?
+**A:** Interfaces differ in how they express intent (a click, a command, an API call), but the guarantee lives at the implementation boundary: the kernel’s semantics for permission checks and metadata updates. As long as the privileged path converges on the same kernel mechanisms and invariants, multiple interfaces can exist without changing what “delete” means.
+
+3. **Q:** Why is the implementation layer the real site of protection enforcement?
+**A:** Because interface code can be bypassed. A user can write a program that never calls the GUI, never runs `rm`, and still requests deletion. The only place enforcement can be universal is where authoritative state is mutated: in privileged kernel code that validates identity, permissions, and filesystem integrity before committing changes.
 
 ![Supplement: service, interface, and implementation are distinct layers that converge on one privileged mechanism](../chapter2_graphviz/fig_2_1_service_interface_implementation.svg)
 
@@ -165,6 +174,10 @@ Keeping the shell outside the kernel means new commands can be added as ordinary
 
 **One Trace: shell command to launched program**
 
+Read this as a boundary-placement trace.
+Command parsing, scripting language features, and user interaction are intentionally kept in user space, while the kernel owns the authoritative act of creating an execution context and installing the initial privilege-separated state.
+When you rehearse it, the pivot is: user intent becomes privileged execution only at the `exec`-style request.
+
 | Step | Shell | Kernel | Why It Matters |
 | --- | --- | --- | --- |
 | command entered | shell reads and parses text | idle until asked | interface logic stays in user space |
@@ -177,11 +190,16 @@ Keeping the shell outside the kernel means new commands can be added as ordinary
 - In a teaching OS, inspect the path from shell parsing to program launch.
 - Notice how much logic lives in user space before the kernel is asked to do anything authoritative.
 
-**Drills**
+**Drills (With Answers)**
 
-1. Why is a shell script not evidence that the shell is part of the kernel?
-2. What benefit appears when new commands are ordinary executables instead of kernel features?
-3. Why is GUI support a different concern from kernel structure?
+1. **Q:** Why is a shell script not evidence that the shell is part of the kernel?
+**A:** A script is executed by a user-space interpreter (the shell or another runtime). The kernel is only involved through system calls (process creation, file I/O, waiting) and does not “understand” the script language. The shell has no privileged instructions; it cannot bypass kernel checks or directly control protected hardware state.
+
+2. **Q:** What benefit appears when new commands are ordinary executables instead of kernel features?
+**A:** Extensibility without privilege. New tools can be installed, updated, and replaced like normal programs without changing the trusted kernel core. That keeps the trusted computing base smaller, reduces the blast radius of bugs, and lets the command ecosystem evolve quickly without turning the kernel into a constantly changing UI platform.
+
+3. **Q:** Why is GUI support a different concern from kernel structure?
+**A:** A GUI is an interface layer: it packages human intent into requests. Kernel structure is about how privileged mechanisms are organized and how authoritative state is protected and updated. You can swap GUIs entirely without changing the kernel’s semantics, but moving UI complexity into privileged code would increase security risk and maintenance cost.
 
 ### 3.3 API, Library Wrappers, And System Calls
 
@@ -224,6 +242,10 @@ One packages intent for programmers; the other transfers authority to the kernel
 
 **One Trace: API call to kernel return**
 
+Read this as three layers with different responsibilities.
+The user program expresses intent, the library wrapper marshals that intent into an ABI-compatible privileged entry, and the kernel validates and performs the operation against authoritative state.
+The wrapper exists so the kernel does not need to implement language- and libc-specific convenience behavior; the kernel stays the minimal authority, not a user API compatibility layer.
+
 | Step | User Program | Library Wrapper | Kernel |
 | --- | --- | --- | --- |
 | request formed | code calls `open()`-style API | receives arguments | not executing yet |
@@ -237,11 +259,16 @@ One packages intent for programmers; the other transfers authority to the kernel
 - Compare a libc wrapper with the kernel syscall dispatcher.
 - Ask where programmer-facing naming ends and where privileged service begins.
 
-**Drills**
+**Drills (With Answers)**
 
-1. Why can two APIs expose the same service while using different wrapper code?
-2. What job does the library wrapper perform that the kernel should not do for it?
-3. Why is syscall argument validation part of OS correctness and security?
+1. **Q:** Why can two APIs expose the same service while using different wrapper code?
+**A:** The service is defined by kernel semantics, not by one library’s implementation. Different language runtimes and libc versions can package arguments differently, add retries, implement convenience overloads, or translate error conventions while still converging on the same syscall (or syscall sequence). This is exactly why “API” and “syscall” are distinct layers: libraries can change without changing the kernel contract.
+
+2. **Q:** What job does the library wrapper perform that the kernel should not do for it?
+**A:** Marshaling and policy at the programming-language boundary: argument validation for user convenience, conversion of types/structures, retry logic, error mapping (`errno` style), and sometimes composition of multiple syscalls into one higher-level operation. Putting that into the kernel would inflate privileged code with fast-changing compatibility logic and create a larger attack surface.
+
+3. **Q:** Why is syscall argument validation part of OS correctness and security?
+**A:** The syscall boundary is a trust boundary. User pointers, sizes, and handles can be wrong by accident or malicious by design. Validation prevents kernel memory corruption, information leaks, and privilege escalation, and it also preserves correctness by ensuring that kernel invariants are updated only when inputs are well-formed and authorized.
 
 ![Supplement: API call to system call to kernel return (boundary and lane view)](../chapter2_graphviz/fig_2_2_api_to_syscall_trace.svg)
 
@@ -290,11 +317,16 @@ For example:
 - When reading a syscall table, classify each entry by which authoritative resource it manipulates.
 - That classification is usually more useful than memorizing names alone.
 
-**Drills**
+**Drills (With Answers)**
 
-1. Why is file creation not just a string-processing event?
-2. Why does device management remain conceptually different from file management even when both use `read()` and `write()`?
-3. Which syscall categories are really about changing execution, and which are about changing stored state?
+1. **Q:** Why is file creation not just a string-processing event?
+**A:** A filename is only the *name*. Creating a file allocates persistent metadata (inode/FCB), updates directory structures, reserves or later allocates storage blocks, sets ownership and permissions, and must preserve consistency even if the system crashes mid-operation. Those are system-wide invariants on shared persistent state, not local string manipulation.
+
+2. **Q:** Why does device management remain conceptually different from file management even when both use `read()` and `write()`?
+**A:** Devices have timing, interrupts, concurrency, and error semantics that are not “just bytes on disk.” A device endpoint may represent a live stream with backpressure, DMA, and driver-managed state. Files are persistent named objects with durability and allocation invariants. The API can look uniform, but the underlying authoritative state and correctness rules differ.
+
+3. **Q:** Which syscall categories are really about changing execution, and which are about changing stored state?
+**A:** Execution-changing calls include process control (create/exec/exit/wait) and protection-related operations that change what execution may do. Stored-state calls include file management and information maintenance (metadata, attributes). Communication spans both: it may create durable endpoints, but it also coordinates live execution and ordering across processes.
 
 ### 3.5 System Programs And Daemons As OS-Adjacent Layers
 
@@ -332,6 +364,10 @@ System programs make it usable.
 
 **One Trace: utility layered over kernel services**
 
+This trace exists to keep the “OS” boundary honest.
+Utilities and daemons can feel like “part of the system,” but they are still user processes that orchestrate work using system calls; the kernel remains the authority that enforces protection and updates shared state.
+When you cover the table, identify which steps are pure policy/orchestration (user space) and which steps necessarily touch authoritative kernel state.
+
 | Stage | Utility / Daemon | Kernel | Structural Meaning |
 | --- | --- | --- | --- |
 | startup | user launches utility or boot starts daemon | creates process | utility gains an execution container |
@@ -343,11 +379,16 @@ System programs make it usable.
 
 - Inspect a daemon or utility and identify which work is policy, presentation, or orchestration, and which work is handed off to the kernel.
 
-**Drills**
+**Drills (With Answers)**
 
-1. Why is a compiler part of the system environment without being part of the kernel?
-2. What makes a daemon structurally different from a kernel thread or interrupt handler?
-3. Why do users often perceive utilities as “the OS” even though privilege lives elsewhere?
+1. **Q:** Why is a compiler part of the system environment without being part of the kernel?
+**A:** It is essential to a developer workflow, but it does not need hardware privilege to do its job. It consumes files, produces files, and uses ordinary system calls like any other application. Keeping it out of the kernel preserves a small trusted base and allows rapid improvement without risking privileged-system stability.
+
+2. **Q:** What makes a daemon structurally different from a kernel thread or interrupt handler?
+**A:** A daemon runs in user mode as a scheduled process, enters the kernel only through syscalls, and can be restarted or replaced without rebuilding the kernel. Kernel threads and interrupt handlers execute in privileged context and can directly manipulate protected state; if they crash or corrupt memory, the whole kernel is at risk.
+
+3. **Q:** Why do users often perceive utilities as “the OS” even though privilege lives elsewhere?
+**A:** Because utilities are the visible control surfaces: they are what users type or click. They also encode lots of user-facing policy (flags, defaults, workflows). But visibility is not authority; the kernel is the invisible layer that actually enforces permissions and preserves system invariants.
 
 ### 3.6 Policy, Mechanism, And Design Goals
 
@@ -392,11 +433,16 @@ Good OS design keeps mechanisms general enough that policies can change without 
 
 - In scheduler or VM code, ask which parts define the possibility of a decision and which parts encode the decision rule itself.
 
-**Drills**
+**Drills (With Answers)**
 
-1. Why is “shorter time slice for interactive work” policy rather than mechanism?
-2. Why does keeping policy outside mechanism usually improve portability?
-3. How can a system be efficient and still structurally brittle?
+1. **Q:** Why is “shorter time slice for interactive work” policy rather than mechanism?
+**A:** The mechanism is “the kernel can preempt using a timer and choose among runnable work.” The time-slice length and who gets which slice are decision rules chosen to optimize a goal (responsiveness, throughput, fairness). Changing the slice length does not change what is *possible*; it changes which outcomes are preferred.
+
+2. **Q:** Why does keeping policy outside mechanism usually improve portability?
+**A:** Different machines and workloads want different decisions: laptops vs servers, interactive vs batch, fast SSD vs slow disk. If the kernel mechanism is general, the policy can adapt through configuration or pluggable schedulers without rewriting core machinery. Portability is the ability to retune decisions while keeping invariants stable.
+
+3. **Q:** How can a system be efficient and still structurally brittle?
+**A:** It can be optimized around one set of assumptions (hardware topology, workloads, latency budgets) in ways that entangle subsystems tightly. That can produce excellent performance today but make future changes risky or expensive because small modifications ripple through privileged code. Brittle systems often “work fast” until the environment changes, then become hard to fix safely.
 
 ### 3.7 Kernel Structures: Monolithic, Layered, Microkernel, Modular, Hybrid
 
@@ -432,6 +478,10 @@ where does this code live, and how much does it cost to communicate with it?
 
 **One Trace: same logical request in different kernel organizations**
 
+This table compares structures by tracing the request path.
+The key variables are (1) how many boundary crossings occur, (2) where service logic executes, and (3) what happens if that service logic crashes.
+When you memorize it, do not memorize names; memorize the trade: lower overhead tends to widen privileged fault scope, while stronger isolation tends to add communication and scheduling cost.
+
 | Structure | Request Path | Main Advantage | Main Cost |
 | --- | --- | --- | --- |
 | monolithic | direct in-kernel call chain | low overhead | large privileged fault domain |
@@ -443,11 +493,16 @@ where does this code live, and how much does it cost to communicate with it?
 
 - In a real kernel, identify which subsystems communicate by direct call, which by message-like handoff, and which can be loaded or removed independently.
 
-**Drills**
+**Drills (With Answers)**
 
-1. Why is a microkernel not just “a small operating system”?
-2. What performance cost appears when a service moves from kernel space to a user-space server?
-3. Why can a kernel be monolithic in execution style and still modular in deployment style?
+1. **Q:** Why is a microkernel not just “a small operating system”?
+**A:** “Microkernel” is not about being small for its own sake; it is about moving many services out of privileged space so failures are contained and services can be restarted or replaced. The kernel still provides essential primitives (address spaces, scheduling, IPC, low-level device mediation). The point is a change in fault boundaries and communication structure, not merely fewer lines of code.
+
+2. **Q:** What performance cost appears when a service moves from kernel space to a user-space server?
+**A:** Communication overhead: message passing, context switches, and often data copies or mapping operations. The request path can include more scheduling points and more cache/TLB disruption. You typically pay this cost to gain isolation, replaceability, and a smaller privileged fault domain.
+
+3. **Q:** Why can a kernel be monolithic in execution style and still modular in deployment style?
+**A:** “Monolithic execution” means services call each other directly in one privileged address space at runtime. “Modular deployment” means the set of privileged components can be loaded/unloaded or compiled separately (loadable modules). Even with modules, once loaded the code still runs with kernel privilege, so performance can be monolithic while safety/fault scope remains largely shared.
 
 ![Supplement: kernel structure choices are mostly about where code runs and how components communicate](../chapter2_graphviz/fig_2_3_kernel_structure_comparison.svg)
 
@@ -484,6 +539,10 @@ These topics belong in Chapter 2 because they reveal how the system is prepared,
 
 **One Trace: boot from firmware to running kernel**
 
+Boot is the ultimate proof that structure exists for operational reasons.
+Before the kernel is in memory, there must be code that can initialize enough hardware to find and load it, and that early code must be trusted even though it is not “the OS” yet.
+When you cover this trace, track the authority handoff: firmware -> bootstrap -> kernel -> user-space services, and name what each stage must make possible for the next one.
+
 | Stage | Machine State | Structural Meaning |
 | --- | --- | --- |
 | power on | only firmware-resident code is immediately available | no disk-based OS code is running yet |
@@ -497,18 +556,26 @@ These topics belong in Chapter 2 because they reveal how the system is prepared,
 - Later, inspect bootloader configuration, trap setup, syscall instrumentation, and crash reporting paths.
 - Those are where Chapter 2 stops being “design vocabulary” and becomes executable machinery.
 
-**Drills**
+**Drills (With Answers)**
 
-1. Why is a crash dump structurally different from a core dump?
-2. Why is system generation not the same event as boot?
-3. Why does observability count as part of system structure instead of only tooling?
+1. **Q:** Why is a crash dump structurally different from a core dump?
+**A:** A core dump is collected for a user process while the kernel is still healthy enough to write files and manage I/O. A crash dump is collected when the kernel (the authority) fails, which means you cannot rely on normal subsystems being correct. Crash dumps often require reserved memory, special dump paths, or out-of-band mechanisms precisely because the OS is partially broken.
+
+2. **Q:** Why is system generation not the same event as boot?
+**A:** System generation configures or builds the OS image and its configuration for a target environment (drivers, modules, parameters). Boot is the runtime act of loading that configured system and starting it on a specific machine instance. One is “prepare the structure,” the other is “activate the structure.”
+
+3. **Q:** Why does observability count as part of system structure instead of only tooling?
+**A:** Because observability requires intentional placement of hooks at boundary points where state transitions occur (syscall entry, scheduling decisions, I/O completion, memory faults). If those hooks are missing, the system becomes opaque and expensive to diagnose, and changes are harder to validate safely. Instrumentation is not decoration; it is a structural capability for operating the system.
 
 ## 4. Canonical Traces To Reproduce From Memory
 
 Do not merely read these.
-Cover the table and reproduce the sequence from memory.
+Cover the tables and reproduce the sequence from memory.
 
 ### 4.1 CLI Command To Program Execution
+
+This is the minimal “intent -> privileged execution -> return” loop for a shell.
+When you recite it, say exactly when privilege changes and what the kernel must construct (process + address space + initial context) before control can return safely.
 
 | Step | User / Shell | Kernel |
 | --- | --- | --- |
@@ -520,6 +587,9 @@ Cover the table and reproduce the sequence from memory.
 
 ### 4.2 API Call To System Call To Return
 
+This is the “API is not a syscall” trace.
+The wrapper is not an implementation detail to ignore; it is where user-facing conventions are reconciled with a privileged ABI boundary.
+
 | Step | Program | Wrapper | Kernel |
 | --- | --- | --- | --- |
 | call site | API invoked | receives intent and args | inactive |
@@ -530,6 +600,10 @@ Cover the table and reproduce the sequence from memory.
 
 ### 4.3 Microkernel Client Request Path
 
+This trace exists to force you to “feel” the extra boundary.
+Service logic runs in a user-space server, which improves fault containment but adds communication and scheduling cost.
+When you reproduce it, name where the kernel mediates IPC and where the server’s correctness becomes part of overall service correctness.
+
 | Step | Client | Microkernel | User-Space Server |
 | --- | --- | --- | --- |
 | request formed | sends message | mediates IPC | waiting |
@@ -539,6 +613,9 @@ Cover the table and reproduce the sequence from memory.
 
 ### 4.4 Boot Path From Firmware To Usable System
 
+Boot is the start-up structure.
+You are tracking who controls the CPU before the kernel exists and when the kernel becomes the resident authority that can then start user-space services.
+
 | Step | Machine State | Controlling Code |
 | --- | --- | --- |
 | reset | hardware starts from predefined entry | firmware |
@@ -547,20 +624,43 @@ Cover the table and reproduce the sequence from memory.
 | kernel stage | core subsystems initialize | kernel |
 | normal use | services and user programs start | kernel plus user-space system programs |
 
-## 5. Questions That Push Beyond Recall
+## 5. Key Questions (Answered)
 
-1. Why is a service/interface distinction necessary for reasoning about OS design?
-2. Why is the kernel boundary simultaneously a privilege boundary and a performance boundary?
-3. Why can an API be stable even when the underlying syscall mechanism changes?
-4. What engineering cost appears when user-interface logic is placed too close to privileged code?
-5. Why does moving a service into user space improve isolation without being “free”?
-6. Why is a shell a better place than the kernel for command-language growth?
-7. Why is a syscall category best understood as a control surface over authoritative state?
-8. Why does a daemon still count as an ordinary process even when it feels like part of the system?
-9. Why is policy/mechanism separation a long-term maintenance advantage rather than only a clean-design slogan?
-10. Why can layering improve reasoning while still worsening performance or structure in practice?
-11. Why is a crash dump harder to capture than a core dump?
-12. Why do boot and system generation belong in a chapter about operating-system structure?
+1. **Q:** Why is a service/interface distinction necessary for reasoning about OS design?
+**A:** Because services are the OS guarantees (what capability exists and what semantics it has), while interfaces are just ways of expressing intent. One service can be exposed by many interfaces, and interfaces can change rapidly without changing what the kernel must enforce. If you confuse them, you will treat utilities and shell syntax as “the OS,” and you will miss where authority and invariants actually live.
+
+2. **Q:** Why is the kernel boundary simultaneously a privilege boundary and a performance boundary?
+**A:** Privilege: crossing into the kernel changes what instructions and state are legal to touch, and it is where the OS must validate untrusted input. Performance: the crossing has real costs (mode switch/trap overhead, cache and TLB disruption, potential scheduling effects) and changes fault scope (a bug in privileged code is more expensive). Chapter 2 exists largely to teach that you do not move code across this boundary casually.
+
+3. **Q:** Why can an API be stable even when the underlying syscall mechanism changes?
+**A:** Because libraries mediate. A stable API can be implemented by different syscalls, by sequences of syscalls, or even entirely in user space if the OS exposes a different primitive. Backward compatibility can be preserved by wrappers and versioning even as the kernel internals evolve. The kernel must preserve *service semantics*; the wrapper layer can adapt the call surface.
+
+4. **Q:** What engineering cost appears when user-interface logic is placed too close to privileged code?
+**A:** The trusted computing base grows. More privileged code means more security risk, more ways to crash the kernel, and more constraints on change, because kernel updates are riskier than user-space updates. It also tends to couple policy and presentation into the most difficult-to-change layer, making the whole system harder to evolve.
+
+5. **Q:** Why does moving a service into user space improve isolation without being “free”?
+**A:** Isolation improves because a server crash need not crash the kernel; the service can often be restarted. The cost is communication: IPC messages, context switches, scheduling points, and sometimes additional copying or mapping. You trade raw speed for fault containment and replaceability, and Chapter 2 teaches you to name that trade explicitly.
+
+6. **Q:** Why is a shell a better place than the kernel for command-language growth?
+**A:** Because shells are interfaces, and interfaces evolve quickly. Keeping that evolution in user space lets the system grow without expanding privileged code. It also makes interfaces replaceable: you can install a new shell, scripting engine, or CLI toolchain without changing the kernel’s authority or invariants.
+
+7. **Q:** Why is a syscall category best understood as a control surface over authoritative state?
+**A:** Categories correspond to the kinds of kernel-managed state that must remain authoritative: execution contexts, persistent named storage, device endpoints, communication channels, and access relationships. Syscalls are “the allowed mutations” of that state under validation and policy. If you treat categories as memorization bins, you miss that they are the map of what the kernel must own.
+
+8. **Q:** Why does a daemon still count as an ordinary process even when it feels like part of the system?
+**A:** Because it runs in user mode, is scheduled like other processes, and enters the kernel only through syscalls. It may run with elevated identity (e.g., as root), but it still cannot execute privileged instructions directly or bypass kernel validation. That is exactly why daemons are a structural tool: they can provide system behavior while keeping privilege in the kernel.
+
+9. **Q:** Why is policy/mechanism separation a long-term maintenance advantage rather than only a clean-design slogan?
+**A:** Workloads and hardware change faster than kernel invariants. If mechanisms are general, policies can evolve (tuning, scheduling choices, replacement strategies) without rewriting deep code. This reduces risk, improves testability, and makes it possible to adapt the system without turning every policy tweak into a privileged refactor.
+
+10. **Q:** Why can layering improve reasoning while still worsening performance or structure in practice?
+**A:** Layers can make dependencies and invariants explicit, which helps humans reason about the system. But they can also add call-path length, duplicate checks, and force unnatural dependency directions that real implementations violate. A layered diagram can be conceptually clean while the real system becomes slower or more contorted if the layers do not match true coupling.
+
+11. **Q:** Why is a crash dump harder to capture than a core dump?
+**A:** A core dump is produced while the kernel is alive and can use normal storage and I/O paths. A crash dump happens when the kernel itself failed, so you cannot assume filesystems, drivers, or buffers are trustworthy. Capturing state often requires pre-reserved memory, special dump devices, or minimal “last resort” code paths designed specifically for a broken system.
+
+12. **Q:** Why do boot and system generation belong in a chapter about operating-system structure?
+**A:** Because they show how the structure is instantiated. Boot defines the authority handoff and the minimal prerequisites required before any OS service can exist; system generation defines what components and configuration the OS will have when it starts. If you ignore them, you miss that OS structure is not only a runtime architecture but also a build/startup pipeline that determines what the system even is.
 
 ## 6. Suggested Bridge Into Real Kernels
 

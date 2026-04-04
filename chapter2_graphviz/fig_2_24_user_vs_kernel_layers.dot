@@ -1,0 +1,23 @@
+digraph fig_2_24_user_vs_kernel_layers {
+  rankdir=LR;
+  bgcolor="white";
+
+  graph [fontname="Latin Modern Roman" fontsize=18 labelloc="t" label="OS-adjacent layers: utilities and daemons over the kernel"];
+  node [fontname="Latin Modern Roman" fontsize=12 shape=box style="rounded,filled" color="#444444" fillcolor="#F7F7F7" penwidth=1.2];
+  edge [fontname="Latin Modern Roman" fontsize=11 color="#444444" penwidth=1.1 arrowsize=0.8];
+
+  user [shape=oval fillcolor="#E9F2FF" label="User / operator"];
+  utility [label="Utility\n(policy + presentation)"];
+  daemon [label="Daemon/service\nlong-running policy"];
+  kernel [shape=box style="rounded,filled" fillcolor="#EAF7EA" label="Kernel authority\nsyscalls, drivers, sched, VM"];
+
+  user -> utility [label="commands, config"];
+  user -> daemon [style=dashed label="starts/controls"];
+
+  utility -> kernel [label="syscalls"];
+  daemon -> kernel [label="syscalls"];
+
+  restart [shape=note style="filled" fillcolor="#FFFFFF" color="#777777" fontcolor="#333333" label="Utilities/daemons:\nrestart/replace/sandbox\nwithout kernel change"];
+  restart -> utility [style=dotted arrowhead=none color="#777777"];
+  restart -> daemon [style=dotted arrowhead=none color="#777777"];
+}

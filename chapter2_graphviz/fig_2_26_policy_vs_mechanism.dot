@@ -1,0 +1,18 @@
+digraph fig_2_26_policy_vs_mechanism {
+  rankdir=TB;
+  bgcolor="white";
+
+  graph [fontname="Latin Modern Roman" fontsize=18 labelloc="t" label="Policy vs mechanism: user-space wrappers over kernel authority"];
+  node [fontname="Latin Modern Roman" fontsize=12 shape=box style="rounded,filled" color="#444444" penwidth=1.2];
+  edge [fontname="Latin Modern Roman" fontsize=11 color="#444444" penwidth=1.1 arrowsize=0.8];
+
+  policy [fillcolor="#E9F2FF" label="Policy & workflow\n(flags, retries, backoff,\nconfig parsing, routing)"];
+  boundary [shape=plaintext label="syscall boundary"];
+  mechanism [fillcolor="#EAF7EA" label="Mechanism\n(VFS, scheduler, VM, drivers,\nsecurity checks)"];
+
+  policy -> boundary -> mechanism;
+
+  note [shape=note style="filled" fillcolor="#FFFFFF" color="#777777" fontcolor="#333333" label="Keep policy in user space: fast to evolve, safe to restart.\nKeep mechanism in kernel: authoritative, minimal, validated."];
+  note -> policy [style=dotted arrowhead=none color="#777777"];
+  note -> mechanism [style=dotted arrowhead=none color="#777777"];
+}

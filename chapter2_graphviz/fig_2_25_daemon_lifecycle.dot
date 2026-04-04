@@ -1,0 +1,20 @@
+digraph fig_2_25_daemon_lifecycle {
+  rankdir=LR;
+  bgcolor="white";
+
+  graph [fontname="Latin Modern Roman" fontsize=18 labelloc="t" label="Daemon lifecycle over kernel services"];
+  node [fontname="Latin Modern Roman" fontsize=12 shape=box style="rounded,filled" color="#444444" fillcolor="#F7F7F7" penwidth=1.2];
+  edge [fontname="Latin Modern Roman" fontsize=11 color="#444444" penwidth=1.1 arrowsize=0.8];
+
+  config [shape=note style="filled" fillcolor="#FFFFFF" color="#777777" fontcolor="#333333" label="Config / policy"];
+  daemon [label="Daemon process\n(user mode)"];
+  kernel [shape=box style="rounded,filled" fillcolor="#EAF7EA" label="Kernel services"];
+  service [label="Effect: files, sockets,\nprocesses, timers"];
+
+  config -> daemon [label="parsed, hot-reloaded"];
+  daemon -> kernel [label="syscalls"];
+  kernel -> service [label="mutate authoritative state"];
+
+  restart [shape=note style="filled" fillcolor="#FFFFFF" color="#777777" fontcolor="#333333" label="Restart/replace daemon\n(no kernel reboot)"];
+  restart -> daemon [style=dotted arrowhead=none color="#777777"];
+}

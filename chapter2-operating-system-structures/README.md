@@ -365,6 +365,12 @@ Most of what users call “the OS” is actually user-space code—utilities and
 
 System programs (utilities, daemons, service managers) are regular user processes. They parse configs, apply policy, and call into the kernel via syscalls. The kernel owns protected state; the utility owns orchestration and presentation. Because they are just processes, they can be restarted, replaced, sandboxed, or updated without kernel changes.
 
+![Utilities and daemons live in user space; authority remains in the kernel](../chapter2_graphviz/fig_2_24_user_vs_kernel_layers.png)
+
+![Daemon lifecycle: config drives a user-mode process that issues syscalls; it can be restarted without reboot](../chapter2_graphviz/fig_2_25_daemon_lifecycle.png)
+
+![Policy vs mechanism: fast-evolving user-space policy layered on stable kernel mechanism](../chapter2_graphviz/fig_2_26_policy_vs_mechanism.png)
+
 **Invariants**
 
 - System programs may depend on many system calls without becoming part of the kernel.

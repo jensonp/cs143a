@@ -1,0 +1,84 @@
+digraph fig_2_5_shell_outside_kernel {
+  rankdir=LR;
+  bgcolor="white";
+
+  graph [
+    fontname="Latin Modern Roman"
+    fontsize=18
+    labelloc="t"
+    label="Shell stays in user space; kernel stays minimal"
+    nodesep=0.5
+    ranksep=0.7
+  ];
+
+  node [
+    fontname="Latin Modern Roman"
+    fontsize=13
+    shape=box
+    style="rounded,filled"
+    fillcolor="#F7F7F7"
+    color="#444444"
+    penwidth=1.2
+  ];
+
+  edge [
+    fontname="Latin Modern Roman"
+    fontsize=11
+    color="#444444"
+    penwidth=1.2
+    arrowsize=0.8
+  ];
+
+  subgraph cluster_user {
+    label="User space (unprivileged)";
+    fontname="Latin Modern Roman";
+    fontsize=13;
+    color="#AAAAAA";
+    style="rounded";
+
+    interfaces [
+      fillcolor="#E9F2FF"
+      label=<<B>Human Interfaces</B><BR/><FONT POINT-SIZE="11">CLI / GUI / batch</FONT>>
+    ];
+
+    shell [
+      fillcolor="#FFF7E6"
+      label=<<B>Shell</B><BR/><FONT POINT-SIZE="11">parse &amp; launch</FONT>>
+    ];
+
+    executables [
+      fillcolor="#E9F2FF"
+      label=<<B>Ordinary Executables</B><BR/><FONT POINT-SIZE="11">new commands live here</FONT>>
+    ];
+  }
+
+  subgraph cluster_kernel {
+    label="Kernel space (privileged minimal authority)";
+    fontname="Latin Modern Roman";
+    fontsize=13;
+    color="#AAAAAA";
+    style="rounded";
+
+    kernel [
+      shape=box3d
+      fillcolor="#EAF7EA"
+      label=<<B>Kernel</B><BR/><FONT POINT-SIZE="11">protected ops &amp; checks</FONT>>
+    ];
+  }
+
+  interfaces -> shell [label="intent"];
+  shell -> executables [label="starts"];
+  executables -> kernel [label="system calls"];
+
+  invariant1 [
+    shape=note
+    style="filled"
+    fillcolor="#FFFFFF"
+    color="#777777"
+    fontcolor="#333333"
+    label="Invariants:\n• Shell is not the kernel\n• Interfaces need not be privileged\n• Kernel is minimal authority"
+  ];
+
+  invariant1 -> shell [style=dashed arrowhead=none color="#777777"];
+  invariant1 -> kernel [style=dashed arrowhead=none color="#777777"];
+}

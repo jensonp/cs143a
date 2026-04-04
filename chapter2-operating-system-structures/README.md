@@ -168,6 +168,8 @@ It reads commands, parses them, locates programs, handles built-ins, and starts 
 
 Keeping the shell outside the kernel means new commands can be added as ordinary executables rather than as privileged kernel changes.
 
+![Mental model: interfaces and the shell stay unprivileged; executables are swappable; kernel stays the minimal authority](../chapter2_graphviz/fig_2_5_shell_outside_kernel.png)
+
 **Invariants**
 
 - A shell is part of the operating-system experience, but it is not itself the kernel.

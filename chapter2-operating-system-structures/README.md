@@ -66,6 +66,21 @@ A policy is the rule that selects which allowed action the system should take in
 
 If a policy is baked into the mechanism too early, the system becomes difficult to tune, port, or evolve because changing the decision requires rewriting the machinery that enforces it.
 
+### 2.6 Terms Chapter 3 Assumes (Quick Definitions)
+
+The later chapters use these words with specific meanings. If a sentence feels slippery, it is usually because one of these boundaries is being blurred.
+
+- `authoritative state`: kernel-managed data structures that are the source of truth (e.g., ready queues, page tables, inode metadata, credentials).
+- `fault scope`: the blast radius of a bug (user-space faults are often contained; privileged faults can corrupt or crash the whole system).
+- `trusted computing base (TCB)`: the code you must trust for security (the kernel plus any privileged components); smaller is safer.
+- `ABI`: the binary calling convention at a boundary (registers/stack layout, syscall numbers, return conventions).
+- `mode switch`: user<->kernel transition for the same running execution context (syscall/trap/interrupt); it does not imply a different process runs next.
+- `context switch`: saving one execution context and restoring another (often due to timer preemption or blocking); it changes *which* instruction stream runs.
+- `execution context`: the schedulable resumable state (PC/registers/stack + kernel bookkeeping); often called a `thread`.
+- `process`: a protected container: an address space + owned kernel resources + one or more execution contexts.
+- `address space`: the virtual-memory mapping that defines which memory a process can access (conceptually: "which addresses mean what").
+- `syscall surface`: the set of privileged entry points where user intent can request protected state changes (a chokepoint by design).
+
 ## 3. Mastery Modules
 
 ### 3.1 Services, Interfaces, And Implementations

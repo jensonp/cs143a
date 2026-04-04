@@ -208,7 +208,7 @@ The kernel still must coordinate ownership of buffers, record completion, and wa
 
 This trace is the “synchronous request + asynchronous completion” pattern you will see everywhere.
 The `read` system call is synchronous in the sense that *the instruction stream causes the entry* into the kernel, but the completion is asynchronous: a device finishes later and signals the CPU with an interrupt.
-The mastery goal is to be able to explain how the OS turns an I/O wait into “someone else runs” (blocked vs runnable) without losing the waiting thread’s identity, buffer ownership, or resumption point.
+The mastery goal is to be able to explain how the OS turns an I/O wait into “someone else runs” (blocked vs runnable) without losing the waiting process’s identity, buffer ownership, or resumption point.
 
 | Stage | CPU | Device | Kernel | Process State |
 | --- | --- | --- | --- | --- |
@@ -307,7 +307,7 @@ The context save/restore is the concrete mechanism that makes “fairness” rea
 **A:** Voluntary yielding is not enforceable. A timer provides a forced, bounded preemption point so the kernel regains control even if a process is buggy or selfish, which is required for bounded response time.
 
 3. **Q:** What state must survive a context switch for correct resumption?
-**A:** At minimum: CPU registers including PC and SP, status/flags, and the kernel’s scheduling/identity bookkeeping for the thread. In practice it also includes memory-mapping state (page table pointer) and kernel bookkeeping needed to re-enter the right execution context safely.
+**A:** At minimum: CPU registers including PC and SP, status/flags, and the kernel’s scheduling/identity bookkeeping for the process. In practice it also includes memory-mapping state (page table pointer) and kernel bookkeeping needed to re-enter the right execution context safely.
 
 ### 3.4 Memory, Storage, Files, And Copies
 

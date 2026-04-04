@@ -449,6 +449,8 @@ This section gives you a clean classification tool:
 
 The quick test is the swap test: if you can change the rule without changing the privileged machinery and its invariants, it is policy. If changing it requires new privileged state, new entry paths, or new invariants, it is mechanism.
 
+![Mental model: goals drive policy; policy selects among kernel mechanisms (swap test)](../chapter2_graphviz/fig_2_30_policy_mechanism_swap_test.png)
+
 Concrete examples (high fidelity, not slogan):
 
 | Domain | Mechanism (what is possible) | Policy (which choice) |

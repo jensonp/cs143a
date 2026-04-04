@@ -1,0 +1,125 @@
+digraph fig_2_30_policy_mechanism_swap_test {
+  rankdir=LR;
+  bgcolor="white";
+
+  graph [
+    fontname="Latin Modern Roman"
+    fontsize=18
+    labelloc="t"
+    label="Policy vs mechanism (swap test): goals choose rules; rules choose among kernel-enforced possibilities"
+    nodesep=0.55
+    ranksep=0.8
+  ];
+
+  node [
+    fontname="Latin Modern Roman"
+    fontsize=12
+    shape=box
+    style="rounded,filled"
+    fillcolor="#F7F7F7"
+    color="#444444"
+    penwidth=1.2
+  ];
+
+  edge [
+    fontname="Latin Modern Roman"
+    fontsize=11
+    color="#444444"
+    penwidth=1.1
+    arrowsize=0.8
+  ];
+
+  subgraph cluster_policy {
+    label="Policy layer (tunable decision rules)";
+    fontname="Latin Modern Roman";
+    fontsize=13;
+    color="#AAAAAA";
+    style="rounded";
+
+    goals [
+      fillcolor="#E9F2FF"
+      label=<
+        <B>Design goals</B><BR/>
+        latency / responsiveness<BR/>
+        throughput / utilization<BR/>
+        safety / isolation<BR/>
+        simplicity / maintainability<BR/>
+        portability / flexibility
+      >
+    ];
+
+    policy [
+      fillcolor="#E9F2FF"
+      label=<
+        <B>Policy</B><BR/>
+        heuristics + comparators<BR/>
+        priorities + thresholds<BR/>
+        knobs/config defaults
+      >
+    ];
+
+    goals -> policy [label="optimize for"];
+  }
+
+  subgraph cluster_mechanism {
+    label="Mechanism layer (kernel-enforced possibilities)";
+    fontname="Latin Modern Roman";
+    fontsize=13;
+    color="#AAAAAA";
+    style="rounded";
+
+    mech [
+      fillcolor="#EAF7EA"
+      label=<
+        <B>Mechanism</B><BR/>
+        primitives + state transitions<BR/>
+        invariant checks + validation<BR/>
+        accounting + isolation
+      >
+    ];
+
+    state [
+      shape=cylinder
+      style="filled"
+      fillcolor="#DFF3DF"
+      label=<
+        <B>Authoritative state</B><BR/>
+        ready queues, page tables<BR/>
+        inodes, credentials, locks
+      >
+    ];
+
+    mech -> state [label="mutate/protect"];
+  }
+
+  policy -> mech [label="choose among allowed actions"];
+  state -> policy [style=dashed color="#777777" fontcolor="#777777" label="observed outcomes / metrics"];
+
+  swap [
+    shape=note
+    style="filled"
+    fillcolor="#FFFFFF"
+    color="#777777"
+    fontcolor="#333333"
+    label="Swap test:\nIf you can change the rule\nwithout changing privileged\nstate/invariants, it is policy.\nIf not, it is mechanism."
+  ];
+
+  swap -> policy [style=dotted arrowhead=none color="#777777"];
+  swap -> mech [style=dotted arrowhead=none color="#777777"];
+
+  examples [
+    shape=plaintext
+    label=<
+      <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="6">
+        <TR><TD COLSPAN="3"><B>Concrete examples</B></TD></TR>
+        <TR><TD><B>Domain</B></TD><TD><B>Mechanism</B></TD><TD><B>Policy</B></TD></TR>
+        <TR><TD>CPU sharing</TD><TD>timer + queues + context switch</TD><TD>slice length, priorities</TD></TR>
+        <TR><TD>Virtual memory</TD><TD>page tables + faults + map/unmap</TD><TD>replacement, prefetch</TD></TR>
+        <TR><TD>Files/caching</TD><TD>page cache + writeback rules</TD><TD>eviction, dirty limits</TD></TR>
+      </TABLE>
+    >
+  ];
+
+  examples -> policy [style=dashed arrowhead=none color="#777777"];
+  examples -> mech [style=dashed arrowhead=none color="#777777"];
+}

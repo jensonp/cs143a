@@ -6,11 +6,11 @@ This file is the mastery note for Chapter 2.
 It treats operating-system structure as a control-boundary problem rather than as a vocabulary list.
 
 Chapter 1 explained why the operating system must exist.
-Chapter 2 explains how a request reaches the kernel, what a user-kernel transition changes, and why the kernel is divided into components instead of expanded as one tightly coupled body of privileged code.
+Chapter 2 explains the control chain in order: requests begin in user space, protected effects require kernel entry, and kernel organization determines the cost and fault scope of that entry.
 
 ## 1. What This File Optimizes For
 
-The goal is not to remember a list of interfaces or kernel shapes.
+The goal is not to remember a list of interfaces or kernel-organization models.
 The goal is to be able to do the following without guessing:
 
 - Explain why a service is not the same thing as an interface.
@@ -22,19 +22,19 @@ The goal is to be able to do the following without guessing:
 
 For Chapter 2, mastery means:
 
-- you can trace how a request moves from user intent to privileged execution and back
-- you can state what boundary is crossed at each stage
-- you can explain why a design improves extensibility, portability, or isolation
-- you can predict what cost appears when a boundary is added or removed
-- you can connect the abstractions to code you would inspect in a shell, libc, a trap handler, or a kernel subsystem
+- you can trace a request from user intent -> kernel entry -> return
+- you can name the boundary crossed at each stage
+- you can predict the performance and fault-scope cost created by each boundary
+- you can explain why a structure choice improves extensibility, portability, or isolation and what it trades away
+- you can map each layer to concrete code (shell, libc, trap handler, kernel subsystem)
 
 ## 2. Mental Models To Know Cold
 
 ### 2.1 Services, Interfaces, And Implementations Are Different Layers
 
-An operating-system `service` is what capability exists.
-An `interface` is how a human or program asks for it.
-The `implementation` is the internal mechanism that actually carries it out.
+An operating-system `service` is an OS-provided capability with defined semantics.
+An `interface` is the request surface a human or program uses to ask for that service.
+The `implementation` is the enforcing machinery that validates the request and commits its effect to authoritative state.
 
 If you treat services, interfaces, and implementations as the same thing, Chapter 2 looks repetitive.
 If you separate them, each term names a different layer of the system: capability, request surface, and enforcing machinery.
@@ -52,12 +52,12 @@ That placement determines communication cost, fault scope, and the amount of pri
 An API is a programmer-facing interface.
 A system call is not the API itself; it is the controlled transfer from user mode to kernel mode that allows the kernel to perform a protected operation.
 
-Some API functions are implemented entirely in user space.
-Other API invocations package arguments and cause exactly one controlled kernel entry.
+At runtime, an API invocation may complete in user space, or it may package arguments in a wrapper and perform a controlled kernel entry exactly once.
 
 ### 2.4 Structure Is About Damage Containment As Much As Organization
 
 Kernel structure determines three things: the fault scope of a bug, the communication cost between subsystems, and the difficulty of replacing one subsystem without changing the rest of the operating system.
+It determines those outcomes because structure changes which code shares a privileged address space and which components must communicate across boundaries.
 
 ### 2.5 Policy And Mechanism Must Be Separable Or The System Hardens In The Wrong Places
 
@@ -122,9 +122,9 @@ When you cover this table, point to the first row where privilege is required an
 
 | Step | GUI Path | CLI Path | Programmatic Path | Shared OS Meaning |
 | --- | --- | --- | --- | --- |
-| request expressed | user clicks delete | user runs `rm` | code calls an API | intent is file removal |
-| front-end logic | GUI emits action | shell starts utility | library wrapper prepares call | interface-specific packaging |
-| privileged entry | utility or wrapper enters kernel | utility enters kernel | wrapper enters kernel | kernel checks permissions |
+| intent expressed | user clicks delete | user runs `rm` | code calls an API | intent is file removal |
+| user-space packaging | GUI emits action | shell starts utility | library wrapper prepares call | interface-specific packaging |
+| privileged kernel entry | utility or wrapper enters kernel | utility enters kernel | wrapper enters kernel | kernel checks permissions |
 | authoritative effect | file-system metadata updated | file-system metadata updated | file-system metadata updated | service semantics committed |
 
 The key row is the first row in which execution enters kernel-controlled code.
@@ -139,7 +139,7 @@ At that row and below it, the system can enforce permissions and modify authorit
 **Drills (With Answers)**
 
 1. **Q:** Why is `rm` not the service itself?
-**A:** `rm` is one user-space interface (a utility) that *requests* file removal. The service is the OS-guaranteed capability: removing a name, updating directory entries and metadata, enforcing permissions, and preserving filesystem invariants. You can replace `rm`, call the syscall from another program, or delete via a GUI; the service remains the same because the kernel implements and enforces it.
+**A:** `rm` is one user-space interface (a utility) that *requests* file removal. The service is the kernel-enforced capability: validate authority, update directory entries and metadata, and preserve filesystem invariants while committing the change to authoritative state. Operationally: (1) user-space tool expresses intent, (2) kernel validates permissions and arguments, (3) filesystem metadata is updated, (4) invariants are preserved and status is returned. You can replace `rm`, delete via a GUI, or call the syscall from another program; the service remains the same because the kernel semantics are the authority.
 
 2. **Q:** How can one service have several interfaces without changing what the OS guarantees?
 **A:** Interfaces differ in how they express user intent (a click, a command, an API call), but the operational meaning is fixed at the enforcement boundary: the kernel’s rules for permission checks, directory updates, and metadata changes. As long as each interface reaches the same privileged semantics, multiple interfaces can exist without changing what the delete operation does to authoritative filesystem state.

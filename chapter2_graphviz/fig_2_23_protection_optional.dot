@@ -1,0 +1,24 @@
+digraph fig_2_23_protection_optional {
+  rankdir=LR;
+  bgcolor="white";
+
+  graph [fontname="Latin Modern Roman" fontsize=18 labelloc="t" label="If protection calls were “optional metadata”"];
+  node [fontname="Latin Modern Roman" fontsize=12 shape=box style="rounded,filled" color="#444444" fillcolor="#F7F7F7" penwidth=1.2];
+  edge [fontname="Latin Modern Roman" fontsize=11 color="#444444" penwidth=1.1 arrowsize=0.8];
+
+  request [label="User request\n(open/write/map)"];
+  optional [shape=box style="rounded,filled" fillcolor="#FFE6E6" label=<
+    <FONT POINT-SIZE="11">
+      <B>No authoritative check</B><BR/>
+      &bull; creds ignored<BR/>
+      &bull; ACLs advisory<BR/>
+      &bull; mmap protections bypassed
+    </FONT>
+  >];
+  kernel [shape=box style="rounded,filled" fillcolor="#EAF7EA" label="Real path:\nsetuid/capset/ACL/mprotect"];
+  breach [shape=note style="filled" fillcolor="#FFE6E6" color="#D9534F" fontcolor="#333333" label="Result: access control\ndegenerates; any process\ncan reach protected state"];
+
+  request -> optional [style=dashed color="#D9534F" label="if treated as metadata only"];
+  request -> kernel [label="privileged check"];
+  optional -> breach [style=dotted color="#D9534F" arrowhead=none];
+}

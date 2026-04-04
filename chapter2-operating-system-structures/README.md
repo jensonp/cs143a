@@ -333,6 +333,12 @@ Thinking in surfaces, not isolated calls, makes the taxonomy useful. A single us
 - If devices are treated like unprotected byte streams, direct hardware control leaks into user space and bypasses the driver’s privilege checks and interrupt coordination.
 - If protection calls are treated as optional metadata, access control becomes advisory; credentials, ACLs, and memory protections would no longer be authoritative.
 
+![Failure sketch: process creation needs kernel PID, scheduling, resource inheritance, cleanup](../chapter2_graphviz/fig_2_21_process_creation_breaks.png)
+
+![Failure sketch: device I/O must stay behind driver privilege checks and IRQ coordination](../chapter2_graphviz/fig_2_22_device_unprotected.png)
+
+![Failure sketch: protection calls must be authoritative or access control collapses](../chapter2_graphviz/fig_2_23_protection_optional.png)
+
 **Code Bridge**
 
 - When reading a syscall table, classify each entry by which authoritative resource it manipulates.

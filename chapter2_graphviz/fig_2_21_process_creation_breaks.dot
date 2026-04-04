@@ -1,0 +1,24 @@
+digraph fig_2_21_process_creation_breaks {
+  rankdir=LR;
+  bgcolor="white";
+
+  graph [fontname="Latin Modern Roman" fontsize=18 labelloc="t" label="If fork/exec were “just a library call”"];
+  node [fontname="Latin Modern Roman" fontsize=12 shape=box style="rounded,filled" color="#444444" fillcolor="#F7F7F7" penwidth=1.2];
+  edge [fontname="Latin Modern Roman" fontsize=11 color="#444444" penwidth=1.1 arrowsize=0.8];
+
+  userlib [label="User library call\n\"create process\""];
+  missing [shape=box style="rounded,filled" fillcolor="#FFE6E6" label=<
+    <FONT POINT-SIZE="11">
+      <B>Missing kernel work</B><BR/>
+      &bull; allocate PID<BR/>
+      &bull; schedule child<BR/>
+      &bull; inherit/close FDs<BR/>
+      &bull; set creds/limits<BR/>
+      &bull; record exit cleanup
+    </FONT>
+  >];
+  kernel [shape=box style="rounded,filled" fillcolor="#EAF7EA" label="Actual kernel path\nfork/exec/wait surfaces"];
+
+  userlib -> missing [style=dashed color="#D9534F" label="if treated as local code"];
+  userlib -> kernel [label="real syscall boundary"];
+}

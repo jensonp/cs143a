@@ -1,0 +1,18 @@
+digraph fig_2_22_device_unprotected {
+  rankdir=LR;
+  bgcolor="white";
+
+  graph [fontname="Latin Modern Roman" fontsize=18 labelloc="t" label="If devices were just byte streams"];
+  node [fontname="Latin Modern Roman" fontsize=12 shape=box style="rounded,filled" color="#444444" fillcolor="#F7F7F7" penwidth=1.2];
+  edge [fontname="Latin Modern Roman" fontsize=11 color="#444444" penwidth=1.1 arrowsize=0.8];
+
+  user [label="User process"];
+  hardware [shape=box style="rounded,filled" fillcolor="#FFE6E6" label=<<B>Hardware device</B><BR/><FONT POINT-SIZE="10">DMA/interrupts</FONT>>];
+  driver [shape=box style="rounded,filled" fillcolor="#EAF7EA" label="Kernel driver &\nprivilege checks"];
+  risk [shape=note style="filled" fillcolor="#FFE6E6" color="#D9534F" fontcolor="#333333" label="Risk: bypass privilege,\nstomp device state,\nmiss IRQ coordination"];
+
+  user -> hardware [style=dashed color="#D9534F" label="unprotected bytes?"];
+  user -> driver [label="syscall + driver entry"];
+  driver -> hardware [label="mediated I/O"];
+  hardware -> risk [style=dotted color="#D9534F" arrowhead=none];
+}

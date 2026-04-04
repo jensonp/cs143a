@@ -324,6 +324,10 @@ The textbook groups system calls into categories such as:
 - communication
 - protection
 
+![System-call categories as control surfaces, laid out around the kernel authority boundary](../chapter2_graphviz/fig_2_20_syscall_categories.png)
+
+Each category is a distinct control surface where user intent enters privileged code. Process control governs creating, replacing, and waiting on execution contexts. File management covers naming, metadata, and byte-stream access. Device management is the shim into drivers and hardware-facing hooks. Information maintenance exposes time, resource accounting, and introspection. Communication handles pipes, sockets, and IPC rendezvous. Protection owns credentials, memory permissions, and ACL updates. The kernel validates arguments and policy at each surface before mutating authoritative state.
+
 These are not just memorization bins.
 They are the main places where user intent collides with authoritative system state.
 

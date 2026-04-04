@@ -1,0 +1,31 @@
+digraph G {
+  graph [rankdir=TB, pad=0.25, nodesep=0.45, ranksep=0.6, splines=true, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75];
+
+  center [label="Key questions\nare retrieval cues for\ncore mechanisms", fillcolor="#BFE2F1", width=3.0];
+
+  control [label="control loop:\ntimer + preemption\n(Q1, Q6, Q15)", fillcolor="#E6F3F9"];
+  entry [label="kernel entry:\ninterrupt vs exception\n(Q5)", fillcolor="#DDEAF1"];
+  io [label="I/O + DMA:\nasync completion +\nownership rules\n(Q2)", fillcolor="#E6F3F9"];
+  conc [label="concurrency:\nraces + coherence\n(Q3, Q9)", fillcolor="#E6F3F9"];
+  alloc [label="scarcity framing:\nOS as allocator\n(Q4)", fillcolor="#DDEAF1"];
+  blocked [label="blocked state:\nwait condition is real\n(Q7)", fillcolor="#E6F3F9"];
+  files [label="file abstraction:\nname -> durable mapping\n(Q8)", fillcolor="#E6F3F9"];
+  scale [label="scaling:\npartial failure model\n(Q10)", fillcolor="#E6F3F9"];
+  protect [label="protection vs security:\nenforcement boundary\n(Q11, Q12)", fillcolor="#DDEAF1"];
+  structs [label="data structures:\npolicy in hot paths\n(Q13)", fillcolor="#E6F3F9"];
+  models [label="models -> code:\nuse concepts to read\nkernels\n(Q14)", fillcolor="#E6F3F9"];
+
+  center -> control;
+  center -> entry;
+  center -> io;
+  center -> conc;
+  center -> alloc;
+  center -> blocked;
+  center -> files;
+  center -> scale;
+  center -> protect;
+  center -> structs;
+  center -> models;
+}

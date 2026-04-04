@@ -1,0 +1,27 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.5, ranksep=0.75, splines=true, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75];
+
+  app [label="application\n(read/write)", fillcolor="#E6F3F9"];
+
+  subgraph cluster_kernel {
+    label="kernel file abstraction";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+
+    vfs [label="VFS + metadata\n(names -> inodes)", fillcolor="#BFE2F1"];
+    cache [label="page/buffer cache\n(reusable copies)", fillcolor="#DDEAF1"];
+    driver [label="block driver\n(schedules I/O)", fillcolor="#BFE2F1"];
+  }
+
+  disk [shape=folder, label="disk blocks\n(durable bytes)", fillcolor="#D9D9D9"];
+
+  app -> vfs [label="syscalls"];
+  vfs -> cache [label="find/allocate pages"];
+  cache -> driver [label="miss / writeback"];
+  driver -> disk [label="read/write"];
+  disk -> driver [style=dashed, label="completion"];
+  driver -> cache [style=dashed, label="fill/commit"];
+}

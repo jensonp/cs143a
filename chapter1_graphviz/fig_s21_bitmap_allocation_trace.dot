@@ -1,0 +1,13 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.5, ranksep=0.8, splines=ortho, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75];
+
+  req [label="allocation request", fillcolor="#E6F3F9"];
+  scan [label="scan for 0 bit\n(policy: first-fit,\nnext-fit, per-CPU)", fillcolor="#DDEAF1"];
+  claim [label="atomic set bit i\n(invariant: no double alloc)", fillcolor="#BFE2F1"];
+  map [label="map i -> resource\n(page/PID/block)", fillcolor="#D5EDF7"];
+  free [label="free: clear bit i\n(resource available)", fillcolor="#E6F3F9"];
+
+  req -> scan -> claim -> map -> free;
+}

@@ -1,0 +1,21 @@
+digraph G {
+  graph [rankdir=TB, pad=0.25, nodesep=0.45, ranksep=0.55, splines=true, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75];
+
+  app [label="application\nreads/writes", fillcolor="#E6F3F9"];
+  cpu [label="CPU caches\n(fast copies)", fillcolor="#F5F5F5"];
+  mem [label="main memory\n(copies)", fillcolor="#F5F5F5"];
+  page [label="page/buffer cache\n(OS-managed copies)", fillcolor="#DDEAF1"];
+  disk [label="secondary storage\n(durable copy)", fillcolor="#D9D9D9"];
+
+  app -> cpu [label="loads/stores"];
+  cpu -> mem [dir=both, label="fills/evicts"];
+  mem -> page [dir=both, label="cache residency"];
+  page -> disk [label="writeback/commit"];
+  disk -> page [style=dashed, label="read in"];
+
+  note [shape=note, style="filled", fillcolor="#EAF6FB", color="#9EC9DA", fontcolor="#233238",
+        label="Correctness rules needed:\n- coherence (which cached value is valid?)\n- durability (when is disk authoritative?)\n- ordering (what write becomes visible when?)"];
+  note -> page [style=dotted, arrowhead=none, color="#5B6B73"];
+}

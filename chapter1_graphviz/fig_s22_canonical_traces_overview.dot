@@ -1,0 +1,17 @@
+digraph G {
+  graph [rankdir=TB, pad=0.25, nodesep=0.55, ranksep=0.65, splines=true, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75];
+
+  traces [label="Canonical traces\n(reproduce from memory)", fillcolor="#BFE2F1"];
+
+  boot [label="4.1 boot\nauthority handoff", fillcolor="#E6F3F9"];
+  io [label="4.2 blocking I/O\nsync request +\nasync completion", fillcolor="#E6F3F9"];
+  timer [label="4.3 timer preemption\nforced re-entry\n+ context switch", fillcolor="#E6F3F9"];
+  fault [label="4.4 faulting access\nhardware detects,\nkernel decides", fillcolor="#E6F3F9"];
+
+  traces -> boot;
+  traces -> io;
+  traces -> timer;
+  traces -> fault;
+}

@@ -1,0 +1,29 @@
+digraph G {
+  graph [rankdir=TB, pad=0.25, nodesep=0.45, ranksep=0.55, bgcolor="white"];
+  node [shape=plaintext, fontname="Helvetica", fontcolor="#233238"];
+
+  matrix [
+    label=<
+      <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="8">
+        <TR>
+          <TD BGCOLOR="#EAF6FB" COLSPAN="3"><B>How control enters the kernel (classification)</B></TD>
+        </TR>
+        <TR>
+          <TD BGCOLOR="#F5F5F5"></TD>
+          <TD BGCOLOR="#DDEAF1"><B>Synchronous</B><BR/><FONT POINT-SIZE="10">caused by current instruction stream</FONT></TD>
+          <TD BGCOLOR="#DDEAF1"><B>Asynchronous</B><BR/><FONT POINT-SIZE="10">external event preempts execution</FONT></TD>
+        </TR>
+        <TR>
+          <TD BGCOLOR="#DDEAF1"><B>Intentional</B><BR/><FONT POINT-SIZE="10">request a service</FONT></TD>
+          <TD BGCOLOR="#BFE2F1"><B>System call</B><BR/><FONT POINT-SIZE="10">ABI + validation contract</FONT></TD>
+          <TD BGCOLOR="#F5F5F5"><FONT POINT-SIZE="10">(rare; not the usual model)</FONT></TD>
+        </TR>
+        <TR>
+          <TD BGCOLOR="#DDEAF1"><B>Unintentional</B><BR/><FONT POINT-SIZE="10">rule violation / fault</FONT></TD>
+          <TD BGCOLOR="#BFE2F1"><B>Exception / trap</B><BR/><FONT POINT-SIZE="10">page fault, illegal access</FONT></TD>
+          <TD BGCOLOR="#BFE2F1"><B>Interrupt</B><BR/><FONT POINT-SIZE="10">timer, device completion</FONT></TD>
+        </TR>
+      </TABLE>
+    >
+  ];
+}

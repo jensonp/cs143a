@@ -1,0 +1,26 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.5, ranksep=0.75, splines=true, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75];
+
+  user [label="user process\n(untrusted inputs)", fillcolor="#E6F3F9"];
+  args [label="syscall arguments\n(pointers, lengths,\nhandles)", fillcolor="#F5F5F5"];
+
+  subgraph cluster_kernel {
+    label="privileged boundary";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+
+    copy [label="copy/validate\n(user -> kernel)", fillcolor="#DDEAF1"];
+    check [label="policy checks\n(identity, permissions)", fillcolor="#BFE2F1"];
+    mutate [label="update authoritative state\n(VFS, VM, scheduler)", fillcolor="#D5EDF7"];
+  }
+
+  user -> args -> copy -> check -> mutate;
+  mutate -> user [style=dashed, label="return code / signal", fontcolor="#5B6B73"];
+
+  risk [shape=note, style="filled", fillcolor="#FFECEC", color="#E09A9A", fontcolor="#233238",
+        label="If validation is wrong:\n- kernel memory corruption\n- information leak\n- privilege escalation"];
+  risk -> copy [style=dotted, arrowhead=none, color="#5B6B73"];
+}

@@ -1,0 +1,20 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.45, ranksep=0.8, splines=ortho, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75];
+
+  label="Bridge into real kernels: read in control-path order";
+  labelloc="t";
+
+  t1 [label="1) trap + syscall\nentry/exit", fillcolor="#BFE2F1"];
+  t2 [label="2) process table + scheduler\nsleep/wakeup", fillcolor="#E6F3F9"];
+  t3 [label="3) page tables +\naddress-space setup", fillcolor="#E6F3F9"];
+  t4 [label="4) filesystem path\nFD -> inode -> cache -> disk", fillcolor="#E6F3F9"];
+  t5 [label="5) interrupts + drivers\ncompletion wakes waiters", fillcolor="#E6F3F9"];
+
+  t1 -> t2 -> t3 -> t4 -> t5;
+
+  note [shape=note, style="filled", fillcolor="#EAF6FB", color="#9EC9DA", fontcolor="#233238",
+        label="Anchor questions:\n- where privileged entry happens\n- where runnable/blocked is encoded\n- where page-table authority lives\n- where file names become blocks\n- where interrupts wake sleepers"];
+  note -> t3 [style=dotted, arrowhead=none, color="#5B6B73"];
+}

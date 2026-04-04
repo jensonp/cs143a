@@ -1,0 +1,15 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.5, ranksep=0.75, splines=true, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75];
+
+  m31 [label="3.1 boundary + authority", fillcolor="#BFE2F1"];
+  m32 [label="3.2 kernel entry paths", fillcolor="#DDEAF1"];
+  m33 [label="3.3 processes + time sharing", fillcolor="#E6F3F9"];
+  m34 [label="3.4 storage + copies", fillcolor="#E6F3F9"];
+  m35 [label="3.5 scaling models", fillcolor="#E6F3F9"];
+  m36 [label="3.6 protection vs security", fillcolor="#DDEAF1"];
+  m37 [label="3.7 data structures -> policy", fillcolor="#E6F3F9"];
+
+  m31 -> m32 -> m33 -> m34 -> m35 -> m36 -> m37;
+}

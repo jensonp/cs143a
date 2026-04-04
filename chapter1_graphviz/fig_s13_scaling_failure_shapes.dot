@@ -1,0 +1,22 @@
+digraph G {
+  graph [rankdir=TB, pad=0.25, nodesep=0.55, ranksep=0.65, splines=true, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75];
+
+  single [label="single CPU\n(one instruction stream at a time)", fillcolor="#E6F3F9"];
+  smp [label="SMP / shared memory\n(many CPUs, one memory image)", fillcolor="#E6F3F9"];
+  dist [label="cluster / distributed\n(many machines, network links)", fillcolor="#E6F3F9"];
+
+  single -> smp -> dist;
+
+  s1 [shape=note, style="filled", fillcolor="#EAF6FB", color="#9EC9DA",
+      label="Main challenge:\npreemption + blocking\n(timer + interrupts)"];
+  s2 [shape=note, style="filled", fillcolor="#EAF6FB", color="#9EC9DA",
+      label="New costs:\ncontention, races,\ncache coherence,\nmemory bandwidth"];
+  s3 [shape=note, style="filled", fillcolor="#EAF6FB", color="#9EC9DA",
+      label="New failures:\npartial failure,\ntimeouts, partitions,\ninconsistent views"];
+
+  s1 -> single [style=dotted, arrowhead=none];
+  s2 -> smp [style=dotted, arrowhead=none];
+  s3 -> dist [style=dotted, arrowhead=none];
+}

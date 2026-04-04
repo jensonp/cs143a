@@ -19,6 +19,8 @@ The goal is to be able to do the following without guessing:
 - Predict what new coordination costs appear when you add processors or machines.
 - State the invariant the kernel enforces at each major boundary (CPU time, memory mappings, I/O, storage).
 
+![Supplement: Chapter 1 mastery targets](../chapter1_graphviz/fig_s8_ch1_mastery_targets.svg)
+
 For Chapter 1, "dangerous" means:
 
 - you can trace a mechanism step by step
@@ -26,9 +28,13 @@ For Chapter 1, "dangerous" means:
 - you can predict what breaks when a mechanism is missing
 - you can connect the abstraction to code you would later inspect in a real kernel
 
+This file is organized to support that skill directly: each module names a **Problem**, explains the **Mechanism**, states the **Invariants**, shows **What Breaks If This Fails**, and gives a **Trace** you can rehearse. If you can reproduce the traces from memory and explain why each step exists, later chapters feel like added detail instead of new mysteries.
+
 Later chapters should deepen these mechanisms, not rescue undefined language here.
 
 ## 2. Mental Models To Know Cold
+
+![Supplement: mental models overview](../chapter1_graphviz/fig_s9_ch1_mental_models_overview.svg)
 
 ### 2.1 The OS Is a Control System
 
@@ -37,6 +43,8 @@ Its role is to decide which computation runs, which computation waits, which res
 
 If you remember only one idea, remember this:
 raw hardware can execute instructions, but raw hardware cannot enforce shared rules by itself.
+
+To "see" a control system, imagine a feedback loop: unprivileged code runs until something forces a return to privileged code (timer, interrupt, fault, syscall). The kernel then observes state (queues, mappings, device completion), applies rules (scheduling, protection), updates authoritative structures, and returns to user mode. The OS is not watching continuously; it is regaining control at specific entry points and using those moments to enforce system-wide invariants.
 
 ![Control loop: timer/trap into the kernel, scheduler returns to user code](../chapter1_graphviz/fig_1_22_control_loop.svg)
 
@@ -50,12 +58,20 @@ Applications request work.
 The kernel validates the request and updates protected state.
 That asymmetry is the foundation of protection.
 
+When you read "the OS decides X," translate it into "privileged code updated authoritative state Y at boundary Z." Examples of authoritative state include ready queues (who can run), page tables (what memory is accessible), filesystem metadata (what names map to what blocks), and credentials (who may do what). This is also why the trusted computing base matters: any bug in privileged code can violate invariants globally, while most user-space bugs are contained.
+
+![Supplement: kernel authority loop (request -> validate -> authoritative state)](../chapter1_graphviz/fig_s10_kernel_authority_loop.svg)
+
 ### 2.3 Concurrency Is Mostly About Scarcity
 
 There are always fewer immediately usable resources than the system would like:
 one CPU, limited RAM, a finite number of devices, finite bandwidth, finite latency budgets.
 
 Scheduling, buffering, caching, and virtualization are all different ways of coping with scarcity while preserving the illusion of abundant progress.
+
+Scarcity forces the kernel to represent "who is waiting for what" explicitly. A blocked computation is not "doing nothing"; it is a kernel record (queue membership + a wakeup condition) that lets the CPU run someone else without losing the blocked computation's identity or resources. This is the thread that connects scheduling, I/O completion interrupts, and later synchronization: progress is managed by queues and wakeups, not by hope.
+
+![Supplement: scarcity -> multiplexing mechanisms -> progress illusion](../chapter1_graphviz/fig_s11_scarcity_multiplexing.svg)
 
 ### 2.4 Copies Create Correctness Problems
 
@@ -64,6 +80,10 @@ It becomes a correctness question: the system must define which copy is authorit
 
 This idea shows up in caches, page caches, DMA buffers, distributed systems, and replicated services.
 
+If you want a concrete mental check, ask a power-loss question: "If the machine lost power right now, which copy would be considered the truth when it comes back, and why?" The answer is never "whichever one is newest" by magic; it is defined by explicit rules (coherence protocols for caches, writeback/commit rules for storage, ordering rules for journaling). Later chapters mostly refine these rules; the fundamental problem is already here.
+
+![Supplement: copies create coherence + durability rules](../chapter1_graphviz/fig_s12_copies_authority_min.svg)
+
 ### 2.5 Scaling Changes The Shape Of Failure
 
 Adding processors or machines changes the object being coordinated.
@@ -71,7 +91,13 @@ On a single CPU, the OS mainly multiplexes one execution resource.
 On an SMP machine, the kernel coordinates shared-memory execution across multiple CPUs and is responsible for synchronization, cache-coherence effects, and placement.
 In a cluster or distributed system, the coordinating software manages separate machines and is responsible for communication, partial-failure handling, and cross-node agreement.
 
+Scaling adds new constraints, not just more throughput. Shared-memory parallelism adds contention and visibility problems (races, coherence, locality). Distributed systems add partial failure and time uncertainty (timeouts, partitions, inconsistent views). Real-time adds deadlines, where "late" is incorrect. The point of this mental model is to expect new invariants as soon as you add CPUs or machines: coordination becomes part of correctness, not optional optimization.
+
+![Supplement: scaling changes failure models](../chapter1_graphviz/fig_s13_scaling_failure_shapes.svg)
+
 ### 2.6 If You Remember Only 10 Things
+
+Treat this list as retrieval cues, not as a memory test. Each line should make you think of a trace (boot, syscall entry, interrupt completion, timer preemption, copy/writeback) and the invariant it exists to enforce.
 
 1. The operating system exists to make hardware usable, shareable, and safe.
 2. The kernel is the privileged always-running core; system calls are the normal entry path into it.
@@ -91,6 +117,8 @@ Pick one node (e.g., “timer preemption” or “copies/authority”), then exp
 If you can traverse the map and justify the edges (“why does this imply that?”), you have Chapter 1 mastery.
 
 ## 3. Mastery Modules
+
+![Supplement: Chapter 1 mastery modules roadmap](../chapter1_graphviz/fig_s14_ch1_mastery_modules_roadmap.svg)
 
 ### 3.1 OS Boundary And Kernel Authority
 
@@ -133,6 +161,8 @@ Operational definitions that stay stable across OSes:
 Read this as a control and authority trace, not as “shell trivia.”
 The shell expresses intent (parse a command, choose an executable), but the kernel is the only actor that can create a new execution context and install the initial machine state that makes the program *run*.
 When you rehearse this trace from memory, say out loud (1) when you cross the user/kernel boundary, and (2) what privileged state is being constructed or validated at each kernel step.
+
+![Supplement: launching a program (boundary + constructed state)](../chapter1_graphviz/fig_s15_launch_trace.svg)
 
 | Step | User / Process Side | Kernel Side | Why It Matters |
 | --- | --- | --- | --- |
@@ -177,6 +207,8 @@ After boot, there are three main paths into the kernel:
 - `system call`: deliberate request by user code
 - `interrupt`: asynchronous external event such as timer expiry or device completion
 - `trap/exception`: synchronous event caused by the current instruction stream, such as a fault
+
+![Supplement: kernel entry classification matrix](../chapter1_graphviz/fig_s16_kernel_entry_matrix.svg)
 
 Useful distinctions:
 
@@ -250,6 +282,8 @@ A `process` is a program plus execution state and resources:
 - `register state`: PC, stack pointer, general registers, status bits
 - `memory image`: code, data, heap, stacks as mapped in memory
 - `open resources`: kernel-managed objects such as files, sockets, devices
+
+![Supplement: a process is a live instance (CPU context + address space + owned resources)](../chapter1_graphviz/fig_s17_process_anatomy.svg)
 
 Multiprogramming keeps several jobs resident so the CPU can run another one when the current one blocks.
 Time sharing adds frequent preemption so interactive response stays short enough that a human experiences the system as responsive rather than stalled.
@@ -328,6 +362,7 @@ not only where data is stored, but what *rules* define the current authoritative
 
 ![Supplement: storage hierarchy](../chapter1_graphviz/fig_1_4_storage_hierarchy.svg)
 ![Supplement: copies and authority across the hierarchy](../chapter1_graphviz/fig_s6_storage_copies_authority.svg)
+![Supplement: file abstraction + page cache + durable blocks](../chapter1_graphviz/fig_s18_file_page_cache.svg)
 
 **Invariants**
 
@@ -419,6 +454,8 @@ Virtualization is a control-boundary story.
 The guest kernel may believe it is “the privileged authority,” but the hypervisor is the actual hardware authority.
 This trace is the smallest operational picture of that: a sensitive operation becomes a forced control transfer below the guest.
 
+![Supplement: VM exit is a forced transfer below the guest kernel](../chapter1_graphviz/fig_s19_vm_exit_trace.svg)
+
 | Stage | Guest (inside VM) | Hypervisor / Hardware | Meaning |
 | --- | --- | --- | --- |
 | run | guest executes normally | hardware runs guest in a constrained mode | guest has the *illusion* of full machine control |
@@ -465,6 +502,7 @@ Mechanisms that make protection enforceable:
 
 ![Supplement: user/kernel mode transition (control + privilege)](../chapter1_graphviz/fig_1_10_mode_transition.svg)
 ![Supplement: protection vs security scope](../chapter1_graphviz/fig_s7_protection_security_scope.svg)
+![Supplement: syscall validation is a security boundary (attack surface)](../chapter1_graphviz/fig_s20_syscall_validation_surface.svg)
 
 **Invariants**
 
@@ -552,6 +590,8 @@ This is the “state representation becomes policy” trace.
 Bitmaps are popular in kernels because they are compact and fast, but the scanning rule (first free bit, next-fit cursor, per-CPU cache) encodes a policy about locality, fairness, and contention.
 When you cover this table, name the invariant you must preserve: “never hand out the same resource twice.”
 
+![Supplement: bitmap allocation trace (policy lives in scan order + atomic claim)](../chapter1_graphviz/fig_s21_bitmap_allocation_trace.svg)
+
 | Step | Bitmap | Kernel action | Meaning |
 | --- | --- | --- | --- |
 | request | some bits are 0 (free) | scan for a 0 bit | choose a candidate resource |
@@ -581,8 +621,12 @@ If the scanning order is poor, you may get pathological contention or fragmentat
 
 ## 4. Canonical Traces To Reproduce From Memory
 
+These traces are the smallest control stories that keep reappearing under new names: authority handoff at boot, synchronous request with asynchronous completion, forced preemption, and fault/repair vs fault/kill. Later chapters add details (more queues, more locks, more policies), but they do not change these fundamental shapes. If you can rehearse these traces, you have a stable mental "skeleton" to hang later material on.
+
 Do not merely read these.
 Cover the tables and reproduce the sequence from memory.
+
+![Supplement: canonical trace “shapes” to rehearse](../chapter1_graphviz/fig_s22_canonical_traces_overview.svg)
 
 ### 4.1 Boot To First User Process
 
@@ -612,6 +656,8 @@ Use the “lanes” to prevent a common misunderstanding: the CPU lane and devic
 While a process is blocked, the device may be actively transferring, and the CPU may be running something else entirely.
 Mastery means you can explain where the waiting condition is recorded (kernel bookkeeping), what event makes it true (interrupt completion), and why this is better than spinning (saves CPU, improves throughput, preserves fairness).
 
+![Supplement: blocking I/O lanes (CPU, device, kernel)](../chapter1_graphviz/fig_s23_blocking_io_lanes.svg)
+
 | Step | CPU Lane | Device Lane | Kernel Lane |
 | --- | --- | --- | --- |
 | request | user issues `read` | idle | validates request |
@@ -630,6 +676,8 @@ This is the minimal time-sharing loop.
 The timer is the enforcement mechanism that prevents “CPU capture,” and the dispatcher is the mechanism that makes a scheduling decision real by saving and restoring architectural state.
 When you rehearse it, explicitly name the non-negotiables: a privileged timer, a saved context that is sufficient to resume, and a consistent runnable set to choose from.
 
+![Supplement: timer preemption loop (save -> choose -> restore)](../chapter1_graphviz/fig_s24_timer_preemption_loop.svg)
+
 | Step | Running Process | Hardware | Kernel |
 | --- | --- | --- | --- |
 | slice active | process A runs | timer counts down | not on CPU yet |
@@ -646,6 +694,8 @@ This trace is the “hardware catches you, kernel decides your fate” pattern.
 The CPU detects that an access violates the current mapping/protection rules, raises an exception, and the kernel decides whether the fault is repairable (e.g., demand paging) or fatal (e.g., illegal access).
 If you can describe what state must be inspected to decide (faulting address, access type, mapping state) you are ready for virtual memory and page faults later.
 
+![Supplement: fault handling (inspect -> repair or terminate)](../chapter1_graphviz/fig_s25_faulting_access.svg)
+
 | Step | Process View | Hardware / Kernel View |
 | --- | --- | --- |
 | access issued | process attempts memory access | CPU checks mapping/protection |
@@ -657,6 +707,10 @@ Faults are the “kernel decides your fate” pattern: hardware detects a violat
 This is why virtual memory is an OS topic: correctness depends on privileged metadata (page tables, permissions, residency) that user code cannot be allowed to forge.
 
 ## 5. Key Questions (Answered)
+
+Treat these as checkpoints, not as trivia. Each question points back to a control mechanism in Chapters 1-2: timer preemption, interrupts/DMA, blocked vs runnable state, copies/authority, scaling failure models, protection boundaries, and the way data structures turn policy into performance. If you cannot answer one from memory, return to the nearest trace or module and rebuild the story.
+
+![Supplement: how the questions map back to mechanisms](../chapter1_graphviz/fig_s26_key_questions_map.svg)
 
 1. **Q:** Why is a timer both a fairness mechanism and a safety mechanism?
 **A:** Fairness: it bounds how long one runnable task can monopolize the CPU before others get a chance. Safety: it guarantees the kernel regains control even if a task never yields, which is required to enforce protection and system-wide policy.
@@ -705,6 +759,10 @@ This is why virtual memory is an OS topic: correctness depends on privileged met
 
 ## 6. Suggested Bridge Into Real Kernels
 
+The reading order below is not "learn the kernel in the same order as the source tree." It is a control-path order: start with privileged entry and return, then study how the kernel preserves resumable execution state, then study how it defines memory authority, then how it defines storage authority, and finally how asynchronous device completion re-enters the kernel and wakes waiters. This is the same authority story repeated across mechanisms.
+
+![Supplement: read kernels in control-path order](../chapter1_graphviz/fig_s27_bridge_to_real_kernels.svg)
+
 If your course later uses `xv6`, this is a good reading order:
 
 1. trap and syscall path
@@ -728,6 +786,10 @@ The control problems do not.
 
 ## 7. How To Use This File
 
+Reading is not the skill. The skill is being able to reproduce the control story and name the invariant at each boundary. Use the diagrams to visualize the path, then cover the text and force yourself to reconstruct it.
+
+![Supplement: mastery loop for this file](../chapter1_graphviz/fig_s28_study_loop.svg)
+
 If you are short on time:
 
 - Read `## 2. Mental Models To Know Cold` once.
@@ -739,3 +801,5 @@ If you want Chapter 1 to become reasoning skill:
 - Work the `## 3. Mastery Modules` slowly: problem -> mechanism -> invariants -> failure modes.
 - Reproduce the traces from memory and explain why each step exists.
 - Use the answered questions in `## 5` as “explain it out loud” checkpoints.
+
+A practical routine that works: (1) cover the table, (2) write the steps from memory, (3) annotate each step with "what authority/state changed," (4) check against the file, (5) repeat two days later. If you can do that for boot, blocking I/O, timer preemption, and a fault, you are ready for Chapter 3 because you can already reason about resumable execution and kernel bookkeeping.

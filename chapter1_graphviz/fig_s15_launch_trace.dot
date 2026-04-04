@@ -1,0 +1,24 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.45, ranksep=0.7, splines=ortho, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75];
+
+  user [shape=oval, label="user intent", fillcolor="#E6F3F9"];
+  shell [label="shell\n(parse + resolve)", fillcolor="#E6F3F9"];
+
+  subgraph cluster_kernel {
+    label="privileged boundary";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+
+    entry [label="syscall/trap entry", fillcolor="#DDEAF1"];
+    checks [label="validate\n(path, perms, format)", fillcolor="#BFE2F1"];
+    create [label="construct execution context\n(PID, address space,\ninitial regs/stack)", fillcolor="#BFE2F1"];
+    ret [label="return to user mode\n(at program entry)", fillcolor="#D5EDF7"];
+  }
+
+  prog [shape=oval, label="new process\nruns", fillcolor="#E6F3F9"];
+
+  user -> shell -> entry -> checks -> create -> ret -> prog;
+}

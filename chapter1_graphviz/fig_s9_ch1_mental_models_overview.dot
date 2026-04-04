@@ -1,0 +1,17 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.5, ranksep=0.75, splines=true, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75];
+
+  control [label="OS as control system", fillcolor="#BFE2F1", width=2.1];
+  authority [label="kernel as trusted authority\n(enforcement boundary)", fillcolor="#DDEAF1"];
+  scarcity [label="concurrency as scarcity\n(scheduling, buffering)", fillcolor="#E6F3F9"];
+  copies [label="copies create correctness\n(coherence + durability)", fillcolor="#E6F3F9"];
+  scale [label="scaling changes failure\n(contention, partial failure)", fillcolor="#E6F3F9"];
+
+  control -> authority [label="needs enforcement"];
+  authority -> scarcity [label="multiplex safely"];
+  authority -> copies [label="define authority"];
+  scarcity -> scale [label="coordination costs grow"];
+  copies -> scale [label="more replicas/caches"];
+}

@@ -1,0 +1,22 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.5, ranksep=0.7, splines=true, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75];
+
+  app [label="application\n(user mode)", fillcolor="#F5F5F5"];
+  api [label="API / library\n(packages intent)", fillcolor="#DDEAF1"];
+
+  subgraph cluster_kernel {
+    label="trusted computing base (TCB)";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+
+    entry [label="syscall/trap entry\n(privilege transfer)", fillcolor="#DDEAF1"];
+    validate [label="validate arguments\n+ permissions", fillcolor="#BFE2F1"];
+    state [label="authoritative state\n(queues, mappings,\ninodes, creds)", fillcolor="#D5EDF7"];
+  }
+
+  app -> api -> entry -> validate -> state;
+  state -> app [style=dashed, label="results/errors", fontcolor="#5B6B73"];
+}

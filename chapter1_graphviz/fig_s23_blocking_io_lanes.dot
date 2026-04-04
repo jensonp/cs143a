@@ -1,0 +1,42 @@
+digraph G {
+  graph [rankdir=TB, pad=0.25, nodesep=0.45, ranksep=0.55, bgcolor="white"];
+  node [shape=plaintext, fontname="Helvetica", fontcolor="#233238"];
+
+  lanes [
+    label=<
+      <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="8">
+        <TR>
+          <TD BGCOLOR="#EAF6FB" COLSPAN="5"><B>Blocking I/O: synchronous request, asynchronous completion</B></TD>
+        </TR>
+        <TR>
+          <TD BGCOLOR="#F5F5F5"><B>Lane</B></TD>
+          <TD BGCOLOR="#DDEAF1"><B>1) request</B></TD>
+          <TD BGCOLOR="#DDEAF1"><B>2) wait / overlap</B></TD>
+          <TD BGCOLOR="#DDEAF1"><B>3) completion</B></TD>
+          <TD BGCOLOR="#DDEAF1"><B>4) wake + return</B></TD>
+        </TR>
+        <TR>
+          <TD BGCOLOR="#DDEAF1"><B>CPU</B></TD>
+          <TD BGCOLOR="#E6F3F9">issues read syscall</TD>
+          <TD BGCOLOR="#E6F3F9">runs other work</TD>
+          <TD BGCOLOR="#E6F3F9">interrupted by IRQ</TD>
+          <TD BGCOLOR="#E6F3F9">later resumes caller</TD>
+        </TR>
+        <TR>
+          <TD BGCOLOR="#DDEAF1"><B>Device</B></TD>
+          <TD BGCOLOR="#F5F5F5">idle</TD>
+          <TD BGCOLOR="#F5F5F5">transferring (DMA/PIO)</TD>
+          <TD BGCOLOR="#F5F5F5">signals done/error</TD>
+          <TD BGCOLOR="#F5F5F5">ready</TD>
+        </TR>
+        <TR>
+          <TD BGCOLOR="#DDEAF1"><B>Kernel</B></TD>
+          <TD BGCOLOR="#BFE2F1">validates + programs I/O</TD>
+          <TD BGCOLOR="#BFE2F1">records wait + blocks caller</TD>
+          <TD BGCOLOR="#BFE2F1">handler records completion</TD>
+          <TD BGCOLOR="#BFE2F1">wakeup + syscall returns</TD>
+        </TR>
+      </TABLE>
+    >
+  ];
+}

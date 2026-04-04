@@ -1,0 +1,28 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.5, ranksep=0.8, splines=true, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75];
+
+  p [label="process issues\nmemory access", fillcolor="#E6F3F9"];
+  hw [label="CPU detects violation\n(mapping/protection)", fillcolor="#DDEAF1"];
+
+  subgraph cluster_kernel {
+    label="kernel fault handler";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+
+    inspect [fillcolor="#BFE2F1", label="inspect fault info\n(addr, type, page tables)"];
+    decide [shape=diamond, style="filled", fillcolor="#D5EDF7", label="repairable?"];
+    fix [fillcolor="#BFE2F1", label="repair\n(page in/allocate,\nupdate mapping)"];
+    kill [fillcolor="#FFECEC", label="fatal\n(signal/terminate)"];
+  }
+
+  resume [label="resume execution\nat faulting instruction", fillcolor="#E6F3F9"];
+
+  p -> hw -> inspect -> decide;
+  decide -> fix [label="yes"];
+  fix -> resume;
+  decide -> kill [label="no"];
+  kill -> p [style=dashed, label="process ends/handles", fontcolor="#5B6B73"];
+}

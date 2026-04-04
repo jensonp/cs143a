@@ -1,0 +1,25 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.45, ranksep=0.7, splines=true, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75];
+
+  a [label="process A running\n(user mode)", fillcolor="#E6F3F9"];
+  t [label="timer interrupt\n(forced entry)", fillcolor="#DDEAF1"];
+
+  subgraph cluster_kernel {
+    label="kernel scheduler/dispatcher";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+
+    save [fillcolor="#BFE2F1", label="save A context\n(PC, SP, regs)"];
+    rq [fillcolor="#D5EDF7", label="ready queue\n(runnable truth)"];
+    pick [fillcolor="#BFE2F1", label="pick next\n(policy)"];
+    load [fillcolor="#BFE2F1", label="restore B context"];
+  }
+
+  b [label="process B running\n(user mode)", fillcolor="#E6F3F9"];
+
+  a -> t -> save -> rq -> pick -> load -> b;
+  b -> t [style=dashed, label="next slice", fontcolor="#5B6B73"];
+}

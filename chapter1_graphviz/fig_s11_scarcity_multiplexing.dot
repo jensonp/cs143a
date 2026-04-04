@@ -1,0 +1,36 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.55, ranksep=0.9, splines=true, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75];
+
+  demand [label="many competing demands\n(processes/threads)", fillcolor="#E6F3F9"];
+
+  cpu [label="CPU time\n(scarce)", fillcolor="#F5F5F5"];
+  mem [label="RAM frames\n(scarce)", fillcolor="#F5F5F5"];
+  io [label="device + bandwidth\n(scarce)", fillcolor="#F5F5F5"];
+
+  subgraph cluster_kernel {
+    label="kernel multiplexing mechanisms";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+
+    sched [label="scheduler\n(queues + preemption)", fillcolor="#BFE2F1"];
+    vm [label="virtual memory\n(residency + faults)", fillcolor="#BFE2F1"];
+    buf [label="buffering/caching\n(overlap work)", fillcolor="#BFE2F1"];
+  }
+
+  progress [label="illusion of progress\n(fairness, responsiveness,\nthroughput)", fillcolor="#DDEAF1"];
+
+  demand -> sched;
+  demand -> vm;
+  demand -> buf;
+
+  cpu -> sched;
+  mem -> vm;
+  io -> buf;
+
+  sched -> progress;
+  vm -> progress;
+  buf -> progress;
+}

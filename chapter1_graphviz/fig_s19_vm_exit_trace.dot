@@ -1,0 +1,24 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.45, ranksep=0.7, splines=true, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75];
+
+  guest [label="guest kernel\n(thinks it is privileged)", fillcolor="#E6F3F9"];
+
+  subgraph cluster_hv {
+    label="hypervisor boundary";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+
+    exit [label="VM exit\n(forced control transfer)", fillcolor="#DDEAF1"];
+    decide [label="hypervisor policy\n(emulate/allow/deny)", fillcolor="#BFE2F1"];
+    entry [label="VM entry\n(resume guest)", fillcolor="#D5EDF7"];
+  }
+
+  hw [label="hardware\n(real authority)", fillcolor="#D9D9D9"];
+
+  guest -> exit [label="sensitive op"];
+  exit -> decide -> hw [label="updates real state"];
+  hw -> entry -> guest [label="resume illusion"];
+}

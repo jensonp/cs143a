@@ -1,21 +1,31 @@
-digraph fig_1_22_control_loop {
-  rankdir=LR;
-  bgcolor="white";
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.45, ranksep=0.6, splines=true, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75, fontname="Helvetica", fontsize=10];
 
-  graph [fontname="Latin Modern Roman" fontsize=18 labelloc="t" label="Control loop: timer, traps, and scheduling keep authority in the kernel"];
-  node [fontname="Latin Modern Roman" fontsize=12 shape=box style="rounded,filled" color="#444444" fillcolor="#F7F7F7" penwidth=1.2];
-  edge [fontname="Latin Modern Roman" fontsize=11 color="#444444" penwidth=1.1 arrowsize=0.8];
+  labelloc="t";
+  label="Control loop: timer/traps re-enter the kernel; scheduler returns to user code";
 
-  cpu [shape=box style="rounded,filled" fillcolor="#E9F2FF" label="CPU executes\nuser code"];
-  timer [shape=box style="rounded,filled" fillcolor="#FFF7E6" label="Timer interrupt\npreemption"];
-  trap [shape=box style="rounded,filled" fillcolor="#FFF7E6" label="Syscall / fault\ntrap into kernel"];
-  kernel [shape=box style="rounded,filled" fillcolor="#EAF7EA" label="Kernel scheduler\n& dispatcher"];
-  readyq [shape=box style="rounded,filled" fillcolor="#EAF7EA" label="Ready queue\n(authoritative)"];
+  cpu [fillcolor="#F5F5F5", label="CPU executes\nuser code"];
+  timer [fillcolor="#DDEAF1", label="timer interrupt\n(preemption)"];
+  trap [fillcolor="#DDEAF1", label="syscall / fault\n(trap)"];
 
-  cpu -> trap [label="syscall/fault"];
-  cpu -> timer [label="interrupt"];
-  timer -> kernel [label="enter kernel"];
-  trap -> kernel [label="enter kernel"];
-  kernel -> readyq [label="choose next"];
-  readyq -> cpu [label="return to user"];
+  subgraph cluster_kernel {
+    label="kernel control path";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+
+    sched [fillcolor="#BFE2F1", label="scheduler\ndecides next"];
+    rq [fillcolor="#D5EDF7", label="runnable set\n(queues/metadata)"];
+    dispatch [fillcolor="#BFE2F1", label="dispatcher\n(save/restore state)"];
+
+    sched -> rq -> dispatch;
+  }
+
+  cpu -> trap [label="request/violation"];
+  cpu -> timer [label="time slice"];
+  trap -> sched [label="enter kernel"];
+  timer -> sched [label="enter kernel"];
+  dispatch -> cpu [label="return to user"];
 }

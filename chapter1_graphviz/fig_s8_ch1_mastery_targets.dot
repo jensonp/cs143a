@@ -1,0 +1,21 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.45, ranksep=0.7, splines=true, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75];
+
+  mastery [label="Chapter 1 mastery\n(operational reasoning)", fillcolor="#BFE2F1", width=2.9];
+
+  trace [label="trace control paths\n(user -> kernel -> user)", fillcolor="#E6F3F9"];
+  boundary [label="name authority boundaries\n(syscall/trap/interrupt)", fillcolor="#DDEAF1"];
+  ctx [label="context switch state\n(PC, SP, regs, mappings)", fillcolor="#E6F3F9"];
+  copies [label="copies + authority rules\n(cache/coherence/durability)", fillcolor="#E6F3F9"];
+  scale [label="scaling costs\n(contention, coordination,\npartial failure)", fillcolor="#E6F3F9"];
+  invariants [label="state invariants\n(what must stay true)", fillcolor="#DDEAF1"];
+
+  mastery -> trace;
+  mastery -> boundary;
+  mastery -> ctx;
+  mastery -> copies;
+  mastery -> scale;
+  mastery -> invariants;
+}

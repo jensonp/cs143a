@@ -1,0 +1,24 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.5, ranksep=0.75, splines=true, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75];
+
+  program [label="program file\n(passive template)", fillcolor="#F5F5F5"];
+
+  subgraph cluster_proc {
+    label="process (live instance)";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+
+    cpu [label="CPU context\n(PC, SP, regs)", fillcolor="#BFE2F1"];
+    as [label="address space\n(code, data, heap, stacks)", fillcolor="#DDEAF1"];
+    res [label="owned kernel resources\n(files, sockets, devices)", fillcolor="#DDEAF1"];
+    pcb [label="PCB / descriptor\n(identity + scheduling\n+ pointers to state)", fillcolor="#D5EDF7"];
+  }
+
+  program -> as [label="mapped as code/data"];
+  pcb -> cpu;
+  pcb -> as;
+  pcb -> res;
+}

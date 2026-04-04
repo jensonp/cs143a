@@ -1,0 +1,15 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.6, ranksep=0.85, splines=true, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75];
+
+  loop [label="How to use this file\n(master the control stories)", fillcolor="#BFE2F1", width=2.8];
+
+  mm [label="mental models\n(what the OS is)", fillcolor="#E6F3F9"];
+  mods [label="mastery modules\n(problem -> mechanism\n-> invariants -> breaks)", fillcolor="#E6F3F9"];
+  traces [label="canonical traces\n(reproduce from memory)", fillcolor="#E6F3F9"];
+  qs [label="key questions\n(retrieval checks)", fillcolor="#DDEAF1"];
+  code [label="bridge into kernels\n(map ideas to code)", fillcolor="#E6F3F9"];
+
+  loop -> mm -> mods -> traces -> qs -> code -> loop;
+}

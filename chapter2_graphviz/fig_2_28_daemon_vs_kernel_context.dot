@@ -1,0 +1,66 @@
+digraph fig_2_28_daemon_vs_kernel_context {
+  rankdir=LR;
+  bgcolor="white";
+
+  graph [
+    fontname="Latin Modern Roman"
+    fontsize=18
+    labelloc="t"
+    label="Daemon vs kernel thread vs interrupt handler (fault scope + restartability)"
+    nodesep=0.55
+    ranksep=0.8
+  ];
+
+  node [
+    fontname="Latin Modern Roman"
+    fontsize=12
+    shape=box
+    style="rounded,filled"
+    fillcolor="#F7F7F7"
+    color="#444444"
+    penwidth=1.2
+  ];
+
+  edge [
+    fontname="Latin Modern Roman"
+    fontsize=11
+    color="#444444"
+    penwidth=1.1
+    arrowsize=0.8
+  ];
+
+  subgraph cluster_user {
+    label="User space (unprivileged)";
+    fontname="Latin Modern Roman";
+    fontsize=13;
+    color="#AAAAAA";
+    style="rounded";
+
+    daemon [fillcolor="#E9F2FF" label="Daemon\n(user-mode process)"];
+    svc [shape=note style="filled" fillcolor="#FFFFFF" color="#777777" fontcolor="#333333" label="Can be restarted\nor replaced"];
+    svc -> daemon [style=dotted arrowhead=none color="#777777"];
+  }
+
+  subgraph cluster_kernel {
+    label="Kernel space (privileged)";
+    fontname="Latin Modern Roman";
+    fontsize=13;
+    color="#AAAAAA";
+    style="rounded";
+
+    kth [shape=box3d style="filled" fillcolor="#EAF7EA" label="Kernel thread\n(privileged)"];
+    irq [shape=box3d style="filled" fillcolor="#EAF7EA" label="Interrupt handler\n(asynchronous, privileged)"];
+    state [shape=box3d style="filled" fillcolor="#DFF3DF" label="Authoritative\nkernel state"];
+  }
+
+  boundary [shape=plaintext label="syscall boundary"];
+
+  daemon -> boundary [label="requests"];
+  boundary -> state [label="validated entry"];
+
+  kth -> state [label="direct access"];
+  irq -> state [label="direct access"];
+
+  risk [shape=note style="filled" fillcolor="#FFE6E6" color="#D9534F" fontcolor="#333333" label="Kernel-context failure:\nmay corrupt state or\ncrash the whole system"];
+  risk -> state [style=dotted arrowhead=none color="#D9534F"];
+}

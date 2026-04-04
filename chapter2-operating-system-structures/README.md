@@ -421,11 +421,17 @@ That distinction is also why many services can be restarted or replaced without 
 1. **Q:** Why is a compiler part of the system environment without being part of the kernel?
 **A:** It is essential to a developer workflow, but it does not need hardware privilege to do its job. It consumes files, produces files, and uses ordinary system calls like any other application. Keeping it out of the kernel preserves a small trusted base and allows rapid improvement without risking privileged-system stability.
 
+![Mental model: compiler is an unprivileged program that uses syscalls; it stays out of the kernel/TCB](../chapter2_graphviz/fig_2_27_compiler_user_space.png)
+
 2. **Q:** What makes a daemon structurally different from a kernel thread or interrupt handler?
 **A:** A daemon runs in user mode as a scheduled process, enters the kernel only through syscalls, and can be restarted or replaced without rebuilding the kernel. Kernel threads and interrupt handlers execute in privileged context and can directly manipulate protected state; if they crash or corrupt memory, the whole kernel is at risk.
 
+![Mental model: daemon vs kernel thread/interrupt (privilege, restartability, fault scope)](../chapter2_graphviz/fig_2_28_daemon_vs_kernel_context.png)
+
 3. **Q:** Why do users often perceive utilities as “the OS” even though privilege lives elsewhere?
 **A:** Because utilities are the visible control surfaces: they are what users type or click. They also encode lots of user-facing policy (flags, defaults, workflows). But visibility is not authority; the kernel is the invisible layer that actually enforces permissions and preserves system invariants.
+
+![Mental model: utilities are visible; the kernel is authoritative enforcement](../chapter2_graphviz/fig_2_29_visibility_vs_authority.png)
 
 ### 3.6 Policy, Mechanism, And Design Goals
 

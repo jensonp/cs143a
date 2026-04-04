@@ -1,0 +1,65 @@
+digraph fig_2_27_compiler_user_space {
+  rankdir=LR;
+  bgcolor="white";
+
+  graph [
+    fontname="Latin Modern Roman"
+    fontsize=18
+    labelloc="t"
+    label="Compiler: essential to the environment, but still an unprivileged program"
+    nodesep=0.5
+    ranksep=0.7
+  ];
+
+  node [
+    fontname="Latin Modern Roman"
+    fontsize=12
+    shape=box
+    style="rounded,filled"
+    fillcolor="#F7F7F7"
+    color="#444444"
+    penwidth=1.2
+  ];
+
+  edge [
+    fontname="Latin Modern Roman"
+    fontsize=11
+    color="#444444"
+    penwidth=1.1
+    arrowsize=0.8
+  ];
+
+  subgraph cluster_user {
+    label="User space (unprivileged)";
+    fontname="Latin Modern Roman";
+    fontsize=13;
+    color="#AAAAAA";
+    style="rounded";
+
+    dev [shape=oval style="filled" fillcolor="#E9F2FF" label="Developer"];
+    src [shape=folder fillcolor="#E9F2FF" label="Source files\n(.c/.java/...)"];
+    compiler [fillcolor="#E9F2FF" label="Compiler\n(user process)"];
+    out [shape=folder fillcolor="#E9F2FF" label="Objects / executable\n(output files)"];
+
+    dev -> compiler [label="invokes"];
+    dev -> src [label="edits"];
+    src -> compiler [label="reads"];
+    compiler -> out [label="writes"];
+  }
+
+  subgraph cluster_kernel {
+    label="Kernel space (privileged authority)";
+    fontname="Latin Modern Roman";
+    fontsize=13;
+    color="#AAAAAA";
+    style="rounded";
+
+    kernel [shape=box3d style="filled" fillcolor="#EAF7EA" label="Kernel\n(validates + enforces)"];
+  }
+
+  compiler -> kernel [label="syscalls\n(open/read/write/mmap)"];
+  kernel -> compiler [label="status/errno"];
+
+  tcb [shape=note style="filled" fillcolor="#FFFFFF" color="#777777" fontcolor="#333333" label="Why not in the kernel?\n- no privileged instructions needed\n- smaller trusted computing base\n- can update compiler without kernel risk"];
+  tcb -> kernel [style=dashed arrowhead=none color="#777777"];
+}

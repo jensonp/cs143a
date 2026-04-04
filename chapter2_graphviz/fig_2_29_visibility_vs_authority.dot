@@ -1,0 +1,48 @@
+digraph fig_2_29_visibility_vs_authority {
+  rankdir=TB;
+  bgcolor="white";
+
+  graph [
+    fontname="Latin Modern Roman"
+    fontsize=18
+    labelloc="t"
+    label="Visibility vs authority: utilities are what you see; the kernel is what enforces"
+    nodesep=0.5
+    ranksep=0.55
+  ];
+
+  node [
+    fontname="Latin Modern Roman"
+    fontsize=12
+    shape=box
+    style="rounded,filled"
+    fillcolor="#F7F7F7"
+    color="#444444"
+    penwidth=1.2
+  ];
+
+  edge [
+    fontname="Latin Modern Roman"
+    fontsize=11
+    color="#444444"
+    penwidth=1.1
+    arrowsize=0.8
+  ];
+
+  user [shape=oval style="filled" fillcolor="#E9F2FF" label="User"];
+
+  utilities [fillcolor="#E9F2FF" label="Utilities / GUI / CLI\n(visible control surfaces)\nflags, defaults, workflows"];
+
+  kernel [shape=box3d style="filled" fillcolor="#EAF7EA" label="Kernel\n(invisible authority)\nvalidates + enforces"];
+
+  state [shape=cylinder style="filled" fillcolor="#DFF3DF" label="Authoritative state\n(files, creds, sched queues)"];
+
+  user -> utilities [label="types/clicks"];
+  utilities -> kernel [label="syscalls"];
+  kernel -> state [label="mutate / protect"];
+  state -> utilities [style=dashed label="results/errors" fontcolor="#777777" color="#777777"];
+
+  note [shape=note style="filled" fillcolor="#FFFFFF" color="#777777" fontcolor="#333333" label="Why users confuse tools with 'the OS':\n- tools are the visible surface\n- authority lives in kernel checks + state"];
+  note -> utilities [style=dotted arrowhead=none color="#777777"];
+  note -> kernel [style=dotted arrowhead=none color="#777777"];
+}

@@ -14,13 +14,13 @@ This repo is organized so each note lives in its own directory as a `README.md`,
 
 ## Shared Assets
 
-- [Chapter 1 Graphviz Figures](chapter1_graphviz/)
-- [Chapter 2 Graphviz Figures](chapter2_graphviz/)
-- [Chapter 3 Graphviz Figures](chapter3_graphviz/)
-- [Chapter 4 Graphviz Figures](chapter4_graphviz/)
-- [Chapter 5 Graphviz Figures](chapter5_graphviz/)
-- [Chapter 6 Graphviz Figures](chapter6_graphviz/)
-- [Chapter 7 Graphviz Figures](chapter7_graphviz/)
+- [Chapter 1 Graphviz Figures](graphviz/chapter1_graphviz/)
+- [Chapter 2 Graphviz Figures](graphviz/chapter2_graphviz/)
+- [Chapter 3 Graphviz Figures](graphviz/chapter3_graphviz/)
+- [Chapter 4 Graphviz Figures](graphviz/chapter4_graphviz/)
+- [Chapter 5 Graphviz Figures](graphviz/chapter5_graphviz/)
+- [Chapter 6 Graphviz Figures](graphviz/chapter6_graphviz/)
+- [Chapter 7 Graphviz Figures](graphviz/chapter7_graphviz/)
 - [Graphviz Learning Heuristic Template](graphviz-learning-heuristic/)
 
 ## Structure

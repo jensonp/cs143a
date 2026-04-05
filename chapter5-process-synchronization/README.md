@@ -131,7 +131,7 @@ Whenever you see an update that depends on a prior read of shared state, assume 
 3. **Q:** Name a real data structure that would corrupt under an uncontrolled interleaving.
 **A:** A linked-list insertion/removal (two threads updating `next` pointers) can easily corrupt the list and lose nodes. Reference counts can be wrong (double-free or leak) under lost updates. Queue head/tail pointers are another common failure: one thread can overwrite another’s pointer update and silently drop elements.
 
-![Supplement: the lost-update interleaving is a correctness bug, not a “timing issue”](../chapter5_graphviz/fig_5_1_race_interleaving.svg)
+![Supplement: the lost-update interleaving is a correctness bug, not a “timing issue”](../graphviz/chapter5_graphviz/fig_5_1_race_interleaving.svg)
 
 ### 3.2 Peterson’s Solution: A Correct Protocol (With Strong Assumptions)
 
@@ -310,7 +310,7 @@ The subtle correctness requirement is the enqueue-before-sleep ordering; get tha
 3. **Q:** Give one scenario that causes priority inversion.
 **A:** Low-priority thread L holds a mutex needed by high-priority thread H. A medium-priority thread M (which does not need the mutex) runs and preempts L, preventing L from running and releasing the mutex. H is blocked waiting on L, so H’s effective progress is “inverted” below M. Priority inheritance is a common mechanism to mitigate this.
 
-![Supplement: blocking mutex is a queueing and wakeup protocol, not just a flag](../chapter5_graphviz/fig_5_2_mutex_blocking_trace.svg)
+![Supplement: blocking mutex is a queueing and wakeup protocol, not just a flag](../graphviz/chapter5_graphviz/fig_5_2_mutex_blocking_trace.svg)
 
 ### 3.5 Semaphores: Counting Resources With Waiting
 
@@ -368,7 +368,7 @@ Consumer:
 3. **Q:** Why can semaphores be harder to reason about than mutex + condition variables?
 **A:** Semaphores combine counting and wakeup effects into one primitive, and they have no ownership concept like “this thread holds the mutex.” A misplaced `signal` can create extra permits (incorrect concurrency), and a missing `signal` can leak permits forever (deadlock). Mutex+condition variables separate concerns: mutex protects state, condition variables wait on a predicate over that state, which tends to make invariants easier to express and verify.
 
-![Supplement: semaphore wait/signal is a state machine over a counter and a queue](../chapter5_graphviz/fig_5_3_semaphore_wait_signal.svg)
+![Supplement: semaphore wait/signal is a state machine over a counter and a queue](../graphviz/chapter5_graphviz/fig_5_3_semaphore_wait_signal.svg)
 
 ### 3.6 Classic Problems Are Templates for Invariants
 
@@ -483,7 +483,7 @@ Under Mesa semantics, `signal` only makes the waiter runnable; correctness comes
 3. **Q:** Give a “lost wakeup” bug in one sentence.
 **A:** A thread checks the predicate, finds it false, releases the lock, and goes to sleep, but another thread signals between the check and the enqueue, so the signal is lost and the waiter sleeps forever.
 
-![Supplement: condition wait is release + sleep + reacquire, not “pause here”](../chapter5_graphviz/fig_5_4_condition_variable_trace.svg)
+![Supplement: condition wait is release + sleep + reacquire, not “pause here”](../graphviz/chapter5_graphviz/fig_5_4_condition_variable_trace.svg)
 
 ### 3.8 Alternative Approaches: From Locks to Transactions (What Problem Changes?)
 

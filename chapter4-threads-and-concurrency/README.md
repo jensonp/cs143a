@@ -123,7 +123,7 @@ That sharing is the performance advantage and the correctness hazard.
 3. **Q:** If one thread calls `close(fd)`, what must other threads assume about that file descriptor?
 **A:** They must assume it can become invalid immediately and can even be *reused* for a different file/socket shortly after. Continuing to use it without coordination can cause EBADF at best and incorrect I/O to the wrong underlying object at worst (if the number is reused). Correct designs either synchronize close/use, duplicate file descriptors for independent lifetimes, or use higher-level ownership rules to prevent “use-after-close.”
 
-![Supplement: threads share process resources but keep distinct execution context](../chapter4_graphviz/fig_4_1_process_threads_container.svg)
+![Supplement: threads share process resources but keep distinct execution context](../graphviz/chapter4_graphviz/fig_4_1_process_threads_container.svg)
 
 ### 3.2 Why Threads Exist (And What They Cost)
 
@@ -339,7 +339,7 @@ Many-to-many often relies on kernel support to coordinate scheduling decisions b
 3. **Q:** What kernel signal would a user-level scheduler want to know about blocked kernel threads?
 **A:** It would want to know when a kernel thread blocks and when it becomes runnable again, so it can remap user threads and avoid stalling the runtime. Historically this appears as scheduler activations / upcalls or other kernel-to-runtime notifications: “this execution resource is now unavailable/available.” Without such signals, M:N becomes fragile because the runtime cannot make correct scheduling decisions under blocking.
 
-![Supplement: threading models differ mainly in parallelism, blocking behavior, and overhead](../chapter4_graphviz/fig_4_2_threading_models_comparison.svg)
+![Supplement: threading models differ mainly in parallelism, blocking behavior, and overhead](../graphviz/chapter4_graphviz/fig_4_2_threading_models_comparison.svg)
 
 ### 3.6 Thread Libraries: API vs Implementation
 
@@ -448,7 +448,7 @@ If you delete the queue by spawning unbounded threads, you do not eliminate wait
 3. **Q:** Why can a bounded pool reduce tail latency even if it reduces peak parallelism?
 **A:** Because unlimited parallelism under load often creates contention and scheduling thrash that makes the slowest requests extremely slow. Bounding concurrency reduces lock contention, cache churn, and run-queue overload, which can make per-request service time more predictable. Tail latency is often dominated by overload behaviors, and pools prevent those overload pathologies.
 
-![Supplement: thread pools convert unbounded demand into bounded runnable work](../chapter4_graphviz/fig_4_3_thread_pool_flow.svg)
+![Supplement: thread pools convert unbounded demand into bounded runnable work](../graphviz/chapter4_graphviz/fig_4_3_thread_pool_flow.svg)
 
 ### 3.8 Threading Issues: Fork/Exec, Signals, Cancellation, TLS
 

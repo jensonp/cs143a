@@ -102,7 +102,7 @@ Each execution has different live state even when the code is identical.
 3. **Q:** Why is a JVM process still a real process even though it hosts another runtime inside it?
 **A:** Because the kernel still schedules and isolates the outer process, not the language runtime. The JVM is user-space code living inside one OS process; its threads and GC are ultimately implemented using OS threads, syscalls, and memory mappings. The presence of a runtime does not weaken the kernel’s role: the OS process remains the unit of protection, resource ownership, and kernel-resumable state.
 
-![Supplement: passive program file, active process image, CPU context, and PCB](../chapter3_graphviz/fig_3_1_process_image_anatomy.svg)
+![Supplement: passive program file, active process image, CPU context, and PCB](../graphviz/chapter3_graphviz/fig_3_1_process_image_anatomy.svg)
 
 ### 3.2 Process States Describe What The Kernel Can Do Next
 
@@ -176,7 +176,7 @@ If you cannot name the event that will wake a waiting process, you do not yet ha
 3. **Q:** Why do state transitions need causes rather than just labels?
 **A:** Because the kernel’s invariants depend on causality. A process becomes `waiting` because it cannot proceed until an event occurs; it becomes `ready` because that event happened and the kernel recorded it. If you allow arbitrary relabeling, you can schedule blocked work, lose wakeups, or clean up live processes, all of which are correctness failures.
 
-![Supplement: process states are defined by what the process can do next](../chapter3_graphviz/fig_3_2_process_state_machine.svg)
+![Supplement: process states are defined by what the process can do next](../graphviz/chapter3_graphviz/fig_3_2_process_state_machine.svg)
 
 ### 3.3 The PCB Is The Kernel’s Authoritative Record
 
@@ -343,7 +343,7 @@ Good OS structure keeps these meanings separated so one bottleneck does not dest
 3. **Q:** Why is a healthy process mix important for overall utilization?
 **A:** Because different processes stress different resources. A mix of CPU-bound and I/O-bound work lets the OS overlap CPU execution with device latency instead of leaving one resource idle. If all work blocks on the same scarce device, the CPU can go idle; if all work is CPU-bound, devices can be underutilized and interactive response can degrade.
 
-![Supplement: admission, dispatch, blocking, completion, and swap pressure create the queue structure](../chapter3_graphviz/fig_3_3_scheduler_queues.svg)
+![Supplement: admission, dispatch, blocking, completion, and swap pressure create the queue structure](../graphviz/chapter3_graphviz/fig_3_3_scheduler_queues.svg)
 
 ### 3.6 Context Switching Is Save, Decision, And Restore
 
@@ -411,7 +411,7 @@ Context-switch code is small and tightly structured because it is the point wher
 3. **Q:** Why does timer-driven preemption require both interrupt logic and scheduler logic?
 **A:** Interrupt logic provides the forced entry that regains control even if the process never yields. Scheduler logic decides which runnable work should run next. Without interrupts, you cannot enforce preemption; without scheduling, you can preempt but you cannot choose a correct next owner of the CPU (or maintain fairness and responsiveness).
 
-![Supplement: a context switch is a save-decision-restore protocol, not a mysterious jump](../chapter3_graphviz/fig_3_4_context_switch_trace.svg)
+![Supplement: a context switch is a save-decision-restore protocol, not a mysterious jump](../graphviz/chapter3_graphviz/fig_3_4_context_switch_trace.svg)
 
 ### 3.7 Process Creation Is Controlled Duplication And Divergence
 
@@ -479,7 +479,7 @@ The kernel exports the container and replacement mechanism; user space owns the 
 3. **Q:** What resource decisions must the OS make during process creation?
 **A:** Which open files and descriptors are inherited (and which are marked close-on-exec), what credentials/identity are inherited, what memory mappings are duplicated or shared (copy-on-write vs deep copy), what scheduling attributes apply, and how parent/child relationships are recorded. These decisions define both correctness (what the child can access) and performance (how expensive “duplication” actually is).
 
-![Supplement: fork then exec is controlled duplication, then image replacement](../chapter3_graphviz/fig_3_7_fork_exec_trace.svg)
+![Supplement: fork then exec is controlled duplication, then image replacement](../graphviz/chapter3_graphviz/fig_3_7_fork_exec_trace.svg)
 
 ### 3.8 Termination, Wait, Zombies, And Orphans
 
@@ -545,9 +545,9 @@ The final deletion boundary is `wait`, which turns process cleanup into an expli
 3. **Q:** Why does final cleanup often happen after execution has already ended?
 **A:** Because cleanup is coordinated with observation. The kernel cannot discard all traces if the parent has a right to collect outcome, and the parent may not call `wait` immediately. The OS therefore splits “stop executing” from “reclaim the final record,” ensuring both correctness (status observable) and bounded resource reclamation (eventually reaped).
 
-![Supplement: exit preserves status via a zombie phase until wait authorizes final cleanup](../chapter3_graphviz/fig_3_8_exit_wait_trace.svg)
+![Supplement: exit preserves status via a zombie phase until wait authorizes final cleanup](../graphviz/chapter3_graphviz/fig_3_8_exit_wait_trace.svg)
 
-![Supplement: process creation and termination form one lifecycle, including zombies and orphans](../chapter3_graphviz/fig_3_5_process_lifecycle_relations.svg)
+![Supplement: process creation and termination form one lifecycle, including zombies and orphans](../graphviz/chapter3_graphviz/fig_3_5_process_lifecycle_relations.svg)
 
 ### 3.9 IPC Exists Because Isolation Alone Is Not Enough
 
@@ -772,7 +772,7 @@ If you cannot point to where correlation (which reply matches which request) and
 3. **Q:** Why is the local-versus-remote distinction less important than many students first assume?
 **A:** Remote communication adds latency and partial failure, but the conceptual problems begin locally: naming, buffering, blocking, ordering, backpressure, and interpretation. If you cannot design correct local IPC, “networking” will not rescue you. RPC and sockets are IPC pushed across a larger boundary; they amplify existing coordination issues rather than replacing them with a new category of problems.
 
-![Supplement: communication models differ mainly in where coordination and mediation live](../chapter3_graphviz/fig_3_6_communication_models.svg)
+![Supplement: communication models differ mainly in where coordination and mediation live](../graphviz/chapter3_graphviz/fig_3_6_communication_models.svg)
 
 ## 4. Canonical Traces To Reproduce From Memory
 

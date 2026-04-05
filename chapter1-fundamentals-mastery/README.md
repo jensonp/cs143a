@@ -19,7 +19,7 @@ The goal is to be able to do the following without guessing:
 - Predict what new coordination costs appear when you add processors or machines.
 - State the invariant the kernel enforces at each major boundary (CPU time, memory mappings, I/O, storage).
 
-![Supplement: Chapter 1 mastery targets](../chapter1_graphviz/fig_s8_ch1_mastery_targets.svg)
+![Supplement: Chapter 1 mastery targets](../graphviz/chapter1_graphviz/fig_s8_ch1_mastery_targets.svg)
 
 For Chapter 1, "dangerous" means:
 
@@ -34,7 +34,7 @@ Later chapters should deepen these mechanisms, not rescue undefined language her
 
 ## 2. Mental Models To Know Cold
 
-![Supplement: mental models overview](../chapter1_graphviz/fig_s9_ch1_mental_models_overview.svg)
+![Supplement: mental models overview](../graphviz/chapter1_graphviz/fig_s9_ch1_mental_models_overview.svg)
 
 ### 2.1 The OS Is a Control System
 
@@ -46,7 +46,7 @@ raw hardware can execute instructions, but raw hardware cannot enforce shared ru
 
 To "see" a control system, imagine a feedback loop: unprivileged code runs until something forces a return to privileged code (timer, interrupt, fault, syscall). The kernel then observes state (queues, mappings, device completion), applies rules (scheduling, protection), updates authoritative structures, and returns to user mode. The OS is not watching continuously; it is regaining control at specific entry points and using those moments to enforce system-wide invariants.
 
-![Control loop: timer/trap into the kernel, scheduler returns to user code](../chapter1_graphviz/fig_1_22_control_loop.svg)
+![Control loop: timer/trap into the kernel, scheduler returns to user code](../graphviz/chapter1_graphviz/fig_1_22_control_loop.svg)
 
 ### 2.2 The Kernel Is the Trusted Authority
 
@@ -60,7 +60,7 @@ That asymmetry is the foundation of protection.
 
 When you read "the OS decides X," translate it into "privileged code updated authoritative state Y at boundary Z." Examples of authoritative state include ready queues (who can run), page tables (what memory is accessible), filesystem metadata (what names map to what blocks), and credentials (who may do what). This is also why the trusted computing base matters: any bug in privileged code can violate invariants globally, while most user-space bugs are contained.
 
-![Supplement: kernel authority loop (request -> validate -> authoritative state)](../chapter1_graphviz/fig_s10_kernel_authority_loop.svg)
+![Supplement: kernel authority loop (request -> validate -> authoritative state)](../graphviz/chapter1_graphviz/fig_s10_kernel_authority_loop.svg)
 
 ### 2.3 Concurrency Is Mostly About Scarcity
 
@@ -71,7 +71,7 @@ Scheduling, buffering, caching, and virtualization are all different ways of cop
 
 Scarcity forces the kernel to represent "who is waiting for what" explicitly. A blocked computation is not "doing nothing"; it is a kernel record (queue membership + a wakeup condition) that lets the CPU run someone else without losing the blocked computation's identity or resources. This is the thread that connects scheduling, I/O completion interrupts, and later synchronization: progress is managed by queues and wakeups, not by hope.
 
-![Supplement: scarcity -> multiplexing mechanisms -> progress illusion](../chapter1_graphviz/fig_s11_scarcity_multiplexing.svg)
+![Supplement: scarcity -> multiplexing mechanisms -> progress illusion](../graphviz/chapter1_graphviz/fig_s11_scarcity_multiplexing.svg)
 
 ### 2.4 Copies Create Correctness Problems
 
@@ -82,7 +82,7 @@ This idea shows up in caches, page caches, DMA buffers, distributed systems, and
 
 If you want a concrete mental check, ask a power-loss question: "If the machine lost power right now, which copy would be considered the truth when it comes back, and why?" The answer is never "whichever one is newest" by magic; it is defined by explicit rules (coherence protocols for caches, writeback/commit rules for storage, ordering rules for journaling). Later chapters mostly refine these rules; the fundamental problem is already here.
 
-![Supplement: copies create coherence + durability rules](../chapter1_graphviz/fig_s12_copies_authority_min.svg)
+![Supplement: copies create coherence + durability rules](../graphviz/chapter1_graphviz/fig_s12_copies_authority_min.svg)
 
 ### 2.5 Scaling Changes The Shape Of Failure
 
@@ -93,7 +93,7 @@ In a cluster or distributed system, the coordinating software manages separate m
 
 Scaling adds new constraints, not just more throughput. Shared-memory parallelism adds contention and visibility problems (races, coherence, locality). Distributed systems add partial failure and time uncertainty (timeouts, partitions, inconsistent views). Real-time adds deadlines, where "late" is incorrect. The point of this mental model is to expect new invariants as soon as you add CPUs or machines: coordination becomes part of correctness, not optional optimization.
 
-![Supplement: scaling changes failure models](../chapter1_graphviz/fig_s13_scaling_failure_shapes.svg)
+![Supplement: scaling changes failure models](../graphviz/chapter1_graphviz/fig_s13_scaling_failure_shapes.svg)
 
 ### 2.6 If You Remember Only 10 Things
 
@@ -110,7 +110,7 @@ Treat this list as retrieval cues, not as a memory test. Each line should make y
 9. Kernel data structures matter because operating-system performance is mostly about how state is organized and accessed.
 10. Distributed systems, virtualization, cloud systems, and embedded real-time systems are different answers to the same control question.
 
-![Supplementary concept map](../chapter1_graphviz/fig_s2_ch1_fundamentals_map.svg)
+![Supplementary concept map](../graphviz/chapter1_graphviz/fig_s2_ch1_fundamentals_map.svg)
 
 Use this map as a retrieval tool, not as a poster.
 Pick one node (e.g., “timer preemption” or “copies/authority”), then explain the mechanism, the invariant, and the failure mode it introduces in your own words without looking.
@@ -118,7 +118,7 @@ If you can traverse the map and justify the edges (“why does this imply that?�
 
 ## 3. Mastery Modules
 
-![Supplement: Chapter 1 mastery modules roadmap](../chapter1_graphviz/fig_s14_ch1_mastery_modules_roadmap.svg)
+![Supplement: Chapter 1 mastery modules roadmap](../graphviz/chapter1_graphviz/fig_s14_ch1_mastery_modules_roadmap.svg)
 
 ### 3.1 OS Boundary And Kernel Authority
 
@@ -141,7 +141,7 @@ Operational definitions that stay stable across OSes:
 - `Application`: user goal software, not responsible for global control.
 - `Middleware`: shared libraries/runtimes above the kernel that standardize common capabilities.
 
-![Supplement: software layers and OS boundaries](../chapter1_graphviz/fig_s3_software_stack_boundaries.svg)
+![Supplement: software layers and OS boundaries](../graphviz/chapter1_graphviz/fig_s3_software_stack_boundaries.svg)
 
 **Invariants**
 
@@ -162,7 +162,7 @@ Read this as a control and authority trace, not as “shell trivia.”
 The shell expresses intent (parse a command, choose an executable), but the kernel is the only actor that can create a new execution context and install the initial machine state that makes the program *run*.
 When you rehearse this trace from memory, say out loud (1) when you cross the user/kernel boundary, and (2) what privileged state is being constructed or validated at each kernel step.
 
-![Supplement: launching a program (boundary + constructed state)](../chapter1_graphviz/fig_s15_launch_trace.svg)
+![Supplement: launching a program (boundary + constructed state)](../graphviz/chapter1_graphviz/fig_s15_launch_trace.svg)
 
 | Step | User / Process Side | Kernel Side | Why It Matters |
 | --- | --- | --- | --- |
@@ -208,7 +208,7 @@ After boot, there are three main paths into the kernel:
 - `interrupt`: asynchronous external event such as timer expiry or device completion
 - `trap/exception`: synchronous event caused by the current instruction stream, such as a fault
 
-![Supplement: kernel entry classification matrix](../chapter1_graphviz/fig_s16_kernel_entry_matrix.svg)
+![Supplement: kernel entry classification matrix](../graphviz/chapter1_graphviz/fig_s16_kernel_entry_matrix.svg)
 
 Useful distinctions:
 
@@ -220,7 +220,7 @@ Timers guarantee preemption.
 `DMA` lets the kernel start an I/O transfer and then let a device controller move a bulk block of bytes between a device buffer and main memory without forcing the CPU to copy each word manually.
 The kernel still must coordinate ownership of buffers, record completion, and wake any process waiting for the transfer.
 
-![Supplement: distinct paths into kernel mode](../chapter1_graphviz/fig_s4_kernel_entry_paths.svg)
+![Supplement: distinct paths into kernel mode](../graphviz/chapter1_graphviz/fig_s4_kernel_entry_paths.svg)
 
 **Invariants**
 
@@ -283,7 +283,7 @@ A `process` is a program plus execution state and resources:
 - `memory image`: code, data, heap, stacks as mapped in memory
 - `open resources`: kernel-managed objects such as files, sockets, devices
 
-![Supplement: a process is a live instance (CPU context + address space + owned resources)](../chapter1_graphviz/fig_s17_process_anatomy.svg)
+![Supplement: a process is a live instance (CPU context + address space + owned resources)](../graphviz/chapter1_graphviz/fig_s17_process_anatomy.svg)
 
 Multiprogramming keeps several jobs resident so the CPU can run another one when the current one blocks.
 Time sharing adds frequent preemption so interactive response stays short enough that a human experiences the system as responsive rather than stalled.
@@ -294,7 +294,7 @@ This forces the kernel to maintain:
 - saved context for resumption
 - a policy for selecting which runnable work runs next
 
-![Supplement: multiprogramming and time sharing structure](../chapter1_graphviz/fig_1_9_multiprogramming.svg)
+![Supplement: multiprogramming and time sharing structure](../graphviz/chapter1_graphviz/fig_1_9_multiprogramming.svg)
 
 **Invariants**
 
@@ -360,9 +360,9 @@ Secondary storage extends persistence and capacity beyond what RAM can provide.
 This creates the key OS problem:
 not only where data is stored, but what *rules* define the current authoritative copy and the visibility of updates.
 
-![Supplement: storage hierarchy](../chapter1_graphviz/fig_1_4_storage_hierarchy.svg)
-![Supplement: copies and authority across the hierarchy](../chapter1_graphviz/fig_s6_storage_copies_authority.svg)
-![Supplement: file abstraction + page cache + durable blocks](../chapter1_graphviz/fig_s18_file_page_cache.svg)
+![Supplement: storage hierarchy](../graphviz/chapter1_graphviz/fig_1_4_storage_hierarchy.svg)
+![Supplement: copies and authority across the hierarchy](../graphviz/chapter1_graphviz/fig_s6_storage_copies_authority.svg)
+![Supplement: file abstraction + page cache + durable blocks](../graphviz/chapter1_graphviz/fig_s18_file_page_cache.svg)
 
 **Invariants**
 
@@ -430,7 +430,7 @@ The hypervisor is the privileged component that multiplexes hardware across isol
 `Real-time` systems attach deadlines to work.
 The scheduler or runtime in a real-time system is responsible for meeting those deadlines, so timing becomes part of correctness rather than only performance.
 
-![Supplement: execution scaling models (single CPU, SMP, clusters, virtualization)](../chapter1_graphviz/fig_s5_execution_scaling_models.svg)
+![Supplement: execution scaling models (single CPU, SMP, clusters, virtualization)](../graphviz/chapter1_graphviz/fig_s5_execution_scaling_models.svg)
 
 **Invariants**
 
@@ -454,7 +454,7 @@ Virtualization is a control-boundary story.
 The guest kernel may believe it is “the privileged authority,” but the hypervisor is the actual hardware authority.
 This trace is the smallest operational picture of that: a sensitive operation becomes a forced control transfer below the guest.
 
-![Supplement: VM exit is a forced transfer below the guest kernel](../chapter1_graphviz/fig_s19_vm_exit_trace.svg)
+![Supplement: VM exit is a forced transfer below the guest kernel](../graphviz/chapter1_graphviz/fig_s19_vm_exit_trace.svg)
 
 | Stage | Guest (inside VM) | Hypervisor / Hardware | Meaning |
 | --- | --- | --- | --- |
@@ -500,9 +500,9 @@ Mechanisms that make protection enforceable:
 - system call validation
 - timer-controlled regain of CPU control
 
-![Supplement: user/kernel mode transition (control + privilege)](../chapter1_graphviz/fig_1_10_mode_transition.svg)
-![Supplement: protection vs security scope](../chapter1_graphviz/fig_s7_protection_security_scope.svg)
-![Supplement: syscall validation is a security boundary (attack surface)](../chapter1_graphviz/fig_s20_syscall_validation_surface.svg)
+![Supplement: user/kernel mode transition (control + privilege)](../graphviz/chapter1_graphviz/fig_1_10_mode_transition.svg)
+![Supplement: protection vs security scope](../graphviz/chapter1_graphviz/fig_s7_protection_security_scope.svg)
+![Supplement: syscall validation is a security boundary (attack surface)](../graphviz/chapter1_graphviz/fig_s20_syscall_validation_surface.svg)
 
 **Invariants**
 
@@ -569,7 +569,7 @@ Common structures encode different access patterns and different policy conseque
 - hash maps: fast expected lookup under controlled collisions
 - bitmaps: compact state for fixed-size resources
 
-![Supplement: kernel structures (overview reconstruction)](../chapter1_graphviz/fig_1_13_to_17_kernel_structures.svg)
+![Supplement: kernel structures (overview reconstruction)](../graphviz/chapter1_graphviz/fig_1_13_to_17_kernel_structures.svg)
 
 **Invariants**
 
@@ -590,7 +590,7 @@ This is the “state representation becomes policy” trace.
 Bitmaps are popular in kernels because they are compact and fast, but the scanning rule (first free bit, next-fit cursor, per-CPU cache) encodes a policy about locality, fairness, and contention.
 When you cover this table, name the invariant you must preserve: “never hand out the same resource twice.”
 
-![Supplement: bitmap allocation trace (policy lives in scan order + atomic claim)](../chapter1_graphviz/fig_s21_bitmap_allocation_trace.svg)
+![Supplement: bitmap allocation trace (policy lives in scan order + atomic claim)](../graphviz/chapter1_graphviz/fig_s21_bitmap_allocation_trace.svg)
 
 | Step | Bitmap | Kernel action | Meaning |
 | --- | --- | --- | --- |
@@ -626,7 +626,7 @@ These traces are the smallest control stories that keep reappearing under new na
 Do not merely read these.
 Cover the tables and reproduce the sequence from memory.
 
-![Supplement: canonical trace “shapes” to rehearse](../chapter1_graphviz/fig_s22_canonical_traces_overview.svg)
+![Supplement: canonical trace “shapes” to rehearse](../graphviz/chapter1_graphviz/fig_s22_canonical_traces_overview.svg)
 
 ### 4.1 Boot To First User Process
 
@@ -645,7 +645,7 @@ When reproducing this, make sure you can say what *must* be initialized for the 
 Say explicitly what changed at each step: which code is trusted, which code is resident in memory, and what resources are now initialized enough to support the next stage.
 If you cannot state why “kernel not yet in memory” forces firmware/bootstrap code to exist, you are memorizing labels rather than the authority story.
 
-![Supplement: boot and early control path](../chapter1_graphviz/fig_s1_boot_interrupt_path.svg)
+![Supplement: boot and early control path](../graphviz/chapter1_graphviz/fig_s1_boot_interrupt_path.svg)
 
 Use this figure to visualize the authority handoff and the minimal “control path” that must exist before any OS service can be requested.
 If you can narrate the handoff without relying on brand names, you understand boot structurally.
@@ -656,7 +656,7 @@ Use the “lanes” to prevent a common misunderstanding: the CPU lane and devic
 While a process is blocked, the device may be actively transferring, and the CPU may be running something else entirely.
 Mastery means you can explain where the waiting condition is recorded (kernel bookkeeping), what event makes it true (interrupt completion), and why this is better than spinning (saves CPU, improves throughput, preserves fairness).
 
-![Supplement: blocking I/O lanes (CPU, device, kernel)](../chapter1_graphviz/fig_s23_blocking_io_lanes.svg)
+![Supplement: blocking I/O lanes (CPU, device, kernel)](../graphviz/chapter1_graphviz/fig_s23_blocking_io_lanes.svg)
 
 | Step | CPU Lane | Device Lane | Kernel Lane |
 | --- | --- | --- | --- |
@@ -676,7 +676,7 @@ This is the minimal time-sharing loop.
 The timer is the enforcement mechanism that prevents “CPU capture,” and the dispatcher is the mechanism that makes a scheduling decision real by saving and restoring architectural state.
 When you rehearse it, explicitly name the non-negotiables: a privileged timer, a saved context that is sufficient to resume, and a consistent runnable set to choose from.
 
-![Supplement: timer preemption loop (save -> choose -> restore)](../chapter1_graphviz/fig_s24_timer_preemption_loop.svg)
+![Supplement: timer preemption loop (save -> choose -> restore)](../graphviz/chapter1_graphviz/fig_s24_timer_preemption_loop.svg)
 
 | Step | Running Process | Hardware | Kernel |
 | --- | --- | --- | --- |
@@ -694,7 +694,7 @@ This trace is the “hardware catches you, kernel decides your fate” pattern.
 The CPU detects that an access violates the current mapping/protection rules, raises an exception, and the kernel decides whether the fault is repairable (e.g., demand paging) or fatal (e.g., illegal access).
 If you can describe what state must be inspected to decide (faulting address, access type, mapping state) you are ready for virtual memory and page faults later.
 
-![Supplement: fault handling (inspect -> repair or terminate)](../chapter1_graphviz/fig_s25_faulting_access.svg)
+![Supplement: fault handling (inspect -> repair or terminate)](../graphviz/chapter1_graphviz/fig_s25_faulting_access.svg)
 
 | Step | Process View | Hardware / Kernel View |
 | --- | --- | --- |
@@ -710,7 +710,7 @@ This is why virtual memory is an OS topic: correctness depends on privileged met
 
 Treat these as checkpoints, not as trivia. Each question points back to a control mechanism in Chapters 1-2: timer preemption, interrupts/DMA, blocked vs runnable state, copies/authority, scaling failure models, protection boundaries, and the way data structures turn policy into performance. If you cannot answer one from memory, return to the nearest trace or module and rebuild the story.
 
-![Supplement: how the questions map back to mechanisms](../chapter1_graphviz/fig_s26_key_questions_map.svg)
+![Supplement: how the questions map back to mechanisms](../graphviz/chapter1_graphviz/fig_s26_key_questions_map.svg)
 
 1. **Q:** Why is a timer both a fairness mechanism and a safety mechanism?
 **A:** Fairness: it bounds how long one runnable task can monopolize the CPU before others get a chance. Safety: it guarantees the kernel regains control even if a task never yields, which is required to enforce protection and system-wide policy.
@@ -761,7 +761,7 @@ Treat these as checkpoints, not as trivia. Each question points back to a contro
 
 The reading order below is not "learn the kernel in the same order as the source tree." It is a control-path order: start with privileged entry and return, then study how the kernel preserves resumable execution state, then study how it defines memory authority, then how it defines storage authority, and finally how asynchronous device completion re-enters the kernel and wakes waiters. This is the same authority story repeated across mechanisms.
 
-![Supplement: read kernels in control-path order](../chapter1_graphviz/fig_s27_bridge_to_real_kernels.svg)
+![Supplement: read kernels in control-path order](../graphviz/chapter1_graphviz/fig_s27_bridge_to_real_kernels.svg)
 
 If your course later uses `xv6`, this is a good reading order:
 
@@ -788,7 +788,7 @@ The control problems do not.
 
 Reading is not the skill. The skill is being able to reproduce the control story and name the invariant at each boundary. Use the diagrams to visualize the path, then cover the text and force yourself to reconstruct it.
 
-![Supplement: mastery loop for this file](../chapter1_graphviz/fig_s28_study_loop.svg)
+![Supplement: mastery loop for this file](../graphviz/chapter1_graphviz/fig_s28_study_loop.svg)
 
 If you are short on time:
 

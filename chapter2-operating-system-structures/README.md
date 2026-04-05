@@ -162,7 +162,7 @@ At that row and below it, the system can enforce permissions and modify authorit
 3. **Q:** Why is the implementation layer the real site of protection enforcement?
 **A:** Because interface code can be bypassed. A user can write a program that never calls the GUI, never runs `rm`, and still requests deletion. The only place enforcement can be universal is where authoritative state is mutated: in privileged kernel code that validates identity, permissions, and filesystem integrity before committing changes.
 
-![Supplement: service, interface, and implementation are distinct layers that converge on a common privileged enforcement boundary](../chapter2_graphviz/fig_2_1_service_interface_implementation.svg)
+![Supplement: service, interface, and implementation are distinct layers that converge on a common privileged enforcement boundary](../graphviz/chapter2_graphviz/fig_2_1_service_interface_implementation.svg)
 
 ### 3.2 Human Interfaces And Why Shells Stay Out Of The Kernel
 
@@ -176,14 +176,14 @@ A `CLI` accepts textual commands.
 A `batch interface` runs commands non-interactively from a file or job stream.
 A `GUI` packages requests through graphical controls.
 
-![Mental model: CLI, batch, and GUI are different front-ends that package requests into the same OS services](../chapter2_graphviz/fig_2_4_human_interfaces.png)
+![Mental model: CLI, batch, and GUI are different front-ends that package requests into the same OS services](../graphviz/chapter2_graphviz/fig_2_4_human_interfaces.png)
 
 The `command interpreter`, usually a `shell`, is typically a user-space program.
 It reads commands, parses them, locates programs, handles built-ins, and starts other programs as needed.
 
 Keeping the shell outside the kernel means new commands can be added as ordinary executables rather than as privileged kernel changes.
 
-![Mental model: interfaces and the shell stay unprivileged; executables are swappable; kernel stays the minimal authority](../chapter2_graphviz/fig_2_5_shell_outside_kernel.png)
+![Mental model: interfaces and the shell stay unprivileged; executables are swappable; kernel stays the minimal authority](../graphviz/chapter2_graphviz/fig_2_5_shell_outside_kernel.png)
 
 **Invariants**
 
@@ -210,7 +210,7 @@ When you rehearse it, the pivot is: user intent first reaches privileged kernel 
 | launch request | shell issues exec-style request | validates executable and permissions | authority begins here |
 | execution starts | shell may wait or continue | creates process and returns to user mode | user interface and privileged setup stay separate |
 
-![Mental model: exec is the pivot where user-space shell hands intent to privileged kernel](../chapter2_graphviz/fig_2_6_shell_exec_boundary_trace.png)
+![Mental model: exec is the pivot where user-space shell hands intent to privileged kernel](../graphviz/chapter2_graphviz/fig_2_6_shell_exec_boundary_trace.png)
 
 This is why shells stay out of the kernel: they are powerful interfaces, but the OS cannot afford to treat interface growth as privileged code growth.
 The kernel owns the minimal, stable authority (create execution context safely); the shell owns the fast-evolving human interface.
@@ -220,24 +220,24 @@ The kernel owns the minimal, stable authority (create execution context safely);
 - In a teaching OS, inspect the path from shell parsing to program launch.
 - Notice how much logic lives in user space before the kernel is asked to do anything authoritative.
 
-![Mental model: most of the launch path lives in user space until the exec boundary](../chapter2_graphviz/fig_2_7_code_bridge.png)
+![Mental model: most of the launch path lives in user space until the exec boundary](../graphviz/chapter2_graphviz/fig_2_7_code_bridge.png)
 
 **Drills (With Answers)**
 
 1. **Q:** Why is a shell script not evidence that the shell is part of the kernel?
 **A:** A script is executed by a user-space interpreter (the shell or another runtime). The kernel is only involved through system calls (process creation, file I/O, waiting) and does not “understand” the script language. The shell has no privileged instructions; it cannot bypass kernel checks or directly control protected hardware state.
 
-![Mental model: script stays in user space; kernel only sees syscalls](../chapter2_graphviz/fig_2_8_drill_shell_script.png)
+![Mental model: script stays in user space; kernel only sees syscalls](../graphviz/chapter2_graphviz/fig_2_8_drill_shell_script.png)
 
 2. **Q:** What benefit appears when new commands are ordinary executables instead of kernel features?
 **A:** Extensibility without privilege. New tools can be installed, updated, and replaced like normal programs without changing the trusted kernel core. That keeps the trusted computing base smaller, reduces the blast radius of bugs, and lets the command ecosystem evolve quickly without turning the kernel into a constantly changing UI platform.
 
-![Mental model: new executables extend capabilities without touching kernel code](../chapter2_graphviz/fig_2_9_drill_extensible_execs.png)
+![Mental model: new executables extend capabilities without touching kernel code](../graphviz/chapter2_graphviz/fig_2_9_drill_extensible_execs.png)
 
 3. **Q:** Why is GUI support a different concern from kernel structure?
 **A:** A GUI is an interface layer: it packages human intent into requests. Kernel structure is about how privileged mechanisms are organized and how authoritative state is protected and updated. You can swap GUIs entirely without changing the kernel’s semantics, but moving UI complexity into privileged code would increase security risk and maintenance cost.
 
-![Mental model: GUI layers can swap freely; kernel authority stays stable](../chapter2_graphviz/fig_2_10_drill_gui_kernel.png)
+![Mental model: GUI layers can swap freely; kernel authority stays stable](../graphviz/chapter2_graphviz/fig_2_10_drill_gui_kernel.png)
 
 ### 3.3 API, Library Wrappers, And System Calls
 
@@ -251,7 +251,7 @@ An `API` is the programmer-visible function interface.
 A `library wrapper` prepares arguments, follows the machine calling convention, and issues the actual privileged entry.
 A `system call` is the kernel entry request itself.
 
-![Baby photo 1: layered view of API, wrapper, syscall, kernel](../chapter2_graphviz/fig_2_11_api_layers.png)
+![Baby photo 1: layered view of API, wrapper, syscall, kernel](../graphviz/chapter2_graphviz/fig_2_11_api_layers.png)
 
 An API function may:
 
@@ -265,7 +265,7 @@ Argument passing may use:
 - a memory block or table
 - the user stack
 
-![Baby photo 2: how arguments travel from wrapper to syscall handler](../chapter2_graphviz/fig_2_12_argument_paths.png)
+![Baby photo 2: how arguments travel from wrapper to syscall handler](../graphviz/chapter2_graphviz/fig_2_12_argument_paths.png)
 
 An API and a system call are different objects.
 The API defines the programmer-facing function surface.
@@ -297,12 +297,12 @@ The wrapper exists so the kernel does not need to implement language- and libc-s
 | dispatch | blocked on return | wrapper inactive | kernel identifies requested service |
 | completion | receives result | converts return convention if needed | returns status or error |
 
-![Baby photo 3: trace from API call, through wrapper, across privilege boundary, to kernel return](../chapter2_graphviz/fig_2_13_api_syscall_trace.png)
+![Baby photo 3: trace from API call, through wrapper, across privilege boundary, to kernel return](../graphviz/chapter2_graphviz/fig_2_13_api_syscall_trace.png)
 
 The wrapper is the user-space object that absorbs calling conventions, compatibility behavior, and convenience logic.
 Responsibility for validating and updating protected state still lies in the kernel.
 
-![Final photo: multiple language wrappers converge on one stable kernel service](../chapter2_graphviz/fig_2_14_wrapper_variants.png)
+![Final photo: multiple language wrappers converge on one stable kernel service](../graphviz/chapter2_graphviz/fig_2_14_wrapper_variants.png)
 
 **Code Bridge**
 
@@ -320,7 +320,7 @@ Responsibility for validating and updating protected state still lies in the ker
 3. **Q:** Why is syscall argument validation part of OS correctness and security?
 **A:** The syscall boundary is a trust boundary. User pointers, sizes, and handles can be wrong by accident or malicious by design. Validation prevents kernel memory corruption, information leaks, and privilege escalation, and it also preserves correctness by ensuring that kernel invariants are updated only when inputs are well-formed and authorized.
 
-![Supplement: API call to system call to kernel return (boundary and lane view)](../chapter2_graphviz/fig_2_2_api_to_syscall_trace.svg)
+![Supplement: API call to system call to kernel return (boundary and lane view)](../graphviz/chapter2_graphviz/fig_2_2_api_to_syscall_trace.svg)
 
 ### 3.4 System-Call Categories As Control Surfaces
 
@@ -332,7 +332,7 @@ Syscalls are the only sanctioned crossings into privileged code. These six categ
 
 Imagine walking around the kernel boundary in a circle. First you hit **process control**, which decides who runs and when contexts begin or end (`fork/exec/wait`). Sliding clockwise you reach **file management**, where named bytes and metadata live (`open/read/write/stat`). The path bends into **device management**—the tunnel into hardware-facing drivers via `ioctl` and related hooks. Next is **communication**: pipes, sockets, and other rendezvous points that connect principals. **Information maintenance** sits nearby; it reveals measured truth such as clocks and resource usage without letting callers mutate it (`gettimeofday`, `rusage`). Wrapping back toward the top is **protection**, which changes identities, permissions, and memory protections (`setuid`, `mprotect`, ACL updates). All six surfaces feed into the same kernel core, which validates arguments, enforces policy, and updates authoritative data structures.
 
-![System-call categories as control surfaces, laid out around the kernel authority boundary](../chapter2_graphviz/fig_2_20_syscall_categories.png)
+![System-call categories as control surfaces, laid out around the kernel authority boundary](../graphviz/chapter2_graphviz/fig_2_20_syscall_categories.png)
 
 Thinking in surfaces, not isolated calls, makes the taxonomy useful. A single user workflow (copy a file to a USB device over SSH) touches process control (the copy tool), file management (source and destination paths), device management (USB mass-storage driver), communication (SSH stream), information (timestamps and progress stats), and protection (UID/permission checks). Every privileged mutation enters through one of these chokepoints; everything else is user-space convention layered on top.
 
@@ -348,11 +348,11 @@ Thinking in surfaces, not isolated calls, makes the taxonomy useful. A single us
 - If devices are treated like unprotected byte streams, direct hardware control leaks into user space and bypasses the driver’s privilege checks and interrupt coordination.
 - If protection calls are treated as optional metadata, access control becomes advisory; credentials, ACLs, and memory protections would no longer be authoritative.
 
-![Failure sketch: process creation needs kernel PID, scheduling, resource inheritance, cleanup](../chapter2_graphviz/fig_2_21_process_creation_breaks.png)
+![Failure sketch: process creation needs kernel PID, scheduling, resource inheritance, cleanup](../graphviz/chapter2_graphviz/fig_2_21_process_creation_breaks.png)
 
-![Failure sketch: device I/O must stay behind driver privilege checks and IRQ coordination](../chapter2_graphviz/fig_2_22_device_unprotected.png)
+![Failure sketch: device I/O must stay behind driver privilege checks and IRQ coordination](../graphviz/chapter2_graphviz/fig_2_22_device_unprotected.png)
 
-![Failure sketch: protection calls must be authoritative or access control collapses](../chapter2_graphviz/fig_2_23_protection_optional.png)
+![Failure sketch: protection calls must be authoritative or access control collapses](../graphviz/chapter2_graphviz/fig_2_23_protection_optional.png)
 
 **Code Bridge**
 
@@ -380,11 +380,11 @@ Most of what users call “the OS” is actually user-space code—utilities and
 
 System programs (utilities, daemons, service managers) are regular user processes. They parse configs, apply policy, and call into the kernel via syscalls. The kernel owns protected state; the utility owns orchestration and presentation. Because they are just processes, they can be restarted, replaced, sandboxed, or updated without kernel changes.
 
-![Utilities and daemons live in user space; authority remains in the kernel](../chapter2_graphviz/fig_2_24_user_vs_kernel_layers.png)
+![Utilities and daemons live in user space; authority remains in the kernel](../graphviz/chapter2_graphviz/fig_2_24_user_vs_kernel_layers.png)
 
-![Daemon lifecycle: config drives a user-mode process that issues syscalls; it can be restarted without reboot](../chapter2_graphviz/fig_2_25_daemon_lifecycle.png)
+![Daemon lifecycle: config drives a user-mode process that issues syscalls; it can be restarted without reboot](../graphviz/chapter2_graphviz/fig_2_25_daemon_lifecycle.png)
 
-![Policy vs mechanism: fast-evolving user-space policy layered on stable kernel mechanism](../chapter2_graphviz/fig_2_26_policy_vs_mechanism.png)
+![Policy vs mechanism: fast-evolving user-space policy layered on stable kernel mechanism](../graphviz/chapter2_graphviz/fig_2_26_policy_vs_mechanism.png)
 
 **Invariants**
 
@@ -421,17 +421,17 @@ That distinction is also why many services can be restarted or replaced without 
 1. **Q:** Why is a compiler part of the system environment without being part of the kernel?
 **A:** It is essential to a developer workflow, but it does not need hardware privilege to do its job. It consumes files, produces files, and uses ordinary system calls like any other application. Keeping it out of the kernel preserves a small trusted base and allows rapid improvement without risking privileged-system stability.
 
-![Mental model: compiler is an unprivileged program that uses syscalls; it stays out of the kernel/TCB](../chapter2_graphviz/fig_2_27_compiler_user_space.png)
+![Mental model: compiler is an unprivileged program that uses syscalls; it stays out of the kernel/TCB](../graphviz/chapter2_graphviz/fig_2_27_compiler_user_space.png)
 
 2. **Q:** What makes a daemon structurally different from a kernel thread or interrupt handler?
 **A:** A daemon runs in user mode as a scheduled process, enters the kernel only through syscalls, and can be restarted or replaced without rebuilding the kernel. Kernel threads and interrupt handlers execute in privileged context and can directly manipulate protected state; if they crash or corrupt memory, the whole kernel is at risk.
 
-![Mental model: daemon vs kernel thread/interrupt (privilege, restartability, fault scope)](../chapter2_graphviz/fig_2_28_daemon_vs_kernel_context.png)
+![Mental model: daemon vs kernel thread/interrupt (privilege, restartability, fault scope)](../graphviz/chapter2_graphviz/fig_2_28_daemon_vs_kernel_context.png)
 
 3. **Q:** Why do users often perceive utilities as “the OS” even though privilege lives elsewhere?
 **A:** Because utilities are the visible control surfaces: they are what users type or click. They also encode lots of user-facing policy (flags, defaults, workflows). But visibility is not authority; the kernel is the invisible layer that actually enforces permissions and preserves system invariants.
 
-![Mental model: utilities are visible; the kernel is authoritative enforcement](../chapter2_graphviz/fig_2_29_visibility_vs_authority.png)
+![Mental model: utilities are visible; the kernel is authoritative enforcement](../graphviz/chapter2_graphviz/fig_2_29_visibility_vs_authority.png)
 
 ### 3.6 Policy, Mechanism, And Design Goals
 
@@ -449,7 +449,7 @@ This section gives you a clean classification tool:
 
 The quick test is the swap test: if you can change the rule without changing the privileged machinery and its invariants, it is policy. If changing it requires new privileged state, new entry paths, or new invariants, it is mechanism.
 
-![Mental model: goals drive policy; policy selects among kernel mechanisms (swap test)](../chapter2_graphviz/fig_2_30_policy_mechanism_swap_test.png)
+![Mental model: goals drive policy; policy selects among kernel mechanisms (swap test)](../graphviz/chapter2_graphviz/fig_2_30_policy_mechanism_swap_test.png)
 
 Concrete examples (high fidelity, not slogan):
 
@@ -513,7 +513,7 @@ Most OS services (file system, networking, memory management, drivers) share a s
 This tends to minimize overhead on hot paths because calls are ordinary function calls and data structures are shared in-kernel.
 The cost is that the privileged fault domain is wide: a bug in any in-kernel component can corrupt kernel memory or crash the whole system.
 
-![Supplement: monolithic kernel (fast internal calls, wide privileged fault domain)](../chapter2_graphviz/fig_2_36_monolithic_kernel.png)
+![Supplement: monolithic kernel (fast internal calls, wide privileged fault domain)](../graphviz/chapter2_graphviz/fig_2_36_monolithic_kernel.png)
 
 **Layered kernel**
 
@@ -521,7 +521,7 @@ Subsystems are arranged into levels with a designed dependency direction: higher
 This can improve reasoning and separation when the dependency order matches reality.
 But OS dependencies are often not strictly hierarchical (for example, paging and file I/O want each other), so layered designs either accept “layer violations” or introduce awkward indirection that adds overhead.
 
-![Supplement: layered kernel (ordered dependencies; layering can become leaky if reality is cyclic)](../chapter2_graphviz/fig_2_37_layered_kernel.png)
+![Supplement: layered kernel (ordered dependencies; layering can become leaky if reality is cyclic)](../graphviz/chapter2_graphviz/fig_2_37_layered_kernel.png)
 
 **Microkernel**
 
@@ -529,7 +529,7 @@ Only the most fundamental privileged mechanisms stay in kernel space (address sp
 Many traditional “kernel services” become user-space servers (file server, network server, driver servers).
 This shrinks the privileged fault domain and can make services restartable/replaceable, but it increases communication cost because requests become IPC messages that introduce extra boundary crossings and scheduling points.
 
-![Supplement: microkernel (minimal privileged core; services as user-space servers over IPC)](../chapter2_graphviz/fig_2_38_microkernel_structure.png)
+![Supplement: microkernel (minimal privileged core; services as user-space servers over IPC)](../graphviz/chapter2_graphviz/fig_2_38_microkernel_structure.png)
 
 **Modular kernel (loadable modules)**
 
@@ -537,7 +537,7 @@ The kernel retains a core, but new privileged code can be loaded dynamically as 
 This is primarily an extensibility and deployment technique: it makes it easier to ship new functionality without rebuilding the whole kernel image.
 However, once loaded, module code still runs with full kernel privilege, so the fault scope remains largely shared.
 
-![Supplement: modular kernel (core + loadable privileged modules)](../chapter2_graphviz/fig_2_39_modular_kernel.png)
+![Supplement: modular kernel (core + loadable privileged modules)](../graphviz/chapter2_graphviz/fig_2_39_modular_kernel.png)
 
 **Hybrid systems**
 
@@ -545,7 +545,7 @@ Real systems often mix patterns: a largely monolithic in-kernel fast path for pe
 The gain is pragmatic: you can keep hot paths cheap while isolating a few risky or fast-evolving components.
 The cost is conceptual and engineering complexity: more interaction styles means more ways control and state can flow.
 
-![Supplement: hybrid systems (mix fast in-kernel paths with selective boundary-separated services)](../chapter2_graphviz/fig_2_40_hybrid_kernel.png)
+![Supplement: hybrid systems (mix fast in-kernel paths with selective boundary-separated services)](../graphviz/chapter2_graphviz/fig_2_40_hybrid_kernel.png)
 
 Each structure choice places code in a particular protection domain.
 That placement determines the communication path, the communication cost, and the fault scope of a failure in that code.
@@ -591,19 +591,19 @@ Most arguments about kernel structure are arguments about how to trade those two
 1. **Q:** Why is a microkernel not just “a small operating system”?
 **A:** “Microkernel” is not about being small for its own sake; it is about moving many services out of privileged space so failures are contained and services can be restarted or replaced. The kernel still provides essential primitives (address spaces, scheduling, IPC, low-level device mediation). The point is a change in fault boundaries and communication structure, not merely fewer lines of code.
 
-![Supplement: drill visual — microkernel is a boundary reorganization, not just fewer lines](../chapter2_graphviz/fig_2_41_drill_microkernel_not_small.png)
+![Supplement: drill visual — microkernel is a boundary reorganization, not just fewer lines](../graphviz/chapter2_graphviz/fig_2_41_drill_microkernel_not_small.png)
 
 2. **Q:** What performance cost appears when a service moves from kernel space to a user-space server?
 **A:** Communication overhead: message passing, context switches, and often data copies or mapping operations. The request path can include more scheduling points and more cache/TLB disruption. You typically pay this cost to gain isolation, replaceability, and a smaller privileged fault domain.
 
-![Supplement: drill visual — user-space servers add IPC + switching cost](../chapter2_graphviz/fig_2_42_drill_userspace_server_costs.png)
+![Supplement: drill visual — user-space servers add IPC + switching cost](../graphviz/chapter2_graphviz/fig_2_42_drill_userspace_server_costs.png)
 
 3. **Q:** Why can a kernel be monolithic in execution style and still modular in deployment style?
 **A:** “Monolithic execution” means services call each other directly in one privileged address space at runtime. “Modular deployment” means the set of privileged components can be loaded/unloaded or compiled separately (loadable modules). Even with modules, once loaded the code still runs with kernel privilege, so performance can be monolithic while safety/fault scope remains largely shared.
 
-![Supplement: drill visual — execution style vs deployment style are different axes](../chapter2_graphviz/fig_2_43_drill_monolithic_modular_axes.png)
+![Supplement: drill visual — execution style vs deployment style are different axes](../graphviz/chapter2_graphviz/fig_2_43_drill_monolithic_modular_axes.png)
 
-![Supplement: kernel structure choices are mostly about where code runs and how components communicate](../chapter2_graphviz/fig_2_3_kernel_structure_comparison.svg)
+![Supplement: kernel structure choices are mostly about where code runs and how components communicate](../graphviz/chapter2_graphviz/fig_2_3_kernel_structure_comparison.svg)
 
 ### 3.8 Debugging, Observability, System Generation, And Boot
 
@@ -616,7 +616,7 @@ An OS that cannot be observed, configured for a target machine, or started relia
 Chapter 2 treats these as *structure*, not “extra tools,” because they close the operational loop around the kernel:
 you must be able to start the system (boot), ensure the image matches the machine (system generation / configuration), observe boundary events (tracing/profiling), and capture state when something fails (dumps).
 
-![Supplement: operational completeness requires observability, dumps, system generation, and boot](../chapter2_graphviz/fig_2_31_operational_completeness.png)
+![Supplement: operational completeness requires observability, dumps, system generation, and boot](../graphviz/chapter2_graphviz/fig_2_31_operational_completeness.png)
 
 Read this figure top-to-bottom.
 The center box (“runtime kernel services”) is what most people mean by “the OS,” but it is not operable by itself.
@@ -628,7 +628,7 @@ In other words: without these, the OS exists on paper but not as an operable sys
 `Tracing`, `profiling`, and probe points matter only if they sit on the edges where kernel state changes: syscall entry/exit, scheduling decisions, I/O start/completion (interrupt paths), and faults/exceptions.
 Those are the moments when the kernel updates authoritative state (queues, mappings, buffer ownership), so those are the moments you must be able to measure and record.
 
-![Supplement: observability pipeline from boundary events to traces to diagnosis](../chapter2_graphviz/fig_2_32_observability_pipeline.png)
+![Supplement: observability pipeline from boundary events to traces to diagnosis](../graphviz/chapter2_graphviz/fig_2_32_observability_pipeline.png)
 
 Read left-to-right: boundary events feed probes; probes write into cheap buffers (ring buffers/logs); tools turn that stream into explanations (profiles, flamegraphs, histograms).
 The constraint note in the diagram is the key design requirement: observability must be cheap enough to leave in.
@@ -639,7 +639,7 @@ If every investigation requires rebuilding the kernel or inserting ad-hoc loggin
 `Core dumps` capture failed user-process state while the kernel is still healthy enough to manage I/O and write a file.
 `Crash dumps` capture failed kernel state when the authority itself has failed, so normal subsystems (filesystems, drivers, scheduler) may be untrustworthy at the moment you want evidence most.
 
-![Supplement: core dump vs crash dump (what failed changes what you can trust)](../chapter2_graphviz/fig_2_33_core_vs_crash_dump.png)
+![Supplement: core dump vs crash dump (what failed changes what you can trust)](../graphviz/chapter2_graphviz/fig_2_33_core_vs_crash_dump.png)
 
 Read this as two trust stories.
 Core dumps assume the kernel is healthy and therefore can capture a single process’s memory + registers as a normal “kernel service.”
@@ -650,7 +650,7 @@ Crash dumping assumes the kernel may already be corrupted, which is why real sys
 `SYSGEN` (and modern equivalents like kernel configuration + module selection + image/initramfs building) configures the OS image for a target hardware/site environment: which drivers exist, which modules are included, and which parameters/defaults are set.
 `Booting` is the runtime startup chain at each power-on: firmware -> loader -> kernel -> early user-space services.
 
-![Supplement: SYSGEN prepares an image; boot activates it on a machine](../chapter2_graphviz/fig_2_34_sysgen_vs_boot.png)
+![Supplement: SYSGEN prepares an image; boot activates it on a machine](../graphviz/chapter2_graphviz/fig_2_34_sysgen_vs_boot.png)
 
 Read the diagram top-to-bottom as “prepare” versus “activate.”
 Separating these prevents a common conceptual error: treating “the OS” as something that springs fully formed at power-on.
@@ -679,7 +679,7 @@ Boot is the ultimate proof that structure exists for operational reasons.
 Before the kernel is in memory, there must be code that can initialize enough hardware to find and load it, and that early code must be trusted even though it is not “the OS” yet.
 When you cover this trace, track the authority handoff: firmware -> bootstrap -> kernel -> user-space services, and name what each stage must make possible for the next one.
 
-![Supplement: boot handoff chain from firmware to kernel to services](../chapter2_graphviz/fig_2_35_boot_handoff.png)
+![Supplement: boot handoff chain from firmware to kernel to services](../graphviz/chapter2_graphviz/fig_2_35_boot_handoff.png)
 
 Read the diagram left-to-right as a control and trust handoff.
 Each solid arrow is “which code runs next” before the normal OS environment exists.
@@ -718,14 +718,14 @@ Boot is therefore part of OS structure, not an afterthought.
 Do not merely read these.
 Cover the tables and reproduce the sequence from memory.
 
-![Supplement: the four canonical boundary traces to rehearse](../chapter2_graphviz/fig_2_44_canonical_traces_overview_ch2.png)
+![Supplement: the four canonical boundary traces to rehearse](../graphviz/chapter2_graphviz/fig_2_44_canonical_traces_overview_ch2.png)
 
 ### 4.1 CLI Command To Program Execution
 
 This is the minimal shell path from user intent to a privileged kernel request, then to a newly constructed execution context, and then back to user mode.
 When you recite it, say exactly when execution enters privileged code and what the kernel must construct (process + address space + initial context) before control can return safely.
 
-![Supplement: trace 4.1 (exec boundary is the authority pivot)](../chapter2_graphviz/fig_2_45_trace_cli_to_exec.png)
+![Supplement: trace 4.1 (exec boundary is the authority pivot)](../graphviz/chapter2_graphviz/fig_2_45_trace_cli_to_exec.png)
 
 | Step | User / Shell | Kernel |
 | --- | --- | --- |
@@ -743,7 +743,7 @@ That “constructed state” is the concrete meaning of “program execution ser
 This is the “API is not a syscall” trace.
 The wrapper is not an implementation detail to ignore; it is where user-facing conventions are reconciled with a privileged ABI boundary.
 
-![Supplement: trace 4.2 (API -> wrapper -> syscall -> authority -> return)](../chapter2_graphviz/fig_2_46_trace_api_to_syscall_return.png)
+![Supplement: trace 4.2 (API -> wrapper -> syscall -> authority -> return)](../graphviz/chapter2_graphviz/fig_2_46_trace_api_to_syscall_return.png)
 
 | Step | Program | Wrapper | Kernel |
 | --- | --- | --- | --- |
@@ -762,7 +762,7 @@ This trace exists to force you to “feel” the extra boundary.
 Service logic runs in a user-space server, which improves fault containment but adds communication and scheduling cost.
 When you reproduce it, name where the kernel mediates IPC and where the server’s correctness becomes part of overall service correctness.
 
-![Supplement: trace 4.3 (microkernel request adds IPC + scheduling points)](../chapter2_graphviz/fig_2_47_trace_microkernel_ipc.png)
+![Supplement: trace 4.3 (microkernel request adds IPC + scheduling points)](../graphviz/chapter2_graphviz/fig_2_47_trace_microkernel_ipc.png)
 
 | Step | Client | Microkernel | User-Space Server |
 | --- | --- | --- | --- |
@@ -779,7 +779,7 @@ You gain fault containment, but you pay additional scheduling and IPC overhead a
 Boot is the start-up structure.
 You are tracking who controls the CPU before the kernel exists and when the kernel becomes the resident authority that can then start user-space services.
 
-![Supplement: trace 4.4 (boot is an authority handoff chain)](../chapter2_graphviz/fig_2_48_trace_boot_authority_chain.png)
+![Supplement: trace 4.4 (boot is an authority handoff chain)](../graphviz/chapter2_graphviz/fig_2_48_trace_boot_authority_chain.png)
 
 | Step | Machine State | Controlling Code |
 | --- | --- | --- |

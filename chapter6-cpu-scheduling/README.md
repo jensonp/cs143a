@@ -221,7 +221,7 @@ Preemption requires:
 - a correct save/choose/restore protocol
 - careful protection of kernel critical sections (you cannot preempt in the middle of breaking invariants)
 
-![Supplement: preemption is a control loop that becomes real only via context switch](../chapter6_graphviz/fig_6_2_preemption_control_loop.svg)
+![Supplement: preemption is a control loop that becomes real only via context switch](../graphviz/chapter6_graphviz/fig_6_2_preemption_control_loop.svg)
 
 **Invariants**
 
@@ -291,7 +291,7 @@ They are:
 - whether preemption occurs
 - what the quantum is
 
-![Supplement: same workload, different schedules (FCFS vs SJF vs RR)](../chapter6_graphviz/fig_6_1_gantt_algorithm_comparison.svg)
+![Supplement: same workload, different schedules (FCFS vs SJF vs RR)](../graphviz/chapter6_graphviz/fig_6_1_gantt_algorithm_comparison.svg)
 
 **Invariants**
 
@@ -364,7 +364,7 @@ Typical MLFQ shape:
 - blocking early keeps you high (assume interactive / I/O-bound)
 - periodic boosts prevent starvation
 
-![Supplement: MLFQ is a queue structure plus movement rules (demotion/boost)](../chapter6_graphviz/fig_6_3_mlfq_overview.svg)
+![Supplement: MLFQ is a queue structure plus movement rules (demotion/boost)](../graphviz/chapter6_graphviz/fig_6_3_mlfq_overview.svg)
 
 **Invariants**
 
@@ -473,7 +473,7 @@ Common patterns:
 - `processor affinity`: prefer keeping a job on the same CPU to reuse cache state
 - NUMA-aware placement: prefer CPUs near the memory a job uses
 
-![Supplement: multiprocessor scheduling trades load balance against affinity](../chapter6_graphviz/fig_6_4_multiprocessor_load_balancing.svg)
+![Supplement: multiprocessor scheduling trades load balance against affinity](../graphviz/chapter6_graphviz/fig_6_4_multiprocessor_load_balancing.svg)
 
 **Invariants**
 

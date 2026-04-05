@@ -45,7 +45,7 @@ Deadlock requires all four:
 
 Break any one condition and deadlock is impossible for that model.
 
-![Supplement: all four conditions must hold for deadlock to be possible](../chapter7_graphviz/fig_7_1_deadlock_four_conditions.svg)
+![Supplement: all four conditions must hold for deadlock to be possible](../graphviz/chapter7_graphviz/fig_7_1_deadlock_four_conditions.svg)
 
 ### 2.3 “Cycle Implies Deadlock” Depends on Resource Instances
 
@@ -199,8 +199,8 @@ For **single-instance** resources, a cycle in the RAG implies deadlock.
 
 Cycle detection in WFG becomes deadlock detection.
 
-![Supplement: resource-allocation graph example (single-instance cycle)](../chapter7_graphviz/fig_7_2_resource_allocation_graph.svg)
-![Supplement: wait-for graph cycle implies deadlock (single-instance model)](../chapter7_graphviz/fig_7_3_wait_for_graph_cycle.svg)
+![Supplement: resource-allocation graph example (single-instance cycle)](../graphviz/chapter7_graphviz/fig_7_2_resource_allocation_graph.svg)
+![Supplement: wait-for graph cycle implies deadlock (single-instance model)](../graphviz/chapter7_graphviz/fig_7_3_wait_for_graph_cycle.svg)
 
 **Invariants**
 
@@ -353,7 +353,7 @@ Banker’s algorithm:
 - on each request, simulate granting it and check if the resulting state is safe
 - grant only if safe; otherwise delay
 
-![Supplement: Banker safety check table (Allocation/Max/Need/Available)](../chapter7_graphviz/fig_7_4_bankers_safety_check.svg)
+![Supplement: Banker safety check table (Allocation/Max/Need/Available)](../graphviz/chapter7_graphviz/fig_7_4_bankers_safety_check.svg)
 
 **Invariants**
 

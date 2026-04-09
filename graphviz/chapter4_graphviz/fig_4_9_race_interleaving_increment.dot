@@ -1,0 +1,40 @@
+digraph G {
+  graph [rankdir=TB, pad=0.25, nodesep=0.5, ranksep=0.7, splines=polyline, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75, fontname="Helvetica", fontsize=11];
+
+  title [shape=note, label="Lost update race: two threads execute x = x + 1\n(x++ is read + add + write)", fillcolor="#FFFFFF", color="#9AA7AE", fontcolor="#233238"];
+
+  subgraph cluster_t1 {
+    label="Thread T1";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+    t1r [label="read x -> r1 (=0)", fillcolor="#DDEAF1"];
+    t1a [label="r1 = r1 + 1", fillcolor="#DDEAF1"];
+    t1w [label="write x = r1 (=1)", fillcolor="#BFE2F1"];
+    t1r -> t1a -> t1w;
+  }
+
+  subgraph cluster_t2 {
+    label="Thread T2";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+    t2r [label="read x -> r2 (=0)", fillcolor="#DDEAF1"];
+    t2a [label="r2 = r2 + 1", fillcolor="#DDEAF1"];
+    t2w [label="write x = r2 (=1)", fillcolor="#BFE2F1"];
+    t2r -> t2a -> t2w;
+  }
+
+  inter [shape=note, label="One possible interleaving:\n1) T1 read (0)\n2) T2 read (0)\n3) T1 write (1)\n4) T2 write (1)\nFinal x = 1 (not 2)", fillcolor="#FFFFFF", color="#9AA7AE", fontcolor="#233238"];
+
+  title -> t1r [style=invis];
+  title -> t2r [style=invis];
+  t1r -> t2r [style=dashed, label="interleave"];
+  t2r -> t1w [style=dashed, label="interleave"];
+  t1w -> t2w [style=dashed, label="interleave"];
+
+  t2w -> inter [style=dotted, arrowhead=none];
+}
+

@@ -1,0 +1,46 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.45, ranksep=0.85, splines=true, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75, fontname="Helvetica", fontsize=11];
+
+  subgraph cluster_mem {
+    label="memory (cache-line granularity)";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+
+    line [label="one cache line\n[ a | b | ... ]", fillcolor="#F7E9C5"];
+    a [label="a (owned by T1)\nupdated often", fillcolor="#DDEAF1"];
+    b [label="b (owned by T2)\nupdated often", fillcolor="#DDEAF1"];
+  }
+
+  subgraph cluster_c1 {
+    label="core 1 cache";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+    c1 [label="cache line copy\n(a,b)", fillcolor="#BFE2F1"];
+    t1 [label="T1 writes a", fillcolor="#D5EDF7"];
+  }
+
+  subgraph cluster_c2 {
+    label="core 2 cache";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+    c2 [label="cache line copy\n(a,b)", fillcolor="#BFE2F1"];
+    t2 [label="T2 writes b", fillcolor="#D5EDF7"];
+  }
+
+  line -> c1 [label="load line"];
+  line -> c2 [label="load line"];
+
+  t1 -> c1 [label="write a"];
+  t2 -> c2 [label="write b"];
+
+  bounce [shape=note, label="false sharing:\nT1 and T2 update different variables\nbut coherence operates on the whole line.\nLine \"bounces\" between caches,\ncreating traffic and slowdown.", fillcolor="#FFFFFF", color="#9AA7AE", fontcolor="#233238"];
+  c1 -> c2 [label="invalidate / transfer\n(cache-line bouncing)", color="#8B3A3A", fontcolor="#8B3A3A"];
+  c2 -> c1 [label="invalidate / transfer", color="#8B3A3A", fontcolor="#8B3A3A"];
+  c2 -> bounce [style=dotted, arrowhead=none];
+}
+

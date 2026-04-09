@@ -1,0 +1,18 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.6, ranksep=0.9, splines=true, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75, fontname="Helvetica", fontsize=11];
+
+  run [label="running\n(executing)", fillcolor="#BFE2F1"];
+  term [label="terminated\n(execution ended)", fillcolor="#F7E9C5"];
+  zomb [label="zombie\n(status retained)\n(not runnable)", fillcolor="#F2D6D6"];
+  gone [label="reaped\n(record removed)", fillcolor="#F5F5F5"];
+
+  run -> term [label="exit / fatal signal"];
+  term -> zomb [label="kernel frees most resources\nkeeps PID + exit status"];
+  zomb -> gone [label="parent waits\n(wait/waitpid)"];
+
+  orphan [shape=note, label="orphan case:\nif parent dies first,\nchild is reparented to init\nso someone can reap it later", fillcolor="#FFFFFF", color="#9AA7AE", fontcolor="#233238"];
+  term -> orphan [style=dotted, arrowhead=none];
+}
+

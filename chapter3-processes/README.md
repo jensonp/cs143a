@@ -106,6 +106,110 @@ Each execution has different live state even when the code is identical.
 
 ### 3.2 Process States Describe What The Kernel Can Do Next
 
+#### Why This Section Exists
+
+Once you accept that a process is a resumable computation, you immediately face a practical question: at any given instant, what is the kernel allowed to do with it?
+
+The kernel cannot simply "run everything." CPUs are scarce, devices complete asynchronously, and processes routinely reach moments where they *cannot* make progress even if you gave them a CPU (for example, waiting for a disk block, a network packet, a child to exit, or a lock to be released). If the kernel does not represent those moments explicitly, scheduling degenerates into guesswork: the OS will waste CPU time on processes that cannot advance, or it will lose track of who should be woken when an event occurs.
+
+Process states exist to fill that exact gap. They are not labels for what happened in the past; they are a contract about *what can happen next* and therefore which kernel mechanisms apply: dispatch, preempt, block, wake, or clean up.
+
+#### The Object Being Introduced (Eligibility For Service + A Waiting Condition)
+
+The object is a **state classification** that the kernel uses to partition processes into sets with different rules.
+
+What is fixed:
+
+- The scheduler can only choose among work that is eligible to run now.
+- Devices and timers generate events asynchronously; wakeups must be tied to those events.
+- Cleanup must be done even though "the process" is no longer executing.
+
+What varies:
+
+- Whether the process is eligible for CPU service now.
+- If it is not eligible, *what exact condition* must occur for it to become eligible again.
+
+The state model is therefore inseparable from two concrete kernel structures:
+
+- a **ready queue** (runnable set) for processes eligible to run, and
+- one or more **wait queues** keyed by the event/resource being awaited (device completion, timer, lock, child exit).
+
+If you keep only one sentence: "state" is the kernel's way of turning progress into queue membership plus a wakeup condition.
+
+#### Formal Definitions (Ready, Running, Waiting, Terminated)
+
+Definition (ready): A process is ready if it is eligible to run as soon as the scheduler chooses it. It is not currently executing, but if you restored its context onto a CPU, it would make progress immediately.
+
+Definition (running): A process is running if its execution context is currently loaded on some CPU and it is consuming CPU cycles.
+
+Definition (waiting / blocked): A process is waiting if it is not eligible for CPU service because it is waiting for an external event or resource. The key is that "waiting" implies a *specific wakeup condition* that the kernel can test and signal.
+
+Definition (terminated): A process is terminated when its execution is over. Importantly, termination does not mean "instantly erased." The kernel may need to preserve minimal bookkeeping (exit status, accounting) until a parent or supervisor collects it.
+
+#### Interpretation (State Is A Kernel Promise About Scheduling And Wakeup Semantics)
+
+The distinction between ready and waiting is what makes multiprogramming real. A waiting process is removed from CPU competition so the scheduler can give the CPU to someone who can actually execute. Meanwhile the kernel must remember *where to resume* and *why resumption is currently illegal*. That "why" is not philosophical; it is the pointer to the queue or event structure that will wake the process later.
+
+If you forget this, you will fall into the most damaging beginner intuition: "the CPU waits for the disk." The CPU never has to wait for the disk. A process waits, and the kernel chooses other runnable work. The whole point of the state model is to ensure that "waiting" becomes an actionable kernel fact.
+
+#### Boundary Conditions / Assumptions / Failure Modes
+
+Assumptions you should surface explicitly:
+
+- A blocked process has a well-defined wakeup condition (interrupt completion, lock release, timer expiry, message arrival). If the kernel cannot name the condition, it cannot wake it reliably.
+- State transitions must be synchronized with queue operations. A state field that says "waiting" is meaningless if the process is still on the run queue, and vice versa.
+
+Failure modes (these show up later as deadlocks, missed signals, and performance cliffs):
+
+- **lost wakeup**: the event occurs, but the process is not moved back to ready because queue membership and signaling got out of sync.
+- **spurious runnable**: a blocked process remains runnable and is scheduled repeatedly, wasting CPU.
+- **incorrect termination protocol**: the kernel frees state too early and the parent cannot observe the child’s exit status, or frees too late and process-table resources leak.
+
+#### Fully Worked Example: Blocked On I/O Is Not "Inactive"
+
+Consider a process that calls `read(fd, buf, 4096)` on a disk-backed file when the data is not in cache.
+
+1. The process starts in `running` (it is executing).
+2. It issues the syscall; the kernel validates arguments and initiates disk I/O.
+3. The process cannot complete the syscall until the device finishes. The kernel therefore:
+   - saves the process context (so it can resume),
+   - records the wait condition (this disk request completion),
+   - moves the process to `waiting`, and
+   - dispatches some other `ready` process.
+4. Later, the disk completes and interrupts the CPU. The interrupt handler records the completion and moves the blocked process from `waiting` to `ready`.
+5. Eventually, the scheduler dispatches it again; it becomes `running` and returns from the syscall.
+
+What you should notice is the invariant pattern: progress is regulated by queues and events, not by the CPU "pausing."
+
+#### Misconceptions (Because They Produce Wrong Debugging Instincts)
+
+Misconception 1: "`waiting` means the process is swapped out."
+
+- Waiting is about CPU eligibility, not memory residency. A waiting process may be resident in RAM or not; swapping is a separate scarcity mechanism. Confusing them leads to wrong performance explanations ("it was slow because it was waiting") and wrong fixes.
+
+Misconception 2: "`ready` means it will run soon."
+
+- Ready means eligible, not guaranteed. Under load, ready time can be long due to scheduling policy, priority, and competition. This is why response time is a queueing problem, not just a CPU-speed problem.
+
+Misconception 3: "State transitions are just bookkeeping."
+
+- They are enforcement. If the kernel does not enforce the rule "waiting processes do not consume CPU," the entire multiprogramming story collapses.
+
+#### Connection To Later Material
+
+You will reuse this state-and-queue framing everywhere:
+
+- CPU scheduling chapters refine how the ready set is ordered and selected.
+- Threading chapters refine what the schedulable entity is (process vs thread) but keep the same ready/waiting logic.
+- Synchronization chapters explain why locks create waiting states and how to avoid deadlocks.
+- IPC chapters explain how message arrival becomes a wakeup event and how buffering changes waiting behavior.
+
+#### Retain / Do Not Confuse
+
+Retain: process state is defined by CPU eligibility and explicit wakeup conditions, not by historical narration.
+
+Do not confuse: waiting (not runnable) with swapped out (not resident), or ready (eligible) with running (currently consuming CPU).
+
 **Problem**
 
 Once a process exists, it does not run continuously to completion.
@@ -179,6 +283,94 @@ If you cannot name the event that will wake a waiting process, you do not yet ha
 ![Supplement: process states are defined by what the process can do next](../graphviz/chapter3_graphviz/fig_3_2_process_state_machine.svg)
 
 ### 3.3 The PCB Is The Kernel’s Authoritative Record
+
+#### Why This Section Exists
+
+Process state labels only become real if the kernel has somewhere trustworthy to store the facts that make a process resumable: where it will resume (PC), what it will resume with (registers), what memory layout gives addresses meaning (page table root / address space), and what resources it owns (open files, credentials, pending signals).
+
+Those facts cannot live only "in the process," because the process is precisely the thing that might be stopped, blocked, or even malicious. The kernel needs a protected, durable record that (1) survives preemption and blocking, (2) can be safely read and updated by the scheduler and other kernel subsystems, and (3) cannot be forged by user code.
+
+That record is the PCB (or, in many real kernels, a closely related family of task/thread structures). This section exists because without a PCB-level mental model, context switches and lifecycle protocols become magic.
+
+#### The Object Being Introduced (Kernel-Resident Records That Index Execution)
+
+The object is a **kernel-resident descriptor** that binds together three worlds:
+
+- the CPU world: the saved execution context that can be restored,
+- the memory world: the address-space mapping that gives the context meaning,
+- and the resource world: the kernel objects the process is allowed to use.
+
+What is fixed:
+
+- The kernel must be able to find and restore an execution context without trusting user memory.
+- The kernel must be able to account and enforce policy using these records (scheduling, limits, credentials).
+
+What varies:
+
+- The specific fields and names across OS implementations.
+- Whether the OS splits process vs thread state into separate structures (common) or combines them (also common in teaching kernels).
+
+#### Formal Definitions (PCB, Trap Frame, Kernel Stack)
+
+Definition (PCB): The process control block is the kernel’s authoritative record for a process, storing identity, state, pointers to memory-management structures, scheduling metadata, and references to owned resources.
+
+Definition (trap frame): The saved CPU register snapshot created on a trap/interrupt/syscall entry so the kernel can later return to the interrupted context correctly. In many kernels, the trap frame lives on the kernel stack of the current thread/process.
+
+Definition (kernel stack): A privileged stack used while executing kernel code on behalf of a process/thread. It is separate from the user stack, because kernel code must remain runnable even when user memory is invalid or untrusted.
+
+The important interpretation is that "PCB contains everything" is an oversimplification. A PCB is often an index: it points to the trap frame and kernel stack, points to the address-space root, and points to tables of resources. But the PCB is the anchor that keeps those pieces coherent.
+
+![Supplement: the PCB anchors trap frames, kernel stacks, address-space roots, and owned resources into one resumable identity](../graphviz/chapter3_graphviz/fig_3_14_pcb_trapframe_anchor.svg)
+
+#### Boundary Conditions / Assumptions / Failure Modes
+
+Assumptions:
+
+- The PCB and related scheduler structures live in kernel memory and are protected from user writes. If user code can forge PCB fields, protection collapses.
+- Context-save/restore protocols are correct with respect to the CPU ABI and interrupt/trap entry rules. If you save the wrong set, restore returns to nonsense.
+
+Failure modes:
+
+- Save/restore bugs produce corruption that is timing-sensitive: it may appear only under interrupts or heavy switching.
+- Resource bookkeeping bugs leak kernel objects (file descriptors, VM mappings) or create use-after-free when a PID/descriptor is reused.
+- If exit cleanup races with a parent `wait`, you get zombies that never clear or status that disappears.
+
+#### Fully Worked Example: Timer Preemption Uses PCB + Trap Frame Together
+
+Consider a running process A that is preempted by a timer interrupt.
+
+1. The timer interrupt occurs asynchronously. Hardware transfers control to the kernel and pushes/saves a register snapshot (exact details depend on the ISA).
+2. The kernel entry path completes the saving protocol, producing a trap frame that is now the authoritative snapshot of A’s interrupted user context.
+3. The kernel updates A’s PCB fields: it records state transition (`running -> ready`), accounts CPU time, and enqueues A on the ready queue.
+4. The scheduler chooses a different runnable process B. The kernel switches "current" pointers to B’s PCB/thread record and loads B’s saved context.
+5. The kernel returns from interrupt/trap using B’s trap frame, restoring registers and resuming B’s user-mode instruction stream.
+
+Notice the division of labor: the trap frame is the raw CPU snapshot; the PCB is the durable kernel record that ties that snapshot to queues, memory mappings, and resources.
+
+#### Misconceptions
+
+Misconception 1: "The PCB is just for the scheduler."
+
+- The PCB is shared infrastructure. The scheduler cares about run-queue membership and priorities, but the memory manager cares about the address-space pointer, the signal subsystem cares about pending signals, and the file subsystem cares about open-file tables. The PCB is the rendezvous point for kernel subsystems that must coordinate around one process identity.
+
+Misconception 2: "User space could store its own context, so PCBs are optional."
+
+- User space can store some logical state, but it cannot store the privileged facts that make resumption safe: mode bits, validated mappings, kernel object references, and unforgeable credentials. The kernel must store those.
+
+#### Connection To Later Material
+
+PCB reasoning is the backbone of:
+
+- CPU scheduling (what fields the scheduler reads/writes, how queue membership is represented),
+- threading (splitting process vs per-thread execution records),
+- signals and cancellation (how asynchronous events attach to a target execution context),
+- and IPC (how blocked state is represented and what wakeups mutate).
+
+#### Retain / Do Not Confuse
+
+Retain: the PCB is the kernel’s authoritative anchor for a process identity across interruption, blocking, and cleanup.
+
+Do not confuse: the raw saved register snapshot (trap frame) with the higher-level kernel record (PCB) that ties it to scheduling and resources.
 
 **Problem**
 
@@ -347,6 +539,108 @@ Good OS structure keeps these meanings separated so one bottleneck does not dest
 
 ### 3.6 Context Switching Is Save, Decision, And Restore
 
+#### Why This Section Exists
+
+The process model is only real if the kernel can *actually* stop one computation and later resume it exactly, potentially after running many other computations in between. Context switching is the mechanism that makes that promise true.
+
+This section exists because "the scheduler chooses who runs next" is not yet an operational statement. A choice is not a physical event. It becomes physical only when the kernel performs a save-decision-restore protocol that changes what registers, stack pointer, and address-space mapping are live on the CPU. If you cannot narrate that protocol, you will not be able to reason about preemption, blocking syscalls, or later synchronization behavior under interrupts.
+
+#### The Object Being Introduced (A Protocol With Explicit Responsibilities)
+
+Treat a context switch as a protocol with responsibilities, not as one magical instruction.
+
+What is fixed:
+
+- The CPU can execute only one instruction stream at a time per core.
+- Traps/interrupts create controlled kernel entry points.
+- The kernel is responsible for preserving resumability and enforcing scheduling rules.
+
+What varies:
+
+- Which event triggered the switch (timer interrupt, I/O block, yield, higher-priority wakeup).
+- Whether the switch also changes the address space (process switch) or keeps it (thread switch inside one process, later).
+
+What conclusions it licenses:
+
+- You can explain why "blocking" is compatible with CPU utilization: the blocked entity is saved and removed from the runnable set, and a different entity is restored.
+- You can explain why context switching has overhead (and why too much preemption can reduce throughput).
+
+#### Formal Definition (Context Switch As State Transfer)
+
+Definition (context switch): A kernel-mediated transfer of CPU execution from one schedulable entity to another, consisting of:
+
+1. saving enough outgoing CPU state into kernel-owned storage so the entity is resumable,
+2. updating kernel scheduling/bookkeeping state to reflect the outgoing entity's new status,
+3. selecting an incoming runnable entity according to scheduling policy, and
+4. restoring the incoming entity's saved state (and associated memory mapping) so it becomes live on the CPU.
+
+#### Interpretation (The Switch Is Where "Policy" Touches Hardware)
+
+Scheduling policy lives in decision rules: priorities, fairness, deadlines, affinity. Context switching is where those rules become physical reality. The kernel turns "B should run next" into:
+
+- B's registers and stack pointer are loaded,
+- B's address space is installed (if needed),
+- and the CPU returns to user mode at B's program counter.
+
+This is why context-switch code is among the most delicate code in an OS: it is where abstract policy turns into concrete machine state.
+
+#### Boundary Conditions / Assumptions / Failure Modes
+
+Assumptions:
+
+- The saved state is complete with respect to the ABI and trap entry/exit protocol.
+- The kernel updates queue membership and state atomically with respect to interrupts (and later, with respect to other CPUs).
+
+Failure modes:
+
+- partial saves produce corruption that is hard to reproduce (depends on timing and which registers were live).
+- state/queue mismatches produce lost wakeups or duplicated runnable entities.
+- excessive switching produces performance collapse: even if "fair," the system spends too much time switching and too little time executing useful instructions.
+
+#### Fully Worked Example: Blocking Syscall Switches For A Different Reason Than Timer Preemption
+
+Compare two switches:
+
+Timer preemption:
+
+1. A is running; timer fires.
+2. Kernel saves A, requeues it as ready.
+3. Scheduler chooses B.
+4. Kernel restores B and returns to user mode.
+
+Blocking syscall:
+
+1. A is running; A issues `read()` and the data is not ready.
+2. Kernel saves A, but does **not** requeue it as ready. Instead it enqueues A on a wait queue associated with the I/O completion event and marks it waiting.
+3. Scheduler chooses B from the ready queue.
+4. Kernel restores B and returns to user mode.
+
+The structural difference is the state transition. In preemption, A remains runnable; in blocking, A becomes non-runnable until a wakeup event occurs.
+
+#### Misconceptions
+
+Misconception 1: "A context switch always means a different process."
+
+- Not necessarily. It can be a switch between threads inside the same process (later). The common part is saving/restoring execution context; whether the address space changes is a separate axis.
+
+Misconception 2: "The scheduler is the switch."
+
+- The scheduler chooses; the context switch makes that choice real. Conflating them hides where correctness obligations live (save/restore) versus where policy lives (choose).
+
+#### Connection To Later Material
+
+Context switching is the mechanical substrate for:
+
+- CPU scheduling policies (the decision that triggers which restore),
+- synchronization and preemption safety (what must be atomic around queue operations),
+- and thread models (user threads vs kernel threads change what entities can be switched independently).
+
+#### Retain / Do Not Confuse
+
+Retain: switching is a protocol: save -> update state/queues -> choose -> restore.
+
+Do not confuse: timer preemption (runnable -> runnable) with blocking (runnable -> waiting).
+
 **Problem**
 
 The OS must stop one computation and later resume either the same one or a different one without corrupting execution.
@@ -415,6 +709,106 @@ Context-switch code is small and tightly structured because it is the point wher
 
 ### 3.7 Process Creation Is Controlled Duplication And Divergence
 
+#### Why This Section Exists
+
+Once you understand that a process is the kernel's unit of execution and ownership, "creation" becomes one of the most load-bearing mechanisms in the OS. Creation is where the kernel mints a new identity that will compete for CPU/memory/I/O, inherits (or does not inherit) access to resources, and must later be cleaned up without leaks.
+
+This section exists because process creation is frequently taught as API trivia (`fork`, `exec`, `spawn`) when the real intellectual content is the protocol:
+
+- identity allocation (PID + kernel records),
+- inheritance rules (what carries over),
+- divergence (how parent and child do different work),
+- and efficiency (how creation can be cheap enough to use constantly in shells and servers).
+
+Lecture 2's `fork`/`exec` split is the canonical way to see that "create a container" and "choose a program image" are different problems. Even on systems that offer a one-shot `spawn`, the same conceptual separation exists internally.
+
+#### The Object Being Introduced (Lifecycle Protocol: Identity + Inheritance + Divergence)
+
+The object here is a **creation protocol** that preserves invariants across multiple subsystems:
+
+- scheduling: insert a new runnable entity without duplicating or losing bookkeeping,
+- memory: create an address-space image that is coherent and protected,
+- files: define what file descriptors and open-file descriptions are shared or duplicated,
+- security: ensure the child does not accidentally inherit more authority than intended,
+- cleanup: ensure every allocated object is reclaimed at termination.
+
+What varies is the *policy* of inheritance and the *API* exposed to user space; what stays fixed is that the kernel must implement the protocol safely.
+
+#### Formal Definitions (fork, exec, Copy-on-Write)
+
+Definition (fork-style creation): A primitive that creates a child process whose initial execution context is a near-copy of the parent, differing in identity (PID) and return value. Divergence happens through control flow.
+
+Definition (exec-style replacement): A primitive that replaces the current process's program image (code/data/stack layout and entry point) while preserving the process identity and selected inherited resources.
+
+Definition (copy-on-write, COW): An optimization where parent and child initially share physical pages marked read-only; on the first write to a shared page, the kernel copies the page so the writer receives a private copy. The logical model is "copied address spaces"; the physical model is "shared until written."
+
+![Supplement: fork can be logically copy-like while physically sharing pages via copy-on-write until a write forces a private copy](../graphviz/chapter3_graphviz/fig_3_15_fork_copy_on_write.svg)
+
+#### Interpretation (Why Creation Is Harder Than "Run Another Program")
+
+Creation is not "start executing some code." It is the act of creating a new execution container whose future syscalls, faults, scheduling decisions, and resource usage will be meaningful. That requires the kernel to tie together:
+
+- a new identity (PID + PCB/task record),
+- a consistent initial CPU context (where does the child begin executing?),
+- an address-space mapping (what do addresses mean for this new computation?),
+- and a controlled set of inherited kernel object references (files, pipes, credentials).
+
+If you translate `fork` to "copy memory," you will miss the most important parts: kernel object inheritance rules and the existence of shared-but-mutable objects (like open-file descriptions).
+
+#### Boundary Conditions / Assumptions / Failure Modes
+
+Assumptions:
+
+- The kernel can allocate and initialize a new process record under concurrency without corrupting global structures.
+- Inheritance rules are explicit and enforced (close-on-exec flags, credential changes).
+
+Failure modes:
+
+- Incorrect inheritance can leak authority (child inherits privileged descriptors or credentials).
+- Incorrect sharing semantics can cause surprising interference (shared file offsets, shared working directories).
+- Over-eager deep copying can make creation too expensive; this is why COW and spawn-style APIs exist.
+
+#### Fully Worked Example: File-Descriptor Inheritance Is About Kernel Objects, Not Integers
+
+Suppose the parent opens a file and then forks:
+
+1. Parent calls `open("data.log")` and receives fd=3.
+2. Parent calls `fork()`.
+
+At the user level, both processes now have an integer 3. The kernel question is what object that integer names.
+
+In many Unix designs:
+
+- the parent has a per-process fd table mapping `3 -> (pointer to an open-file description)`,
+- `fork` duplicates the fd table entries so the child also has `3 -> same open-file description object`.
+
+That open-file description often includes a current file offset. If it is shared, parent and child writes advance a shared offset and therefore interleave unless coordinated. This is why "inheritance" is not a casual feature; it is a semantic choice that affects ordering and correctness.
+
+#### Misconceptions
+
+Misconception 1: "`exec` creates a new process."
+
+- `exec` replaces the program image inside an existing process identity. PID often stays the same; the "container" persists while its contents change.
+
+Misconception 2: "`fork` always duplicates everything immediately."
+
+- The logical model is "two independent processes," but the kernel can implement that with sharing (COW) and with shared kernel objects. Independence is a semantic guarantee, not an instruction that bytes must be copied now.
+
+#### Connection To Later Material
+
+Creation is the foundation for:
+
+- shells and pipelines (inherit pipes, then `exec` into stages),
+- server models (prefork vs thread pools),
+- scheduling and accounting (new entities enter queues and resource limits),
+- and security (least privilege via controlled inheritance).
+
+#### Retain / Do Not Confuse
+
+Retain: creation mints identity and initial bindings; divergence is a separate step (often via `exec` or control flow).
+
+Do not confuse: copying an address space (semantic) with copying all bytes immediately (implementation).
+
 **Problem**
 
 Processes must be created dynamically, but creation raises questions of identity, inheritance, and independence.
@@ -482,6 +876,107 @@ The kernel exports the container and replacement mechanism; user space owns the 
 ![Supplement: fork then exec is controlled duplication, then image replacement](../graphviz/chapter3_graphviz/fig_3_7_fork_exec_trace.svg)
 
 ### 3.8 Termination, Wait, Zombies, And Orphans
+
+#### Why This Section Exists
+
+"Process termination" sounds like an instantaneous event: the program ends, the process disappears. In real kernels, termination is a protocol because other processes may need to learn the outcome (exit status), resources must be reclaimed in a safe order, and parent/child relationships create obligations (who is allowed to wait for whom).
+
+This section exists to prevent two common confusions that break later reasoning:
+
+- mistaking a *terminated computation* for a *deleted kernel record*, and
+- treating parent/child relations as narrative trivia rather than as a cleanup protocol that preserves kernel invariants and avoids leaks.
+
+#### The Object Being Introduced (A Two-Phase Death: Execution Ends, Bookkeeping Persists)
+
+The object here is the **termination protocol**.
+
+What is fixed:
+
+- The kernel must reclaim resources (address space mappings, open descriptors, kernel objects).
+- The kernel must preserve the child's exit status long enough for an authorized observer (parent) to collect it.
+
+What varies:
+
+- which resources are reclaimed immediately versus deferred,
+- which process becomes responsible when the original parent disappears (reparenting).
+
+The key interpretive move is to separate:
+
+1. the *end of execution* (no more instructions will run), from
+2. the *end of existence as a kernel-recorded identity* (PCB entry fully removed).
+
+The gap between (1) and (2) is exactly what "zombie" names.
+
+#### Formal Definitions (Exit Status, Zombie, Orphan, Reparenting)
+
+Definition (exit status): A small result code recorded by the kernel that summarizes why the process ended (normal exit code, killed by signal, etc.).
+
+Definition (zombie): A process that has finished executing but still has a kernel record retained solely so the parent can collect its exit status and accounting. A zombie is not runnable and does not hold an address space like a live process, but it occupies a slot/entry in process bookkeeping.
+
+Definition (orphan): A process whose parent has terminated before it did. Orphans still execute normally; the "orphan" property is about cleanup responsibility, not about whether the process is alive.
+
+Definition (reparenting): The kernel operation that assigns an orphaned process a new parent (often `init`/PID 1) so that there is always a live process that can eventually perform the wait/cleanup handshake.
+
+![Supplement: termination is a protocol; zombies are bookkeeping, and orphans are reparented so cleanup is guaranteed](../graphviz/chapter3_graphviz/fig_3_16_exit_zombie_reparenting.svg)
+
+#### Interpretation (Why Zombies Are Not A Bug)
+
+Zombies exist because "parent observes child outcome" is a real semantic promise. If the kernel deleted all traces immediately at `exit`, the parent would have no reliable way to learn whether the child succeeded, failed, or crashed. So the kernel keeps minimal identity + status until the parent executes `wait` (or equivalent) to acknowledge it.
+
+This is the OS version of a handshake: the child reports "I'm done" and the parent eventually acknowledges "I have received your status," after which the kernel can reclaim the final record.
+
+#### Boundary Conditions / Assumptions / Failure Modes
+
+Assumptions:
+
+- Only authorized parents (or supervisors) may collect a child's status; otherwise status becomes an information leak.
+- The kernel must prevent PID reuse from confusing observers (a late `wait` must not collect status from a different process that reused the PID).
+
+Failure modes:
+
+- If parents never `wait`, zombies accumulate and exhaust process-table resources (leak of identities/bookkeeping).
+- If the kernel deletes status too early, parents lose correctness (cannot determine child result).
+- If reparenting is absent, orphans can become uncollectable, causing leaks or broken semantics.
+
+#### Fully Worked Example: Zombie Lifecycle As A Wait-Handshaking Problem
+
+1. Child calls `exit(0)` (or crashes).
+2. Kernel marks child as terminated, reclaims most resources (address space, many kernel objects), but retains:
+   - PID and minimal process record,
+   - exit status and accounting.
+3. Child is now a zombie: not runnable, but still present as a kernel record.
+4. Parent later calls `waitpid(child_pid, &status, ...)`.
+5. Kernel copies out the exit status to the parent and then removes the final zombie record. Only now is the identity fully reclaimed.
+
+The general lesson is: zombies are a consequence of a *useful contract* (observable child outcome), and the cure is not "delete zombies" but "complete the wait handshake."
+
+#### Misconceptions
+
+Misconception 1: "A zombie is a running process consuming CPU."
+
+- A zombie is not runnable. It is a bookkeeping entry waiting for the parent’s acknowledgment.
+
+Misconception 2: "An orphan is dead."
+
+- An orphan is alive; it has simply lost its original parent. It continues executing and will still exit normally later.
+
+Misconception 3: "Reparenting is optional sugar."
+
+- Reparenting is the kernel guaranteeing that cleanup responsibility is always assigned so process-table resources do not leak permanently.
+
+#### Connection To Later Material
+
+Termination protocol details matter later for:
+
+- shells and job control (`wait` semantics, pipelines),
+- threading (what it means for one thread to exit vs the whole process to exit),
+- and security (who can observe process outcomes and when).
+
+#### Retain / Do Not Confuse
+
+Retain: termination is a protocol; zombies are a deliberate interim state for status collection; orphans are reparented to preserve cleanup.
+
+Do not confuse: "no longer executing" with "no longer represented in kernel bookkeeping."
 
 **Problem**
 

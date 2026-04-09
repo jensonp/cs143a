@@ -1,0 +1,26 @@
+digraph G {
+  graph [rankdir=TB, pad=0.25, nodesep=0.45, ranksep=0.75, splines=polyline, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75, fontname="Helvetica", fontsize=11];
+
+  start [label="thread running\n(holds invariants)", fillcolor="#BFE2F1"];
+  req [label="cancellation requested\n(by another thread)", fillcolor="#DDEAF1"];
+
+  async [label="asynchronous cancellation\n(stop immediately)", fillcolor="#F2D6D6"];
+  def [label="deferred cancellation\n(stop at cancellation points", fillcolor="#D5EDF7"];
+
+  point [label="cancellation point\n(e.g., blocking call,\nexplicit check)", fillcolor="#F7E9C5"];
+  cleanup [label="cleanup handlers run\n(release locks,\nfree resources)", fillcolor="#DDEAF1"];
+  exit [label="thread terminates\n(resources reclaimed)", fillcolor="#F5F5F5"];
+
+  start -> req;
+  req -> async;
+  req -> def;
+
+  def -> point -> cleanup -> exit;
+
+  warn [shape=note, label="Key idea:\nImmediate stop can leave\nlocks held and invariants broken.\nDeferred cancellation + cleanup\nmakes termination a protocol.", fillcolor="#FFFFFF", color="#9AA7AE", fontcolor="#233238"];
+  async -> warn [style=dotted, arrowhead=none];
+  cleanup -> warn [style=dotted, arrowhead=none];
+}
+

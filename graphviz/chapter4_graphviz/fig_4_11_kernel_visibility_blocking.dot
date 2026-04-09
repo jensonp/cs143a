@@ -1,0 +1,42 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.45, ranksep=0.8, splines=polyline, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75, fontname="Helvetica", fontsize=11];
+
+  subgraph cluster_m1 {
+    label="M:1 (user threads, one kernel thread)";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+
+    u1 [label="U1", fillcolor="#DDEAF1"];
+    u2 [label="U2", fillcolor="#DDEAF1"];
+    rt [label="user runtime scheduler", fillcolor="#D5EDF7"];
+    k1 [label="one kernel thread", fillcolor="#BFE2F1"];
+
+    u1 -> rt [label="yield/switch"];
+    u2 -> rt [label="yield/switch"];
+    rt -> k1 [label="runs on"];
+
+    blk1 [shape=note, label="blocking syscall by any Ux\nblocks the one kernel thread\n=> whole process stops", fillcolor="#FFFFFF", color="#9AA7AE", fontcolor="#233238"];
+    k1 -> blk1 [style=dotted, arrowhead=none];
+  }
+
+  subgraph cluster_11 {
+    label="1:1 (kernel threads)";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+
+    kU1 [label="kernel thread for U1", fillcolor="#BFE2F1"];
+    kU2 [label="kernel thread for U2", fillcolor="#BFE2F1"];
+    sched [label="kernel scheduler", fillcolor="#D5EDF7"];
+
+    kU1 -> sched [label="scheduled by"];
+    kU2 -> sched [label="scheduled by"];
+
+    blk2 [shape=note, label="blocking syscall blocks only\nthat kernel thread\nothers can keep running", fillcolor="#FFFFFF", color="#9AA7AE", fontcolor="#233238"];
+    kU2 -> blk2 [style=dotted, arrowhead=none];
+  }
+}
+

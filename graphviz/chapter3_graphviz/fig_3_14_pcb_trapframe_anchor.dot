@@ -1,0 +1,47 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.55, ranksep=0.9, splines=true, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75, fontname="Helvetica", fontsize=11];
+
+  subgraph cluster_cpu {
+    label="CPU (live execution)";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+    regs [label="registers\n(PC, SP, flags, GPRs)", fillcolor="#BFE2F1"];
+    mode [label="privilege mode\n(user/kernel)", fillcolor="#DDEAF1"];
+  }
+
+  subgraph cluster_kernel {
+    label="kernel memory (authoritative records)";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+
+    pcb [label="PCB / task record\nPID, state, priority,\nlinks to resources", fillcolor="#D5EDF7"];
+    kstack [label="kernel stack\n(per thread/context)", fillcolor="#DDEAF1"];
+    tf [label="trap frame\n(saved CPU snapshot)", fillcolor="#F7E9C5"];
+    mmu [label="address space root\n(page table pointer)", fillcolor="#DDEAF1"];
+    fdt [label="open file table\n(fd -> kernel objects)", fillcolor="#F5F5F5"];
+  }
+
+  subgraph cluster_user {
+    label="user memory (process address space)";
+    color="#D0D0D0";
+    style="rounded,filled";
+    fillcolor="#FFFFFF";
+    ustack [label="user stack\n(call frames)", fillcolor="#F5F5F5"];
+    heap [label="heap / data / code\n(mapped pages)", fillcolor="#F5F5F5"];
+  }
+
+  regs -> tf [label="saved on entry"];
+  tf -> regs [label="restored on return"];
+
+  pcb -> kstack [label="points to"];
+  kstack -> tf [label="contains\n(on entry path)"];
+  pcb -> mmu [label="selects"];
+  pcb -> fdt [label="references"];
+  mmu -> ustack [style=dashed, label="defines meaning of\nvirtual addresses"];
+  mmu -> heap [style=dashed];
+}
+

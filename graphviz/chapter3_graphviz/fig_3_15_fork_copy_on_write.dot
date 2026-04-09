@@ -1,0 +1,36 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.55, ranksep=0.85, splines=true, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75, fontname="Helvetica", fontsize=11];
+
+  subgraph cluster_before {
+    label="before fork";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+    p_as [label="parent address space\n(virtual pages)", fillcolor="#BFE2F1"];
+    p_phys [label="physical frames\nF1 F2 F3", fillcolor="#DDEAF1"];
+    p_as -> p_phys [label="mapped R/W"];
+  }
+
+  subgraph cluster_after {
+    label="after fork (copy-on-write)";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+
+    c_as [label="child address space\n(same virtual layout)", fillcolor="#BFE2F1"];
+    shared [label="shared physical frames\nF1 F2 F3\n(marked read-only)", fillcolor="#F7E9C5"];
+    p2_as [label="parent address space\n(same virtual layout)", fillcolor="#BFE2F1"];
+
+    p2_as -> shared [label="mapped R/O + COW"];
+    c_as -> shared [label="mapped R/O + COW"];
+
+    fault [shape=note, label="first write triggers fault:\nkernel copies the page\nso writer gets a private frame\n(semantic independence preserved)", fillcolor="#FFFFFF", color="#9AA7AE", fontcolor="#233238"];
+    shared -> fault [style=dotted, arrowhead=none];
+  }
+
+  arrow [label="fork", shape=note, fillcolor="#FFFFFF", color="#9AA7AE", fontcolor="#233238"];
+  p_as -> arrow [style=invis];
+}
+

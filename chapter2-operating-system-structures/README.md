@@ -36,6 +36,27 @@ An operating-system `service` is an OS-provided capability with defined semantic
 An `interface` is the request surface a human or program uses to ask for that service.
 The `implementation` is the enforcing machinery that validates the request and commits its effect to authoritative state.
 
+Why this section exists: Chapter 1 gave you the kernel boundary, but it did not give you a language for separating “what the OS guarantees” from “how you ask for it” and from “how it is enforced.”
+Without that separation, students end up with category errors that poison everything that follows:
+they treat `rm` as “the delete service,” treat libc as “the OS,” treat syscalls as “APIs,” and treat kernel structure as “just organization.”
+Chapter 2 exists to give you the layer model that prevents those confusions.
+
+The object being introduced is a three-layer decomposition of an OS capability:
+
+- the **service** is the *semantic contract* (what the system promises will happen, including error cases and ordering),
+- the **interface** is the *request language* (how humans/programs express intent),
+- the **implementation** is the *enforcement machinery* (where privilege, validation, and authoritative state updates live).
+
+Formal definition (service): a capability with specified semantics that is enforced by the OS and remains stable even if interfaces change.
+
+Formal definition (interface): a user-visible or programmer-visible request surface that expresses intent but is not, by itself, the authority that commits protected effects.
+
+Formal definition (implementation): the privileged code and data structures that validate requests and realize the service by updating authoritative state while preserving system invariants.
+
+Interpretation: this decomposition is what makes OS reasoning possible.
+It lets you say, precisely, “the service is file deletion; `rm` is one interface; the filesystem + permission checks + directory metadata updates are the implementation.”
+Once you can say that sentence, you can also explain why multiple interfaces can coexist without changing the OS guarantee, why the kernel boundary matters, and why kernel structure affects fault scope and performance.
+
 If you treat services, interfaces, and implementations as the same thing, Chapter 2 looks repetitive.
 If you separate them, each term names a different layer of the system: capability, request surface, and enforcing machinery.
 
@@ -63,6 +84,25 @@ It determines those outcomes because structure changes which code shares a privi
 
 A mechanism is the system-provided apparatus that makes a class of actions or state transitions possible.
 A policy is the rule that selects which allowed action the system should take in a particular situation.
+
+Why this section exists: earlier sections taught you that the kernel is the authority and that interfaces package intent.
+That still leaves a subtle but decisive design question: when the kernel has the power to do many actions, *how does it choose which one to do*?
+If you do not separate “the power to act” from “the rule for choosing,” you will later misread scheduling, paging, and I/O as if they were fixed behaviors rather than designs with tunable goals and tradeoffs.
+
+The object being introduced is a decomposition of a control decision:
+
+- the **mechanism** is the set of legal moves and the machinery to execute them correctly (data structures, state transitions, atomicity),
+- the **policy** is the selection rule over those moves (fairness vs throughput, latency vs energy, responsiveness vs batching).
+
+Formal definition (mechanism): a set of allowed state transitions plus the enforcing machinery that makes those transitions safe and repeatable.
+
+Formal definition (policy): a rule that selects which allowed transition to perform, often as a function of measured state (queue lengths, priorities, deadlines, locality).
+
+Interpretation: a mechanism answers “what can the system do?”; a policy answers “which of the allowed things should it do now?”
+The separation matters because mechanisms are hard to change safely (they touch privilege and invariants), while policies often need tuning (workload changes, hardware changes, product goals).
+
+Worked example (scheduling): the context-switch and run-queue machinery is the mechanism; “pick the highest-priority runnable thread” or “round-robin with time slices” is the policy.
+If you fuse them, you cannot change fairness without rewriting low-level switching code, and the system becomes rigid in exactly the places where evolution is most needed.
 
 If a policy is baked into the mechanism too early, the system becomes difficult to tune, port, or evolve because changing the decision requires rewriting the machinery that enforces it.
 

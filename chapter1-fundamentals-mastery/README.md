@@ -141,6 +141,75 @@ Operational definitions that stay stable across OSes:
 - `Application`: user goal software, not responsible for global control.
 - `Middleware`: shared libraries/runtimes above the kernel that standardize common capabilities.
 
+**Why This Section Exists**
+
+Chapter 1 cannot proceed with “processes,” “files,” or “scheduling” until we settle a more basic question: *where does authority live?*
+If you do not know which component is allowed to change page tables, program I/O devices, or decide who runs next, every later abstraction becomes ambiguous.
+This section exists to force a clean separation between (1) user intent and convenience logic and (2) the privileged machinery that enforces system-wide invariants even when programs are buggy or adversarial.
+
+**The Object Being Introduced (The Boundary, Not A Vocabulary Word)**
+
+The main object here is the **kernel boundary**: the line that separates code that may directly mutate protected machine state from code that may only request such mutations.
+That boundary is not “a design preference.” It is the only place where the OS can reliably enforce global rules, because it is the only place where:
+
+1. the CPU guarantees privilege (user mode cannot execute certain instructions),
+2. the OS can validate untrusted inputs before they reach authoritative state, and
+3. the OS can regain control (timer/interrupts/traps) even if a program never cooperates.
+
+Everything else in the operating system ecosystem (shells, libraries, daemons, window systems) is important, but it is important for *interface and policy packaging*, not for being the final authority.
+
+**Formal Definition**
+
+Definition (kernel boundary): A system has a kernel boundary if there exists a privileged execution mode and a controlled entry/exit mechanism such that unprivileged code cannot directly execute privileged instructions or directly mutate protected machine state, and all privileged effects must occur in privileged code after validation.
+
+**Interpretation**
+
+Read that definition operationally: “If you want to change something the system must protect (who runs, what memory is accessible, what device is programmed, which file metadata is authoritative), you must cross into kernel mode through a narrow gate, and the kernel decides whether the request is allowed and how it will be realized.”
+The boundary is therefore both a *protection boundary* and a *meaning boundary*.
+It is the point where “a number in a register” becomes “a descriptor that names a kernel object,” where “a pointer” becomes “a claim that must be checked,” and where “a user-level plan” becomes “a system-wide state transition.”
+
+**Boundary Conditions / Assumptions / Failure Modes**
+
+This story assumes hardware support for privilege and controlled entry.
+If the CPU cannot distinguish user from kernel mode, then “the OS” becomes a convention, and any program can become the OS by writing to device registers or memory mappings directly.
+If the kernel boundary exists but does not validate inputs, the boundary becomes a funnel for exploitation: untrusted pointers and sizes become a way to corrupt kernel memory or leak secrets.
+If the kernel cannot regain control (for example, no timer interrupt), a single program can monopolize execution and the OS cannot enforce fairness or responsiveness.
+
+**Fully Worked Example: Why The Shell Cannot Be “The OS”**
+
+Suppose the shell were the only “control” program and there were no privileged kernel boundary.
+A user runs a normal command and the shell launches it.
+Now that program runs and executes a tight infinite loop. What can the shell do?
+
+1. The shell is not running; it only runs when scheduled.
+2. Without a timer interrupt that forces control back to privileged code, the looping program can keep the CPU indefinitely.
+3. Even if the shell *could* run, it has no privileged instruction to stop the other program safely, and no authoritative state to enforce memory protection or device access.
+
+So the shell cannot be the OS because it lacks enforceable authority: it is a normal process competing for the same CPU and living under the same constraints as every other program.
+Only a privileged resident kernel, reached through traps/interrupts and armed with a timer, can guarantee “someone else gets to run” and “one process cannot rewrite another’s memory.”
+
+**Misconception Block: OS vs Kernel**
+
+Do not confuse “the OS experience” with “the kernel.”
+Users often say “the OS did X” when a user-space service did it (a shell, a window system, a daemon).
+That language is fine socially, but it is disastrous for reasoning.
+When reasoning, ask: did this effect require privileged state changes?
+If yes, the kernel (or some privileged component) must have been involved.
+If no, it can live entirely in user space and be replaced without changing kernel authority.
+
+**Connection To Later Material**
+
+This boundary is the spine of the entire course:
+
+- Chapter 2 will explain how interfaces (GUI/CLI/APIs) package intent but converge on the same privileged enforcement boundary.
+- Chapter 3 will rely on the boundary to define a process as a resumable execution container whose state can be saved/restored by the kernel.
+- Chapters 4 and 5 will rely on the boundary to explain why blocking, wakeups, and scheduling are kernel-mediated, and why synchronization must preserve invariants even under preemption and interrupts.
+
+**Retain / Do Not Confuse**
+
+Retain: the kernel boundary is the unique place where the system can validate and commit protected effects to authoritative state.
+Do not confuse: shells/libraries/daemons (interfaces and policy packaging) with the kernel (authority and enforcement).
+
 ![Supplement: software layers and OS boundaries](../graphviz/chapter1_graphviz/fig_s3_software_stack_boundaries.svg)
 
 **Invariants**
@@ -210,6 +279,38 @@ After boot, there are three main paths into the kernel:
 
 ![Supplement: kernel entry classification matrix](../graphviz/chapter1_graphviz/fig_s16_kernel_entry_matrix.svg)
 
+**Why This Section Exists**
+
+Once you accept that the kernel boundary is where authority lives, you immediately hit the next question: *how does control reach the kernel at the moments it must act?*
+If the kernel only ran when applications politely asked, it could not enforce fairness (runaway loops), could not respond to devices (I/O completion), and could not handle protection violations (illegal memory access).
+This section exists to make kernel entry feel like a small set of repeated control shapes rather than like a bag of unrelated terms.
+
+**The Object Being Introduced**
+
+The key object is a **kernel entry event**: a hardware-supported transition that (1) moves execution into privileged code and (2) leaves behind a resumable record of what was interrupted.
+The “resumable record” is what makes the control system stable: the kernel can intervene without destroying the interrupted computation unless it chooses to.
+
+**Formal Definitions**
+
+Definition (system call): a deliberate, synchronous request by user code that triggers a controlled transfer to privileged code through a defined ABI so the kernel can validate the request and perform a protected operation.
+
+Definition (interrupt): an asynchronous hardware event that forces control transfer to privileged code (typically to report timer expiration or device completion) regardless of what instruction stream is running.
+
+Definition (trap/exception): a synchronous event raised by the current instruction stream when an instruction cannot proceed under the current protection/translation state (e.g., invalid memory access, divide-by-zero, or a page fault).
+
+Definition (trap frame): a saved snapshot of enough CPU state (PC/flags/registers and related metadata) to resume or terminate the interrupted instruction stream correctly after privileged handling.
+
+**Interpretation**
+
+The difference between these paths is not “which buzzword you use.”
+It is *who initiated the boundary crossing and why*:
+
+- syscalls exist because user intent must be converted into privileged state change under validation,
+- interrupts exist because external reality (time and devices) must be reflected into kernel state even if user code does not cooperate,
+- traps exist because hardware must stop illegal or impossible actions and give the kernel a chance to enforce protection or to repair state (in later VM designs).
+
+All three paths share one structural invariant: the kernel must be able to return safely, and that requires saved state (a trap frame) plus disciplined handler code.
+
 Useful distinctions:
 
 - `asynchronous`: not caused by the instruction currently executing
@@ -221,6 +322,26 @@ Timers guarantee preemption.
 The kernel still must coordinate ownership of buffers, record completion, and wake any process waiting for the transfer.
 
 ![Supplement: distinct paths into kernel mode](../graphviz/chapter1_graphviz/fig_s4_kernel_entry_paths.svg)
+
+**Boundary Conditions / Assumptions / Failure Modes**
+
+All of this assumes the kernel entry path is correct and minimal:
+it must save enough state to return correctly, it must not trust user inputs, and it must not lose events.
+If interrupts can be lost without being buffered, device completions and wakeups can vanish, producing hangs that look like “mysterious randomness.”
+If traps are not distinguished from interrupts, the kernel cannot apply correct policies (a page fault is not a timer tick; a divide-by-zero is not a disk completion).
+If the syscall ABI is inconsistent, user-space wrappers and kernel handlers cannot agree on what request is being made.
+
+**Worked Example: A Page Fault As “Fault And Repair,” Not “Fault And Die”**
+
+Take a user instruction that loads from a virtual address `v`.
+If the MMU cannot translate `v` under the current mappings, it raises a page fault trap.
+At that moment, the kernel has a choice:
+
+1. If the access is illegal (violates permissions), the kernel should reject it (signal/terminate), because resuming would break protection.
+2. If the access is legal but the page is not resident (later virtual memory chapters), the kernel can *repair* the world: allocate or page-in the data, install the mapping, then return to the same instruction so it can retry and succeed.
+
+The conceptual leap is that faults are not merely error reports; they are control events that let the kernel enforce or restore invariants.
+Later, demand paging uses this mechanism to make “large memory” an illusion built from “fault, fetch, resume” cycles.
 
 #### I/O Completion: Polling vs Interrupts
 

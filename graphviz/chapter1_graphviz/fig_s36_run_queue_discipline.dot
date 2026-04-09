@@ -1,0 +1,42 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.55, ranksep=0.9, splines=true, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75, fontname="Helvetica"];
+
+  subgraph cluster_fifo {
+    label="FIFO queue discipline";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+
+    f1 [label="A", fillcolor="#DDEAF1"];
+    f2 [label="B", fillcolor="#DDEAF1"];
+    f3 [label="C", fillcolor="#DDEAF1"];
+    f4 [label="D", fillcolor="#DDEAF1"];
+
+    f1 -> f2 -> f3 -> f4 [dir=none];
+
+    fsel [shape=note, label="next = head\nfairness: arrival order\nrisk: long waits\nif jobs are long", fillcolor="#FFFFFF", color="#9AA7AE", fontcolor="#233238"];
+    f1 -> fsel [style=dotted, arrowhead=none];
+  }
+
+  subgraph cluster_prio {
+    label="priority discipline";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+
+    p_hi [label="high prio\nH1, H2", fillcolor="#BFE2F1"];
+    p_mid [label="mid prio\nM1, M2", fillcolor="#DDEAF1"];
+    p_lo [label="low prio\nL1, L2", fillcolor="#F7E9C5"];
+
+    p_hi -> p_mid -> p_lo [style=dashed, arrowhead=none];
+
+    psel [shape=note, label="next = highest nonempty\nbenefit: responsiveness\nrisk: starvation\n(if high-prio keeps arriving)", fillcolor="#FFFFFF", color="#9AA7AE", fontcolor="#233238"];
+    p_hi -> psel [style=dotted, arrowhead=none];
+  }
+
+  arrow [label="same abstract state:\n\"set of runnable threads\"\nDifferent structure =>\ndifferent behavior.", shape=note, fillcolor="#FFFFFF", color="#9AA7AE", fontcolor="#233238"];
+  f4 -> arrow [style=invis];
+}
+

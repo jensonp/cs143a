@@ -1,0 +1,52 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.4, ranksep=0.75, splines=polyline, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75, fontname="Helvetica", fontsize=11];
+
+  subgraph cluster_user {
+    label="user space (names / handles)";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+
+    app [label="program", fillcolor="#F5F5F5"];
+    fd [label="fd = 3\n(int)", fillcolor="#DDEAF1"];
+    pid [label="pid = 4217\n(int)", fillcolor="#DDEAF1"];
+    addr [label="addr = 0x7f...\n(pointer claim)", fillcolor="#DDEAF1"];
+    sock [label="sock = 9\n(int)", fillcolor="#DDEAF1"];
+
+    app -> fd;
+    app -> pid;
+    app -> addr;
+    app -> sock;
+  }
+
+  boundary [label="syscall boundary\n(ABI + trap frame)\nvalidate inputs", fillcolor="#D5EDF7"];
+
+  subgraph cluster_kernel {
+    label="kernel space (authoritative objects)";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+
+    fobj [label="open file description\n(offset, flags, inode ref)", fillcolor="#BFE2F1"];
+    pobj [label="process / task\n(PCB, credentials)", fillcolor="#BFE2F1"];
+    vma [label="VM mapping\n(VMA + page tables)", fillcolor="#BFE2F1"];
+    sobj [label="socket endpoint\n(state + buffers)", fillcolor="#BFE2F1"];
+
+    rule [shape=note, label="kernel translates handles -> objects\nand checks rights at commit point.\nHandles are names; objects are state.", fillcolor="#FFFFFF", color="#9AA7AE", fontcolor="#233238"];
+  }
+
+  fd -> boundary [label="read/write/open"];
+  pid -> boundary [label="wait/kill"];
+  addr -> boundary [label="copyin/copyout"];
+  sock -> boundary [label="send/recv/connect"];
+
+  boundary -> fobj [label="fd table lookup"];
+  boundary -> pobj [label="pid lookup"];
+  boundary -> vma [label="pointer range check"];
+  boundary -> sobj [label="socket table lookup"];
+
+  boundary -> rule [style=dotted, arrowhead=none];
+}
+

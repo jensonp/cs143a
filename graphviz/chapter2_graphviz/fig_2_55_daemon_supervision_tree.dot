@@ -1,0 +1,37 @@
+digraph G {
+  graph [rankdir=TB, pad=0.25, nodesep=0.4, ranksep=0.65, splines=polyline, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75, fontname="Helvetica", fontsize=11];
+
+  fw [label="firmware / bootloader", fillcolor="#F5F5F5"];
+  kernel [label="kernel\n(resident authority)", fillcolor="#BFE2F1"];
+  init [label="init / service manager\n(user space supervisor)", fillcolor="#D5EDF7"];
+
+  fw -> kernel [label="loads + jumps"];
+  kernel -> init [label="starts first user process"];
+
+  subgraph cluster_services {
+    label="user-space services (daemons)";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+
+    net [label="network manager\n(policy + orchestration)", fillcolor="#DDEAF1"];
+    logd [label="logging daemon\n(policy + persistence)", fillcolor="#DDEAF1"];
+    time [label="time sync\n(NTP)", fillcolor="#DDEAF1"];
+    name [label="name resolver\n(DNS cache)", fillcolor="#DDEAF1"];
+  }
+
+  init -> net;
+  init -> logd;
+  init -> time;
+  init -> name;
+
+  restart [shape=note, label="supervision policies:\n- restart on crash\n- dependency ordering\n- resource limits\n- privilege dropping", fillcolor="#FFFFFF", color="#9AA7AE", fontcolor="#233238"];
+  init -> restart [style=dotted, arrowhead=none];
+
+  edge [style=dashed, color="#9AA7AE", fontcolor="#6D7B82"];
+  net -> init [label="crash -> restart"];
+  logd -> init [label="crash -> restart"];
+}
+

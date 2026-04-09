@@ -1,0 +1,43 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.5, ranksep=0.75, splines=true, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75, fontname="Helvetica"];
+
+  subj [label="subject\n(process / thread)", fillcolor="#F5F5F5"];
+  req [label="request\n\"do action A on object O\"", fillcolor="#DDEAF1"];
+
+  subgraph cluster_kernel {
+    label="kernel (reference monitor)";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+
+    gate [label="controlled entry\n(syscall/trap)", fillcolor="#D5EDF7"];
+    id [label="identity + credentials\n(UID/GID, caps)", fillcolor="#DDEAF1"];
+    pol [label="policy lookup\n(ACLs, capabilities,\nmandatory rules)", fillcolor="#DDEAF1"];
+    med [label="complete mediation\n(check at commit point)", fillcolor="#BFE2F1"];
+  }
+
+  subgraph cluster_objs {
+    label="protected objects";
+    color="#B0C7D3";
+    style="rounded,filled";
+    fillcolor="#F3FAFD";
+    file [label="file / directory", fillcolor="#F5F5F5"];
+    mem [label="memory mapping\n(page permissions)", fillcolor="#F5F5F5"];
+    dev [label="device / driver\n(I/O control)", fillcolor="#F5F5F5"];
+  }
+
+  subj -> req;
+  req -> gate;
+  gate -> id;
+  id -> pol;
+  pol -> med;
+  med -> file [label="allow -> commit"];
+  med -> mem [label="allow -> commit"];
+  med -> dev [label="allow -> commit"];
+
+  deny [shape=note, label="deny -> controlled failure\n(error, signal)\n(invariant preserved)", fillcolor="#FFFFFF", color="#9AA7AE", fontcolor="#233238"];
+  med -> deny [style=dashed, color="#8B3A3A", fontcolor="#8B3A3A"];
+}
+

@@ -1,0 +1,49 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.45, ranksep=0.8, splines=polyline, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75, fontname="Helvetica", fontsize=11];
+
+  subgraph cluster_user {
+    label="user space (visible symptoms)";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+
+    apps [label="applications", fillcolor="#F5F5F5"];
+    daemons [label="daemons / services", fillcolor="#DDEAF1"];
+    tools [label="user tools\n(ps/top, logs,\ntracers like strace)", fillcolor="#D5EDF7"];
+  }
+
+  boundary [label="syscall boundary\n(natural seam)", fillcolor="#BFE2F1"];
+
+  subgraph cluster_kernel {
+    label="kernel space (authoritative state)";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+
+    sched [label="scheduler state\n(run queues, context switches)", fillcolor="#DDEAF1"];
+    mm [label="memory state\n(faults, mappings, caches)", fillcolor="#DDEAF1"];
+    io [label="I/O state\n(queues, interrupts, drivers)", fillcolor="#DDEAF1"];
+    sec [label="protection state\n(credentials, permissions)", fillcolor="#DDEAF1"];
+    instr [label="instrumentation\n(tracepoints, counters,\nlogs)", fillcolor="#D5EDF7"];
+  }
+
+  apps -> boundary [label="syscalls"];
+  daemons -> boundary [label="syscalls"];
+  tools -> boundary [label="observe\n(via APIs)"];
+
+  boundary -> sched;
+  boundary -> mm;
+  boundary -> io;
+  boundary -> sec;
+
+  instr -> sched [style=dashed, arrowhead=none];
+  instr -> mm [style=dashed, arrowhead=none];
+  instr -> io [style=dashed, arrowhead=none];
+  instr -> sec [style=dashed, arrowhead=none];
+
+  note [shape=note, label="Rule of thumb:\nUse tools that can see the layer\nwhere the authoritative state lives.\nSymptoms show up in user space,\nbut root causes often live in kernel\nqueues, mappings, and drivers.", fillcolor="#FFFFFF", color="#9AA7AE", fontcolor="#233238"];
+  instr -> note [style=dotted, arrowhead=none];
+}
+

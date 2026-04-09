@@ -1,0 +1,20 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.45, ranksep=0.85, splines=polyline, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75, fontname="Helvetica", fontsize=11];
+
+  fw [label="firmware\n(ROM/flash code)", fillcolor="#F5F5F5"];
+  bl [label="bootloader\n(load kernel image)", fillcolor="#DDEAF1"];
+  k [label="kernel\n(sets up MMU, drivers,\ninterrupts, scheduler)", fillcolor="#BFE2F1"];
+  init [label="init / service manager\n(first user process)", fillcolor="#D5EDF7"];
+  svc [label="services + login\n(user environment)", fillcolor="#F5F5F5"];
+
+  fw -> bl [label="first trusted code"];
+  bl -> k [label="load + jump"];
+  k -> init [label="spawn process 1"];
+  init -> svc [label="start daemons\n+ sessions"];
+
+  auth [shape=note, label="Authority handoff:\n- early stages run before the OS exists\n- kernel becomes resident authority\n- init orchestrates user-space services\nEach stage has different capabilities\nand different debugging visibility.", fillcolor="#FFFFFF", color="#9AA7AE", fontcolor="#233238"];
+  k -> auth [style=dotted, arrowhead=none];
+}
+

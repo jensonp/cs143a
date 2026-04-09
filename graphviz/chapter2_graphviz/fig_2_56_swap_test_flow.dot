@@ -1,0 +1,19 @@
+digraph G {
+  graph [rankdir=TB, pad=0.25, nodesep=0.45, ranksep=0.7, splines=polyline, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75, fontname="Helvetica", fontsize=11];
+
+  start [label="candidate design choice\n(\"rule\" or \"algorithm\")", fillcolor="#F5F5F5"];
+  q [shape=diamond, label="Can you swap the rule\nwithout changing:\n- privileged state\n- invariants\n- entry points?", fillcolor="#D5EDF7"];
+
+  pol [label="POLICY\n(tunable decision rule)\nexamples:\n- slice length\n- eviction heuristic\n- priority weights", fillcolor="#DDEAF1"];
+  mech [label="MECHANISM\n(stable primitives)\nexamples:\n- timer preemption\n- page faults + mapping\n- IPC primitive", fillcolor="#BFE2F1"];
+
+  note [shape=note, label="If swapping requires new\nprivileged state or new invariants,\nyou are expanding mechanism\n(or entangling policy with it).", fillcolor="#FFFFFF", color="#9AA7AE", fontcolor="#233238"];
+
+  start -> q;
+  q -> pol [label="yes"];
+  q -> mech [label="no"];
+  mech -> note [style=dotted, arrowhead=none];
+}
+

@@ -672,6 +672,78 @@ Responsibility for validating and updating protected state still lies in the ker
 
 ### 3.4 System-Call Categories As Control Surfaces
 
+#### Why This Section Exists
+
+Once you accept that syscalls are the controlled gates into privileged authority, a new question appears immediately:
+
+"What *kinds* of authority transfers exist, and what kernel state does each one mutate?"
+
+If you only memorize syscall names, you will not transfer knowledge across Unix variants, Windows, or teaching kernels; the names and signatures vary, but the *control surfaces* (the privileged state that must be protected and updated) are stable. This section exists to give you that stable map so you can reason about correctness, performance, and security with your eyes open:
+
+- correctness: which invariants must hold when this state changes?
+- performance: which calls can block, allocate, or trigger scheduling?
+- security: which calls are high-risk surfaces because they interpret untrusted pointers/handles?
+
+#### The Object Being Introduced (Kernel Objects And Control Surfaces)
+
+At the boundary, user-space does not manipulate "resources" directly. It manipulates **handles** (integers, pointers, descriptors) that name kernel-managed objects. The kernel then translates those handles to authoritative objects and applies the request.
+
+This is the kernel's central abstraction pattern:
+
+1. user space holds *names* (fd, pid, address, socket descriptor),
+2. the kernel holds *objects* (file descriptions, process descriptors, VMAs, socket endpoints),
+3. syscalls are state transitions on those objects under validation.
+
+![Supplement: handles are names in user space; syscalls translate them to kernel objects and then commit protected effects](../graphviz/chapter2_graphviz/fig_2_54_handle_to_kernel_object.svg)
+
+Thinking this way makes the category taxonomy natural: categories are not arbitrary; they correspond to different families of kernel objects and different invariants.
+
+#### Formal Definitions (Control Surface, Handle, Kernel Object)
+
+Definition (control surface): A class of privileged entry points that can mutate one family of authoritative kernel state. "Process control" is a control surface because it can create/terminate execution contexts and alter scheduling-visible identity; "file management" is a control surface because it mutates filesystem metadata and file offset state; and so on.
+
+Definition (handle): A user-space token (often an integer) that names a kernel object indirectly. A handle is a *capability-like reference* in the minimal sense that it lets the kernel find an object, but whether it is a true capability system depends on how unforgeable it is and what rights it carries.
+
+Definition (kernel object): A kernel-resident data structure that represents a protected resource or stateful endpoint (open file description, inode, socket, process/task, VM mapping, device instance). Kernel objects are authoritative: user space cannot directly mutate them.
+
+#### Interpretation (Why Categories Are About Invariants, Not About API Design)
+
+Two syscalls can look similar at the C API level and still belong to different control surfaces. For example, `read()` from a file and `read()` from a device both return bytes, but their invariants differ:
+
+- file reads have persistence, caching, and offset semantics,
+- device reads involve timing, interrupts, DMA, and driver-managed state.
+
+So categories are not about how "convenient" the interface is. They are about what kinds of authoritative state the kernel must protect, and what kinds of failure are possible when that state is updated incorrectly.
+
+#### Boundary Conditions / Assumptions / Failure Modes
+
+Assumptions:
+
+- A syscall can block. Any call that touches I/O, waits on a lock, or faults in memory may suspend the caller and resume it later.
+- Handles and pointers are untrusted claims. The kernel must validate both (bounds, permissions, object lifetime) before committing effects.
+
+Failure modes:
+
+- If a handle can name an object outside the caller's authority, you get privilege escalation.
+- If pointer arguments are not validated, you get memory corruption or information leaks.
+- If the kernel updates multi-step state without atomicity guarantees (or without journaling/ordering for storage), you get inconsistent system state after crashes or races.
+
+#### Fully Worked Example: "Copy A File" Touches Multiple Control Surfaces
+
+Take the simple user-visible intent: "copy `src` to `dst`."
+
+Even this "file operation" is not purely file management:
+
+1. The tool is a process that must run (process control surface created it; scheduling runs it).
+2. It resolves names to objects and opens them (file management + protection checks).
+3. It allocates buffers (virtual memory surface indirectly via `brk/mmap`, and protection via page permissions).
+4. It performs read/write loops (file management, possibly device management if `dst` is a device or a network mount).
+5. It queries metadata for timestamps and size (information maintenance).
+
+This example matters because it teaches you what to expect in later debugging:
+
+When a "file copy" is slow, the cause might be device management (slow disk), communication (network filesystem), protection (permission denials causing retries), or memory (page faults), not the string parsing of filenames.
+
 **Problem**
 
 Syscalls are the only sanctioned crossings into privileged code. These six categories are the specific “control surfaces” where untrusted intent is converted into authoritative state change. If you do not know which surface you are touching, you cannot reason about protection, performance, or failure modes.
@@ -719,6 +791,91 @@ Thinking in surfaces, not isolated calls, makes the taxonomy useful. A single us
 **A:** Execution-changing calls include process control (create/exec/exit/wait) and protection-related operations that change what execution may do. Stored-state calls include file management and information maintenance (metadata, attributes). Communication spans both: it may create durable endpoints, but it also coordinates live execution and ordering across processes.
 
 ### 3.5 System Programs And Daemons As OS-Adjacent Layers
+
+#### Why This Section Exists
+
+If you ask a user what their OS is, they will usually point to visible tools: shells, file managers, network managers, updaters, service panels, and "background services." Most of that is not the kernel. This section exists because Chapter 2 is about *structures*, and structure is largely about deciding what must remain privileged and what can live safely outside.
+
+If you do not understand what system programs and daemons are, you will make two persistent errors:
+
+- you will attribute authority to the wrong layer ("the daemon enforces security"),
+- and you will treat OS evolution as a kernel rewrite problem, when much of it is user-space policy that can be swapped.
+
+#### The Object Being Introduced (OS-Adjacent User Processes)
+
+System programs and daemons are ordinary user-space processes that exist to make the system operational and convenient. Their distinguishing feature is not privilege mode; it is role:
+
+- they run continuously or periodically,
+- they encode policy and workflows,
+- they coordinate multiple kernel services into a user-visible behavior,
+- and they can often be restarted or replaced independently.
+
+What is fixed:
+
+- The kernel remains the authority boundary for protected effects.
+- Daemons and utilities must still use syscalls; they do not bypass the kernel.
+
+What varies:
+
+- which policies and defaults are used (network selection, logging detail, update schedules),
+- which supervision strategy is used (restart on crash, dependency ordering),
+- and which parts of the OS experience are implemented as separate services vs bundled into monolithic programs.
+
+![Supplement: daemons are supervised processes (often started at boot) that can crash and restart without rebooting the kernel](../graphviz/chapter2_graphviz/fig_2_55_daemon_supervision_tree.svg)
+
+#### Formal Definitions (System Program, Daemon, Service Manager)
+
+Definition (system program): A user-space program that provides OS-adjacent functionality (utilities like `ps`, `mount`, `ip`, `ls`; compilers and linkers; backup tools; package managers). It runs without needing special kernel privilege beyond what its credentials allow.
+
+Definition (daemon): A long-running background process that provides a service (logging, networking, name resolution, print spooling, time synchronization). It is scheduled like any other process and enters the kernel only through syscalls.
+
+Definition (service manager / init): The early user-space process that starts other services, manages dependencies, and often supervises daemons (restart policies, ordering, environment). It is not the kernel, but it is structurally special because it is the root of many user-space service trees.
+
+#### Interpretation (Why "Visible" Is Not "Authoritative")
+
+Daemons often feel like authority because they are the knobs you turn. But the kernel is the authority because it is the only component that can:
+
+- create and schedule execution contexts universally,
+- enforce memory mappings and permissions,
+- mediate device access and interrupts,
+- and preserve system invariants even when user-space code is buggy.
+
+Daemons are therefore best understood as **policy engines** sitting on top of kernel mechanisms. They decide *what to ask for*, not *whether the ask is allowed* at the enforcement boundary.
+
+#### Fully Worked Example: A Logging Daemon Turns Kernel Events Into Durable Records
+
+Consider system logging.
+
+1. Many processes emit log messages (to stdout/stderr, to a logging socket, or via a logging API).
+2. The logging daemon receives messages, applies policy (filtering, formatting, rate limiting), and writes to storage.
+3. The kernel enforces the actual protected effects: socket delivery, file writes, permission checks, and durability semantics.
+4. If the daemon crashes, the kernel remains intact; the daemon can be restarted and the system continues (perhaps with degraded logging).
+
+The general lesson is structural: "OS behavior" is often implemented by a user-space daemon that composes syscalls into a workflow. The workflow can evolve quickly; the kernel mechanism stays stable.
+
+#### Misconceptions
+
+Misconception 1: "A daemon is privileged because it is a system service."
+
+- A daemon can have broad rights because it runs as a powerful user identity, but it still runs in user mode. It does not get to bypass kernel checks or directly manipulate protected memory/device state.
+
+Misconception 2: "If a daemon crashes, the system must reboot."
+
+- Kernel crashes often require reboot. Daemon crashes often do not. This difference is exactly why structure choices matter: fault containment and restartability are part of OS design.
+
+#### Connection To Later Material
+
+This section is a bridge into:
+
+- policy vs mechanism (daemons often *are* policy),
+- kernel structure (microkernel designs move more services into daemons/servers),
+- and debugging/observability (many symptoms originate in daemons, but the authoritative facts come from kernel state).
+
+#### Retain / Do Not Confuse
+
+Retain: daemons are user-space policy engines composed on top of stable kernel mechanisms.
+
+Do not confuse: service visibility (what users interact with) with authority (what enforces invariants).
 
 **Problem**
 
@@ -782,6 +939,63 @@ That distinction is also why many services can be restarted or replaced without 
 ![Mental model: utilities are visible; the kernel is authoritative enforcement](../graphviz/chapter2_graphviz/fig_2_29_visibility_vs_authority.png)
 
 ### 3.6 Policy, Mechanism, And Design Goals
+
+#### Why This Section Exists
+
+When you read OS design debates, they often sound like arguments about taste: "microkernels are cleaner," "monolithic kernels are faster," "LRU is better," "priorities are unfair." Those debates become actionable only when you can separate:
+
+- what the system *can* do at all (mechanism),
+- what the system *chooses* to do among allowed actions (policy),
+- and what outcome you are optimizing for (design goal).
+
+This section exists because the course repeatedly returns to this distinction. Without it, you will confuse "a rule I can tune" with "a boundary I must enforce," and you will misdiagnose where complexity belongs.
+
+#### The Object Being Introduced (Decision Rules Over Stable Primitives)
+
+Think of a mechanism as a set of state transitions with invariants:
+
+"the kernel can preempt, can block, can wake, can map/unmap memory, can send messages."
+
+Policy is the decision rule that chooses which transition to take:
+
+"which runnable thread next," "which page to evict," "which packet to drop."
+
+The same mechanism can serve many goals by swapping policy. That is what makes an OS adaptable across machines and workloads.
+
+![Supplement: the swap test as a reasoning tool (does changing the rule require new privileged state/invariants?)](../graphviz/chapter2_graphviz/fig_2_56_swap_test_flow.svg)
+
+#### Boundary Conditions / Assumptions / Failure Modes
+
+Assumptions:
+
+- Mechanisms must preserve invariants regardless of policy: isolation, accounting, validity of kernel objects.
+- Policies are only meaningful if their inputs reflect authoritative state (for example, actual queue lengths, measured latency, real deadlines).
+
+Failure modes:
+
+- If policy is baked into mechanism, you lock in assumptions and make retuning require privileged rewrites.
+- If mechanism is too narrow, policy cannot express what workloads need, so user-space reimplements hacks (often badly).
+- If goals are unstated, policies conflict and the system becomes inconsistent ("fast here, secure there" in mutually incompatible ways).
+
+#### Fully Worked Example: Page Replacement (Policy) Built On Fault + Mapping (Mechanism)
+
+Mechanism:
+
+- page tables define mappings,
+- a page fault traps into the kernel when a mapping is missing,
+- the kernel can allocate a frame, install a mapping, and evict a frame when memory is full.
+
+Policy:
+
+- when memory is full, which page should be evicted?
+- LRU-like, clock, working-set, or random are different rules over the same mechanism.
+
+The swap test:
+
+- If you can implement "clock" instead of "LRU" without changing what the kernel is capable of (fault, map, evict), you changed policy.
+- If you must add new privileged state or new invariants (for example, per-page reference history that the mechanism previously did not track), you may be expanding the mechanism.
+
+The lesson is transferable: whenever you see an OS "algorithm," ask which parts are the enforcement primitives and which parts are the tunable decision rule.
 
 **Problem**
 
@@ -1053,6 +1267,79 @@ Most arguments about kernel structure are arguments about how to trade those two
 ![Supplement: kernel structure choices are mostly about where code runs and how components communicate](../graphviz/chapter2_graphviz/fig_2_3_kernel_structure_comparison.svg)
 
 ### 3.8 Debugging, Observability, System Generation, And Boot
+
+#### Why This Section Exists
+
+An OS is not just a set of mechanisms; it is a running system that must be built for a particular machine, started reliably, and debugged when things go wrong. Without observability, you cannot tell whether a slowdown is CPU scheduling, memory pressure, I/O latency, or a user-space policy daemon. Without a clear boot model, "the OS" becomes a black box that either starts or does not, and you cannot reason about failure.
+
+This section exists to fill a conceptual gap that beginners often have:
+
+"If the kernel is the authority, how do we *see* what it is doing, and how does the system even reach the point where syscalls are possible?"
+
+#### The Object Being Introduced (Signals About State Across Layers)
+
+Observability is about producing signals that let you infer system state without breaking isolation:
+
+- **logs**: discrete events with context (kernel messages, daemon logs).
+- **metrics**: aggregated numeric summaries over time (CPU utilization, queue lengths, cache hit rates).
+- **traces**: structured time-ordered records of execution and events (syscall traces, scheduling traces, I/O completion traces).
+
+System generation and boot are about a different object: **how the machine reaches a stable authority boundary**:
+
+- build-time configuration selects which mechanisms exist (drivers, filesystems, scheduling options),
+- boot-time handoff loads the kernel and starts the first user-space process (init/service manager),
+- runtime supervision keeps the user-space service ecosystem alive.
+
+![Supplement: observability spans user space and kernel space; different tools see different layers, and the syscall boundary is a natural instrumentation seam](../graphviz/chapter2_graphviz/fig_2_57_observability_layers.svg)
+
+![Supplement: boot chain as authority handoffs (firmware -> bootloader -> kernel -> init -> services)](../graphviz/chapter2_graphviz/fig_2_58_boot_chain_authority.svg)
+
+#### Boundary Conditions / Assumptions / Failure Modes
+
+Assumptions:
+
+- The system can write somewhere trustworthy (console, serial, persistent storage) early enough to report boot progress.
+- Debugging interfaces do not silently widen the TCB (debug modes often trade security for visibility).
+
+Failure modes:
+
+- If you rely only on user-space tools, you may miss kernel-level stalls (deadlocks, interrupt storms).
+- If you rely only on kernel logs, you may miss policy mistakes in daemons that cause the kernel to do the "wrong thing correctly."
+- If boot fails before storage or drivers exist, the only visible output may be firmware/bootloader messages; you must know where the boundary is to know where to look.
+
+#### Fully Worked Example: Diagnosing "It Hangs On Startup"
+
+You should learn to classify a hang by *where control is stuck*:
+
+1. If nothing appears after power-on, the failure is before the kernel: firmware/bootloader stage.
+2. If kernel messages appear but no login/service environment starts, the kernel may have booted but init/services failed.
+3. If services start but a specific application hangs, the problem is likely user-space policy, permissions, or a blocked syscall.
+
+The transfer skill is to map symptoms to layer, then choose tools that see that layer (boot console, kernel logs, syscall traces, daemon logs, resource metrics).
+
+#### Misconceptions
+
+Misconception 1: "Observability is just printing logs."
+
+- Logs are one signal. Many failures require traces (ordering and timing) or metrics (slow drift and pressure) to diagnose.
+
+Misconception 2: "Boot is a single step where the OS starts."
+
+- Boot is a sequence of authority handoffs. Each stage runs with different capabilities and different visibility, which is why early failures look qualitatively different from late failures.
+
+#### Connection To Later Material
+
+This section becomes practical immediately in later chapters:
+
+- When learning scheduling, you will interpret metrics like run-queue length and context-switch rate.
+- When learning memory management, you will interpret page fault rates and cache pressure.
+- When learning synchronization, you will need traces to see ordering and contention instead of guessing.
+
+#### Retain / Do Not Confuse
+
+Retain: different tools see different layers; choose tools based on where authority and state live.
+
+Do not confuse: a user-space daemon failure (restartable) with a kernel failure (often global), and do not confuse "the system is slow" with "the system is stuck" (pressure vs deadlock).
 
 **Problem**
 

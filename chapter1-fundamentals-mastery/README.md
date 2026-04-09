@@ -1092,6 +1092,130 @@ It is to be able to say: “what event forces control to transfer, what state is
 
 ### 3.6 Protection And Security
 
+#### Why This Section Exists
+
+Up to this point, the notes have explained how the kernel *regains control* (interrupts, traps, syscalls) and how it *shares* scarce resources (processes, scheduling, caches, scaling models). That still leaves an unanswered question that every real system must settle before it can safely share anything:
+
+"How can multiple computations coexist on one machine without being able to destroy, impersonate, or silently interfere with each other?"
+
+This question is not a late add-on. It is the reason the kernel boundary exists in the first place. If untrusted code could directly program devices, rewrite page tables, or run forever, the OS could not make any system-wide promises. So protection and security are introduced here as the *invariant story* that sits underneath later material: memory isolation, file permissions, IPC, and even scheduling fairness all rely on the ability to enforce limits on what code may do.
+
+#### The Object Being Introduced (Subjects, Objects, Rights, And Protection Domains)
+
+Protection is easiest to reason about when you name the objects explicitly.
+
+The key objects are:
+
+- **subject**: the active entity making a request (usually a process or thread acting on behalf of a user).
+- **object**: the resource being accessed (a file, a page of memory, a socket endpoint, a device, a kernel object).
+- **rights**: what actions are permitted (read, write, execute, create, delete, map, signal, configure).
+- **protection domain**: the set of rights a subject currently has; changing domains is a privileged operation (for example, entering the kernel, switching user identities, or calling into a privileged service).
+
+What is fixed:
+
+- The kernel is the only place that can update authoritative access-control state and the mappings that give memory meaning.
+- Hardware provides mechanisms (privilege mode, MMU, interrupts) that make enforcement possible.
+
+What varies:
+
+- The subject identity and credentials.
+- The object being accessed and its protection metadata.
+- The policy that maps credentials to rights.
+
+The payoff is precision. Instead of saying "the OS prevents bad things," you can say:
+
+"When subject S requests action A on object O, the kernel consults authoritative policy and either commits the effect or returns a controlled failure."
+
+#### Formal Definitions (Protection, Security, Complete Mediation, Least Privilege)
+
+Definition (protection): The enforcement of access-control rules on shared resources. Protection is about *who may do what* under a defined policy and identity model, and about making the "may" and "may not" enforceable rather than advisory.
+
+Definition (security): The broader goal of keeping the system's intended guarantees intact even under adversarial behavior, including authentication (who are you), confidentiality (who can read), integrity (who can modify), availability (can the system keep serving), auditing, and recovery. Security includes protection but also includes how protection can fail under hostile conditions.
+
+Definition (complete mediation): Every access to a protected object must be checked against policy. Skipping checks "for speed" creates bypasses, and bypasses become the easiest exploitation path.
+
+Definition (least privilege): A subject should have only the rights it needs for its current task, and no more. Excess privilege turns bugs into catastrophes: if a process can write anywhere, then any memory corruption becomes a whole-system compromise.
+
+#### Interpretation (The Kernel As A Reference Monitor, Not A Helpful Library)
+
+It is natural to imagine the OS as a helpful library: "call functions and the OS does things." That picture is dangerously incomplete. Protection requires the OS to play a different role: a *reference monitor* that sits at the boundary where protected effects are committed.
+
+The crucial idea is that protection is meaningful only if:
+
+1. protected effects cannot occur without passing through the monitor, and
+2. the monitor's checks consult *authoritative state* that the untrusted subject cannot forge.
+
+That is why user-space checks (for example, "does the file look writable?") are not sufficient. A program can lie to itself; only the kernel can enforce for the system.
+
+![Supplement: reference monitor model (subject requests must be mediated at the kernel boundary before protected effects occur)](../graphviz/chapter1_graphviz/fig_s34_reference_monitor.svg)
+
+#### Boundary Conditions / Assumptions / Failure Modes
+
+Protection only works under assumptions that are easy to forget:
+
+- **privilege separation must be real**: user code must not be able to execute privileged instructions or install its own memory mappings.
+- **identity must be bound to enforcement**: the kernel must know "who is asking" and must check that identity at the moment the protected effect is committed.
+- **time must not create bypasses**: the fact that time passes between "check" and "use" can create races that defeat user-space validation.
+
+Failure modes that matter (and why they are subtle):
+
+- **confused deputy**: a privileged program performs an action on behalf of an unprivileged caller without realizing it is being tricked into using its authority incorrectly.
+- **TOCTOU (time-of-check to time-of-use)**: a check is performed on one object, but by the time the effect is committed, the object has changed (for example via a symlink swap), so the effect applies somewhere else.
+- **incomplete mediation**: a fast path skips checks, so attackers aim directly for that path.
+
+![Supplement: TOCTOU race (a safe-looking check can be invalidated before the privileged effect is committed)](../graphviz/chapter1_graphviz/fig_s35_toctou_race.svg)
+
+#### Fully Worked Example: Why "Checking Permissions In User Space" Is Not Enforcement
+
+Suppose a program wants to write to `/tmp/out.txt` and tries to be "safe" by checking permissions before opening the file.
+
+Naive user-space reasoning:
+
+1. call something like `stat("/tmp/out.txt")` to see ownership and mode bits
+2. if it looks writable, call `open("/tmp/out.txt", O_WRONLY|O_TRUNC)`
+
+What goes wrong is not theoretical. Between step (1) and step (2), an attacker can change what the pathname refers to (rename, symlink swap, mount trick). Now the `open` commits its effect on a different object than the one checked. The user-space check was not enforceable because it did not happen at the point of commitment.
+
+What the kernel must do instead is:
+
+1. treat the pathname as an untrusted claim,
+2. resolve it to an authoritative object (inode) while holding the right locks or using a design that prevents substitution,
+3. check permissions on that object, and only then
+4. commit the effect (create/truncate/open).
+
+The general lesson you must retain is:
+
+Protection is about *atomicity of meaning*: the "thing you checked" must be the "thing you used" at the moment the privileged effect happens.
+
+#### Misconceptions (Common, Costly, And Worth Killing Now)
+
+Misconception 1: "Protection is just file permissions."
+
+- File permissions are one protection mechanism, but protection is broader: memory permissions, process signaling, device access, network endpoints, and kernel object handles are all part of the same story. The shared theme is: untrusted intent must be mediated before authoritative state changes.
+
+Misconception 2: "Encryption is protection."
+
+- Encryption helps confidentiality when data is at rest or in transit, but it does not by itself define *who is allowed* to request actions on a live system. Access control and identity still matter.
+
+Misconception 3: "If a program runs as root, it is equivalent to the kernel."
+
+- Root is a user-space identity with broad rights *as defined by kernel policy*. Root is not allowed to rewrite the kernel's memory mappings arbitrarily, and root does not get to bypass the syscall boundary. The kernel remains the authority; "root" is one set of credentials the kernel interprets.
+
+#### Connection To Later Material
+
+Protection/security is the hidden substrate of later chapters:
+
+- Threads and concurrency: races are not only performance bugs; they can become security bugs when they allow invariant violations at boundaries.
+- IPC and message passing: endpoints are protected objects; identity and permission checks define who may talk to whom.
+- Virtual memory: page permissions and address-space separation are the mechanism that turns "my data" vs "your data" into enforceable reality.
+- Kernel structure: moving code out of kernel space changes the TCB size and fault scope, which is a security design choice as much as an engineering one.
+
+#### Retain / Do Not Confuse
+
+Retain: protection is enforceable access control; security is the broader adversarial problem that includes protection but also how protection can be bypassed, misused, or defeated.
+
+Do not confuse: user-space checks (advisory, bypassable) with kernel mediation (authoritative, enforced at the point of commitment).
+
 **Problem**
 
 A useful OS must share resources among mutually untrusted or simply buggy activities without surrendering control of the machine.
@@ -1158,6 +1282,127 @@ If you can explain why “enforcement must be at the authority boundary,” you 
 **A:** The syscall boundary is a trust boundary. User pointers/lengths can be malicious. Validation prevents kernel memory corruption and privilege escalation, which are security failures even if the calling app “meant well.”
 
 ### 3.7 Kernel Data Structures As Policy In Disguise
+
+#### Why This Section Exists
+
+If you read an OS book as "algorithms plus data structures," the data structures can feel like a lower-level implementation detail. In kernels, that intuition is wrong. The kernel is constantly answering system-wide questions:
+
+- Who is runnable right now?
+- Who is waiting, and on what condition?
+- Which pages are free?
+- Which file descriptors refer to which kernel objects?
+- Which interrupts are pending, and which handler should run?
+
+Those are *control questions*, and the answers are encoded in data structures. A data structure is not merely storage; it imposes an ordering, a cost model, and a contention pattern. That means the data structure partially *is* policy, because it determines what happens first, what is easy, what is expensive, and what can starve.
+
+Chapter 1 introduces this here so that later chapters do not feel like unrelated topics. Scheduling, memory allocation, page replacement, and synchronization are unified by one idea: the kernel is a control system whose state representation shapes its behavior.
+
+#### The Object Being Introduced (Representation + Invariant + Operational Consequence)
+
+The kernel usually starts with an abstract state:
+
+"There exists a set of runnable threads" or "there exists a set of free pages."
+
+To make that state operational, the kernel chooses a representation:
+
+queue, tree, hash table, bitmap, per-CPU cache, etc.
+
+The representation choice comes with:
+
+- a **representation invariant** (what must remain true for the structure to mean what it claims),
+- an **update protocol** (what operations must be atomic, which locks are needed),
+- and an **operational consequence** (latency, fairness, locality, contention).
+
+If you learn to look for those three items, kernel code becomes interpretable rather than magical.
+
+#### Formal Definitions (Representation Invariant, Queue Discipline, Contention)
+
+Definition (representation invariant): A condition on a data structure that must always hold for the structure to correctly represent the abstract state. Example: "a runnable thread is in exactly one run queue," or "a bit is 1 if and only if the resource is allocated."
+
+Definition (queue discipline): The rule by which the next element is chosen from a waiting structure (FIFO, LIFO, priority, round-robin, multi-level feedback). In kernels, the discipline often *is* scheduling policy in concrete form.
+
+Definition (contention): The performance and correctness cost that appears when multiple CPUs/threads attempt to access or update the same structure concurrently (locks, cache-line bouncing, atomic operations, queue bottlenecks).
+
+#### Interpretation (Why "Big-O" Is Not The Whole Story In Kernels)
+
+In user-space algorithms classes, you learn to ask for asymptotic complexity. Kernels care about that too, but they also care about:
+
+- worst-case latency (does any operation occasionally take 10,000 steps under load?),
+- cache locality (does each operation touch a handful of cache lines or spray across memory?),
+- and concurrency behavior (does one lock serialize all CPUs?).
+
+Two structures can have the same asymptotic complexity and behave very differently under contention. That is why the notes phrase this as "policy in disguise": the structure sets the shape of both time and fairness.
+
+![Supplement: run queue discipline becomes concrete fairness behavior (FIFO vs priority can change who waits and who starves)](../graphviz/chapter1_graphviz/fig_s36_run_queue_discipline.svg)
+
+#### Boundary Conditions / Assumptions / Failure Modes
+
+Assumptions that are often hidden:
+
+- The structure is updated concurrently (SMP), so atomicity is not optional. If updates are not properly synchronized, the kernel state becomes self-contradictory.
+- "Fast path" operations still preserve invariants. Kernels often have fast paths for common cases; the danger is skipping the invariant maintenance.
+
+Failure modes:
+
+- **double allocation**: the same resource is handed out twice (bitmap claim not atomic, free list corrupted).
+- **lost wakeup**: a waiting thread is never re-admitted because queue membership and wakeup signaling got out of sync.
+- **starvation**: a priority structure or lock discipline systematically prevents some work from ever being chosen.
+- **algorithmic complexity attack**: adversarial inputs cause a structure to degrade from expected fast behavior to worst-case slow behavior (hash collision DoS).
+
+![Supplement: hash maps are fast on average, but collision behavior can become a bottleneck or an attack surface if not controlled](../graphviz/chapter1_graphviz/fig_s37_hash_collision_pathology.svg)
+
+#### Fully Worked Example: A Run Queue Is A Policy Object, Not A Container
+
+Abstract state: "there exists a set of runnable threads."
+
+Representation option A: one global FIFO queue.
+
+- Invariant: each runnable thread appears once in the queue.
+- Update protocol: enqueue/dequeue must be atomic; otherwise two CPUs can run the same thread or lose a thread.
+- Operational consequence: fairness is strong (first-come-first-served), but scalability is weak (one global lock; all CPUs contend).
+
+Representation option B: priority queue.
+
+- Invariant: ordering reflects current priority values.
+- Update protocol: priority changes must be reflected in the structure; otherwise the structure lies about what should run next.
+- Operational consequence: urgent work runs sooner, but starvation becomes possible if low priority work is never selected.
+
+Representation option C: per-CPU run queues + load balancing.
+
+- Invariant: a runnable thread belongs to exactly one CPU queue at a time (or is in a migration state).
+- Update protocol: migrations must preserve identity and not duplicate/lose entries.
+- Operational consequence: scalability improves (less contention), but policy becomes more complex (affinity, balancing heuristics, locality).
+
+The lesson is not "FIFO vs priority." The lesson is that the data structure commits you to a *behavioral regime* under load, because it defines what is cheap, what is expensive, and how contention is resolved.
+
+#### Misconceptions
+
+Misconception 1: "Choosing a data structure is an optimization decision that can be postponed."
+
+- In kernels, the structure determines correctness properties (no duplication, no loss, no lost wakeups) and shapes policy (fairness/starvation/locality). You often cannot change it later without changing external behavior.
+
+Misconception 2: "Expected O(1) is good enough."
+
+- Expected-case performance can be unacceptable if worst-case spikes produce long tail latency, missed deadlines, or denial-of-service vulnerabilities. Kernels often need bounds or mitigation strategies, not just averages.
+
+Misconception 3: "Locks are separate from data structures."
+
+- Locks are part of the structure's meaning under concurrency: they define what updates are atomic and therefore which invariants are preserved.
+
+#### Connection To Later Material
+
+You will see this pattern repeatedly:
+
+- CPU scheduling: run queue structures encode fairness and responsiveness tradeoffs.
+- Virtual memory: page tables and reverse mappings encode what translations are possible and how expensive faults/reclaims are.
+- Filesystems: directory and inode structures encode lookup cost, locality, and crash-consistency behavior.
+- Synchronization: wait queues and lock implementations encode who wakes first and how contention behaves.
+
+#### Retain / Do Not Confuse
+
+Retain: kernel structures are representations of system-wide control state; their invariants and update protocols are correctness, not optional performance tweaks.
+
+Do not confuse: "a queue is just a list" with "the queue discipline is a policy decision about who progresses next."
 
 **Problem**
 

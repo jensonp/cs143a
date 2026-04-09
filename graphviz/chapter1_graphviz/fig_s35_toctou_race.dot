@@ -1,0 +1,37 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.55, ranksep=0.9, splines=polyline, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75, fontname="Helvetica"];
+
+  time [shape=plaintext, label="time ->"];
+
+  subgraph cluster_victim {
+    label="victim process";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+    v_check [label="check\nstat(path)\n\"looks writable\"", fillcolor="#DDEAF1"];
+    v_gap [label="gap\n(time passes)", fillcolor="#F5F5F5"];
+    v_use [label="use\nopen(path, O_TRUNC)\n(commit effect)", fillcolor="#BFE2F1"];
+  }
+
+  subgraph cluster_attacker {
+    label="attacker process";
+    color="#F0C2C2";
+    style="rounded,filled";
+    fillcolor="#FDF0F0";
+    a_wait [label="wait for check", fillcolor="#F5F5F5"];
+    a_swap [label="swap meaning\n(rename/symlink)\npath now points elsewhere", fillcolor="#F7E9C5"];
+  }
+
+  v_check -> v_gap -> v_use;
+  a_wait -> a_swap;
+
+  v_check -> a_wait [style=dashed, label="observes timing"];
+  a_swap -> v_use [style=dashed, color="#8B3A3A", fontcolor="#8B3A3A", label="use hits different object"];
+
+  note [shape=note, label="Lesson:\nchecks must be tied to the\nobject actually used at the\ncommit point (kernel-mediated).\nOtherwise \"check then use\"\ncan be invalidated by races.", fillcolor="#FFFFFF", color="#9AA7AE", fontcolor="#233238"];
+  v_use -> note [style=dotted, arrowhead=none];
+  time -> v_check [style=invis];
+}
+

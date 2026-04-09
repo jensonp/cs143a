@@ -1,0 +1,36 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.5, ranksep=0.8, splines=polyline, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75, fontname="Helvetica"];
+
+  subgraph cluster_good {
+    label="healthy hash table (keys spread)";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+
+    b0 [label="bucket 0\nK1", fillcolor="#DDEAF1"];
+    b1 [label="bucket 1\nK2", fillcolor="#DDEAF1"];
+    b2 [label="bucket 2\nK3", fillcolor="#DDEAF1"];
+    b3 [label="bucket 3\nK4", fillcolor="#DDEAF1"];
+  }
+
+  subgraph cluster_bad {
+    label="pathological collisions (many keys in one bucket)";
+    color="#F0C2C2";
+    style="rounded,filled";
+    fillcolor="#FDF0F0";
+
+    c0 [label="bucket 0\nK1 -> K2 -> K3 -> K4 -> ...", fillcolor="#F7E9C5"];
+    c1 [label="bucket 1\n(empty)", fillcolor="#F5F5F5"];
+    c2 [label="bucket 2\n(empty)", fillcolor="#F5F5F5"];
+    c3 [label="bucket 3\n(empty)", fillcolor="#F5F5F5"];
+  }
+
+  good [shape=note, label="expected: near O(1)\nlookup touches a small\nconstant amount of state", fillcolor="#FFFFFF", color="#9AA7AE", fontcolor="#233238"];
+  bad [shape=note, label="worst-case: O(n)\nlookup becomes scan\n(latency spike / DoS risk)", fillcolor="#FFFFFF", color="#9AA7AE", fontcolor="#233238"];
+
+  b0 -> good [style=dotted, arrowhead=none];
+  c0 -> bad [style=dotted, arrowhead=none];
+}
+

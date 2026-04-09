@@ -1,0 +1,46 @@
+digraph G {
+  graph [rankdir=TB, pad=0.2, bgcolor="white"];
+  node [shape=plain, fontname="Helvetica"];
+
+  flow [label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#5B6B73">
+      <TR>
+        <TD BGCOLOR="#F5F5F5"><B>Phase</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Producer</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Kernel / VM</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Consumer</B></TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Name</B></TD>
+        <TD>`shm_open(name, O_CREAT|O_RDWR)`</TD>
+        <TD>creates or opens a shared object by name</TD>
+        <TD>`shm_open(name, O_RDWR)`</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Size</B></TD>
+        <TD>`ftruncate(fd, size)`</TD>
+        <TD>sets object size (backing store / VM object)</TD>
+        <TD>observes same sized object</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Map</B></TD>
+        <TD>`mmap(..., MAP_SHARED, fd, 0)`</TD>
+        <TD>installs mappings into each process address space</TD>
+        <TD>`mmap(..., MAP_SHARED, fd, 0)`</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Communicate</B></TD>
+        <TD>stores into mapped region</TD>
+        <TD>no per-exchange syscall; coherence/VM provides visibility</TD>
+        <TD>loads from mapped region</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Synchronize</B></TD>
+        <TD>uses locks/conds/semaphores/atomics</TD>
+        <TD>kernel may help if using futex/sem, etc.</TD>
+        <TD>uses same protocol</TD>
+      </TR>
+    </TABLE>
+  >];
+}
+

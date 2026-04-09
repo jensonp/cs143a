@@ -1,0 +1,45 @@
+digraph G {
+  graph [rankdir=TB, pad=0.2, bgcolor="white"];
+  node [shape=plain, fontname="Helvetica"];
+
+  trace [label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#5B6B73">
+      <TR>
+        <TD BGCOLOR="#F5F5F5"><B>Phase</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Kernel</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>init (PID 1)</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Parent P</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Child C</B></TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Boot</B></TD>
+        <TD>starts the first user-space process</TD>
+        <TD>becomes root of process tree</TD>
+        <TD>absent</TD>
+        <TD>absent</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Normal</B></TD>
+        <TD>tracks parent/child relation</TD>
+        <TD>running; can adopt orphans</TD>
+        <TD>creates C (via fork/clone)</TD>
+        <TD>running with parent=P</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Parent exits first</B></TD>
+        <TD>records P termination; C becomes orphan</TD>
+        <TD>still alive</TD>
+        <TD>terminated (may become zombie until reaped)</TD>
+        <TD>still running but parent is gone</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Reparent</B></TD>
+        <TD>sets C.parent = init</TD>
+        <TD>now responsible for eventual wait/reap protocol</TD>
+        <TD>-</TD>
+        <TD>continues with parent=init</TD>
+      </TR>
+    </TABLE>
+  >];
+}
+

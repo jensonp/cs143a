@@ -1,0 +1,25 @@
+digraph G {
+  graph [rankdir=TB, pad=0.2, bgcolor="white"];
+  node [shape=plain, fontname="Helvetica"];
+
+  tcb [label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#5B6B73">
+      <TR>
+        <TD BGCOLOR="#F5F5F5"><B>State category</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Examples</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Why it matters</B></TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Shared (process container)</B></TD>
+        <TD>code/data/heap mappings; global variables; open files/sockets; credentials</TD>
+        <TD>threads can communicate cheaply but must synchronize shared invariants</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Private (per thread, TCB)</B></TD>
+        <TD>program counter; registers; stack; scheduling identity/metadata; TLS</TD>
+        <TD>defines “where this thread resumes” and lets the kernel/runtime schedule it</TD>
+      </TR>
+    </TABLE>
+  >];
+}
+

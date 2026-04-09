@@ -501,6 +501,10 @@ A `zombie` is a terminated process whose final status has not yet been collected
 An `orphan` is a child whose original parent has disappeared first.
 On UNIX-like systems, orphans are typically reparented so someone can still collect status later.
 
+Concretely, this “someone” is usually `init` (PID 1):
+the kernel creates `init` at boot time, and it sits at the root of the process tree.
+When a parent dies before its child, the kernel reassigns the child’s parent pointer to `init` so there is always a live process responsible for eventual status collection and cleanup protocol completion.
+
 **Invariants**
 
 - Exit status may need to outlive execution itself.
@@ -548,6 +552,8 @@ The final deletion boundary is `wait`, which turns process cleanup into an expli
 ![Supplement: exit preserves status via a zombie phase until wait authorizes final cleanup](../graphviz/chapter3_graphviz/fig_3_8_exit_wait_trace.svg)
 
 ![Supplement: process creation and termination form one lifecycle, including zombies and orphans](../graphviz/chapter3_graphviz/fig_3_5_process_lifecycle_relations.svg)
+
+![Supplement: when a parent dies, the kernel reparents the child to init (PID 1) so cleanup responsibility remains well-defined](../graphviz/chapter3_graphviz/fig_3_9_init_reparenting.svg)
 
 ### 3.9 IPC Exists Because Isolation Alone Is Not Enough
 
@@ -773,6 +779,76 @@ If you cannot point to where correlation (which reply matches which request) and
 **A:** Remote communication adds latency and partial failure, but the conceptual problems begin locally: naming, buffering, blocking, ordering, backpressure, and interpretation. If you cannot design correct local IPC, “networking” will not rescue you. RPC and sockets are IPC pushed across a larger boundary; they amplify existing coordination issues rather than replacing them with a new category of problems.
 
 ![Supplement: communication models differ mainly in where coordination and mediation live](../graphviz/chapter3_graphviz/fig_3_6_communication_models.svg)
+
+### 3.13 Concrete IPC On POSIX: Shared Memory, Pipes, Sockets
+
+This chapter optimizes for mental models, but Lecture 2 also expects you to recognize a few canonical POSIX shapes.
+Treat these as “minimal API traces” that anchor the abstractions in concrete mechanisms.
+
+#### 3.13.1 POSIX Shared Memory: `shm_open` + `ftruncate` + `mmap`
+
+Shared memory has two phases:
+
+1. kernel-mediated setup (name a segment, size it, map it)
+2. user-space loads/stores plus synchronization (Chapter 5)
+
+In POSIX-style APIs, the setup often looks like:
+
+```c
+int shm_fd = shm_open(name, O_CREAT | O_RDWR, 0666);
+ftruncate(shm_fd, 4096);
+void *addr = mmap(NULL, 4096, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
+```
+
+After `mmap`, the “send/receive” path is just memory reads/writes.
+That is why shared memory can be fast and also why it demands correct synchronization discipline.
+
+![Supplement: POSIX shared memory is setup once (open/size/map), then communicate via loads/stores plus synchronization](../graphviz/chapter3_graphviz/fig_3_10_posix_shm_flow.svg)
+
+#### 3.13.2 Pipes: Ordinary vs Named
+
+Pipes are an IPC mechanism optimized for *ordered byte-stream* communication.
+
+- `ordinary pipe` (anonymous): typically used between parent/child; unidirectional; created with `pipe()` and inherited across `fork()`
+- `named pipe` (FIFO): has a filesystem name; can be used without a parent-child relationship; often treated as bidirectional at the “who can open it” level even though each open endpoint is still read-only or write-only
+
+The ordinary-pipe control pattern is:
+
+```c
+int fd[2];
+pipe(fd);
+pid_t pid = fork();
+if (pid > 0) {           // parent: producer
+  close(fd[0]);          // close read end
+  write(fd[1], msg, len);
+  close(fd[1]);
+} else {                 // child: consumer
+  close(fd[1]);          // close write end
+  read(fd[0], buf, n);
+  close(fd[0]);
+}
+```
+
+![Supplement: ordinary pipes are typically parent-child and unidirectional; named pipes decouple processes via a filesystem name](../graphviz/chapter3_graphviz/fig_3_11_pipes_types.svg)
+
+#### 3.13.3 Sockets: Addressing As `IP:port` and Common Port Conventions
+
+A socket endpoint is commonly named as `IP:port`.
+
+- Ports below `1024` are traditionally “well-known” ports used by standard services.
+- `127.0.0.1` is the loopback address: it refers to “this same machine.”
+- The transport flavor changes semantics: TCP (connection-oriented stream) versus UDP (connectionless datagrams), plus multicast patterns.
+
+The “client shape” for a TCP socket typically looks like:
+
+```c
+int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+connect(sockfd, (struct sockaddr *)&addr, sizeof(addr));
+read(sockfd, buf, n);
+close(sockfd);
+```
+
+![Supplement: sockets are named endpoints (IP:port); loopback and well-known ports are conventions that shape real systems](../graphviz/chapter3_graphviz/fig_3_12_socket_addressing.svg)
 
 ## 4. Canonical Traces To Reproduce From Memory
 

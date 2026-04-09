@@ -1,0 +1,35 @@
+digraph G {
+  graph [rankdir=TB, pad=0.2, bgcolor="white"];
+  node [shape=plain, fontname="Helvetica"];
+
+  buf [label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#5B6B73">
+      <TR>
+        <TD BGCOLOR="#F5F5F5"><B>Representation</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Rule</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Consequence</B></TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Ring buffer</B></TD>
+        <TD>array of N slots + indices `in` and `out`</TD>
+        <TD>constant-time enqueue/dequeue, wraps around with mod</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Empty</B></TD>
+        <TD>`in == out`</TD>
+        <TD>no items available to consume</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Full (disambiguation trick)</B></TD>
+        <TD>`((in + 1) % N) == out`</TD>
+        <TD>must keep one slot unused so full != empty</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Max occupancy</B></TD>
+        <TD>`N - 1` items</TD>
+        <TD>capacity reduced to preserve an unambiguous invariant</TD>
+      </TR>
+    </TABLE>
+  >];
+}
+

@@ -1,0 +1,35 @@
+digraph G {
+  graph [rankdir=TB, pad=0.2, bgcolor="white"];
+  node [shape=plain, fontname="Helvetica"];
+
+  sock [label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#5B6B73">
+      <TR>
+        <TD BGCOLOR="#F5F5F5"><B>Concept</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Concrete handle</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Meaning</B></TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Endpoint</B></TD>
+        <TD>`IP:port` (e.g., `161.25.19.8:1625`)</TD>
+        <TD>names a service instance on a host</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Loopback</B></TD>
+        <TD>`127.0.0.1`</TD>
+        <TD>refers to the same machine; stays local</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Port convention</B></TD>
+        <TD>ports &lt; 1024</TD>
+        <TD>traditionally well-known ports for standard services</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Transport flavor</B></TD>
+        <TD>TCP vs UDP vs multicast</TD>
+        <TD>changes ordering, connection, and delivery semantics</TD>
+      </TR>
+    </TABLE>
+  >];
+}
+

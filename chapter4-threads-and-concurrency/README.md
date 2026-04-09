@@ -46,6 +46,12 @@ Parallelism: the machine *actually runs* multiple activities at the same time.
 You can have concurrency without parallelism (single core).
 You cannot have safe parallelism without correct concurrency structure (multicore).
 
+Related terms from Lecture 2 that are easy to mix up:
+
+- `multiprocessing`: the machine has multiple CPUs/cores
+- `multiprogramming`: the OS keeps multiple jobs/processes in memory so the CPU stays busy
+- `multithreading`: one process has multiple threads of execution
+
 ### 2.3 The Threading Model Is Mostly About What Blocks
 
 If the kernel schedules only *one* kernel execution entity for the whole process, then a blocking system call blocks *everyone* in the process.
@@ -123,7 +129,13 @@ That sharing is the performance advantage and the correctness hazard.
 3. **Q:** If one thread calls `close(fd)`, what must other threads assume about that file descriptor?
 **A:** They must assume it can become invalid immediately and can even be *reused* for a different file/socket shortly after. Continuing to use it without coordination can cause EBADF at best and incorrect I/O to the wrong underlying object at worst (if the number is reused). Correct designs either synchronize close/use, duplicate file descriptors for independent lifetimes, or use higher-level ownership rules to prevent “use-after-close.”
 
+In many OS texts and kernels, the per-thread kernel bookkeeping is described as a `thread control block (TCB)`:
+the record that stores each thread’s private execution context (PC/registers/stack pointer + scheduling metadata).
+The key “Lecture 2” mental split is simply: shared process container state versus private per-thread execution state.
+
 ![Supplement: threads share process resources but keep distinct execution context](../graphviz/chapter4_graphviz/fig_4_1_process_threads_container.svg)
+
+![Supplement: thread state divides into process-shared state and per-thread state (TCB)](../graphviz/chapter4_graphviz/fig_4_4_thread_shared_private_state.svg)
 
 ### 3.2 Why Threads Exist (And What They Cost)
 
@@ -253,6 +265,10 @@ the threading library creates and schedules threads in user space.
 `Kernel threads`:
 the kernel schedules threads directly; blocking, preemption, and multicore execution are handled naturally by the kernel.
 
+User-level threading libraries are often (at least conceptually) `cooperative`:
+user threads may be scheduled non-preemptively relative to each other, and a switch happens only when a thread `yield()`s or performs an operation that returns control to the runtime.
+This is the core reason M:1 can look great in microbenchmarks (fast user-space switching) and still fail badly under real blocking and multicore demands.
+
 The key distinction is what happens on a blocking system call:
 
 - if the kernel thinks there is only one execution entity, it blocks the whole process
@@ -311,6 +327,7 @@ Different systems choose different mappings between user threads and kernel thre
 - `many-to-many (M:N)`: many user threads multiplexed over a smaller or equal set of kernel threads
 
 Many-to-many often relies on kernel support to coordinate scheduling decisions between the runtime and the kernel (e.g., scheduler activations / upcalls).
+Historically, systems like Solaris 2 are often cited as a “hybrid” approach that implements both user-level and kernel-supported threads.
 
 **Invariants**
 
@@ -340,6 +357,8 @@ Many-to-many often relies on kernel support to coordinate scheduling decisions b
 **A:** It would want to know when a kernel thread blocks and when it becomes runnable again, so it can remap user threads and avoid stalling the runtime. Historically this appears as scheduler activations / upcalls or other kernel-to-runtime notifications: “this execution resource is now unavailable/available.” Without such signals, M:N becomes fragile because the runtime cannot make correct scheduling decisions under blocking.
 
 ![Supplement: threading models differ mainly in parallelism, blocking behavior, and overhead](../graphviz/chapter4_graphviz/fig_4_2_threading_models_comparison.svg)
+
+![Supplement: cooperative user-level scheduling switches at yield/boundaries; kernel threads can be preempted independently](../graphviz/chapter4_graphviz/fig_4_5_user_threads_yield.svg)
 
 ### 3.6 Thread Libraries: API vs Implementation
 
@@ -500,6 +519,20 @@ When you cover this table, the mastery check is: can you name which invariants w
 
 The distinction between “request cancel” and “terminate” is the point: safe cancellation is not immediate; it is deferred to a boundary where invariants can be restored.
 If you cannot name what cleanup must happen (release which locks, free which resources), you cannot safely use cancellation.
+
+**One Trace: UNIX signal lifecycle (baseline)**
+
+Signals are the OS-visible “something happened” notifications.
+The baseline lifecycle is: generate -> deliver to process -> handle (default or user-defined).
+Multithreading complicates only the delivery choice (which thread runs the handler), not the existence of the lifecycle itself.
+
+| Phase | OS / kernel | Process / runtime meaning |
+| --- | --- | --- |
+| generate | event occurs (fault, timer, child exit, user send) | a signal becomes pending |
+| deliver | kernel selects a target thread (subject to masks) | handler will run at a safe boundary |
+| handle | default action or user-defined handler executes | process may continue, stop, or terminate |
+
+![Supplement: signal handling is generate -> deliver -> handle (default or user-defined); multithreading mainly changes delivery choice](../graphviz/chapter4_graphviz/fig_4_6_signal_lifecycle.svg)
 
 **Code Bridge**
 

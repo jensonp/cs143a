@@ -1,0 +1,30 @@
+digraph G {
+  graph [rankdir=TB, pad=0.2, bgcolor="white"];
+  node [shape=plain, fontname="Helvetica"];
+
+  flow [label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#5B6B73">
+      <TR>
+        <TD BGCOLOR="#F5F5F5"><B>Step</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Kernel view</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Programmer view</B></TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Generate</B></TD>
+        <TD>event occurs (fault, timer, child exit, explicit send)</TD>
+        <TD>\"a signal becomes pending\"</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Deliver</B></TD>
+        <TD>selects a target thread subject to masks; arranges handler run</TD>
+        <TD>\"handler will run\" (or default action will occur)</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Handle</B></TD>
+        <TD>default action or user handler executes</TD>
+        <TD>continue / stop / terminate depending on signal + handler</TD>
+      </TR>
+    </TABLE>
+  >];
+}
+

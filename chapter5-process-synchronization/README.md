@@ -353,6 +353,21 @@ Producer:
 Consumer:
 `wait(full); wait(mutex); remove; signal(mutex); signal(empty)`
 
+**Bounded buffer nuance (ring buffer form): why you sometimes only get N-1 usable slots**
+
+Many lecture slides show a “shared-memory bounded buffer” using only two indices `in` and `out` in a circular array.
+With that representation, `in == out` is naturally used to mean “empty.”
+But then you need a different condition for “full,” and the common trick is:
+
+- empty: `in == out`
+- full: `((in + 1) % N) == out`
+
+That rule prevents ambiguity between empty and full, but it also means the maximum occupancy is `N-1` (one slot is sacrificed as a disambiguation marker).
+An alternative is to keep an explicit `count` (or separate full/empty flags), which allows all `N` slots to be used but adds additional shared state that must remain consistent.
+If you see slide code that uses `while (full) ;` or `while (empty) ;`, treat it as a correctness sketch, not as a good OS design: it is busy-waiting (spinning) and will waste CPU unless replaced with proper blocking synchronization (semaphores, condition variables, futex-style waits).
+
+![Supplement: ring buffer with only in/out pointers uses N-1 slots to keep empty and full distinguishable](../graphviz/chapter5_graphviz/fig_5_5_ring_buffer_full_empty.svg)
+
 **Code Bridge**
 
 - Semaphores are “resource counters + queue,” which is why they show up in kernels (permits, slots, credits).

@@ -1,0 +1,35 @@
+digraph G {
+  graph [rankdir=TB, pad=0.2, bgcolor="white"];
+  node [shape=plain, fontname="Helvetica"];
+
+  cmp [label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#5B6B73">
+      <TR>
+        <TD BGCOLOR="#F5F5F5"><B>Question</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Ordinary pipe (anonymous)</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Named pipe (FIFO)</B></TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>How created?</B></TD>
+        <TD>`pipe(fd)` returns two fds (read end, write end)</TD>
+        <TD>`mkfifo(path, ...)` (or shell `mkfifo`) creates a filesystem node</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>How connected?</B></TD>
+        <TD>typically inherited across `fork()`</TD>
+        <TD>any process can `open(path)` if permitted</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Direction?</B></TD>
+        <TD>unidirectional: one writes, one reads</TD>
+        <TD>can be used for two-way communication via two FIFOs or conventions</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Key constraint</B></TD>
+        <TD>usually assumes parent-child relationship and coordinated lifetime</TD>
+        <TD>decouples processes by naming a rendezvous object in the filesystem</TD>
+      </TR>
+    </TABLE>
+  >];
+}
+

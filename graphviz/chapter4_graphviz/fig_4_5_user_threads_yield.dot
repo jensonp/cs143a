@@ -1,0 +1,35 @@
+digraph G {
+  graph [rankdir=TB, pad=0.2, bgcolor="white"];
+  node [shape=plain, fontname="Helvetica"];
+
+  cmp [label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#5B6B73">
+      <TR>
+        <TD BGCOLOR="#F5F5F5"><B>Question</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>User-level threads (cooperative model)</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Kernel threads (preemptive scheduling)</B></TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Who switches threads?</B></TD>
+        <TD>runtime library in user space</TD>
+        <TD>kernel scheduler</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>When can a switch happen?</B></TD>
+        <TD>at `yield()` or at boundaries where control returns to runtime</TD>
+        <TD>at timer preemption, blocking, wakeups, or explicit yield</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Blocking syscall impact</B></TD>
+        <TD>can freeze the whole process if it blocks the only kernel-visible entity</TD>
+        <TD>blocks only the calling thread; others may run</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Why it’s tempting</B></TD>
+        <TD>fast user-space context switches</TD>
+        <TD>simple correctness under blocking and multicore</TD>
+      </TR>
+    </TABLE>
+  >];
+}
+

@@ -1,0 +1,40 @@
+digraph G {
+  graph [rankdir=TB, pad=0.2, bgcolor="white"];
+  node [shape=plain, fontname="Helvetica"];
+
+  flow [label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#5B6B73">
+      <TR>
+        <TD BGCOLOR="#F5F5F5"><B>Step</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Program (virtual)</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>MMU / hardware</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Kernel</B></TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>1) Issue address</B></TD>
+        <TD>instruction references virtual address `v`</TD>
+        <TD>receives `v` to translate</TD>
+        <TD>not executing yet</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>2) Check permission</B></TD>
+        <TD>-</TD>
+        <TD>verifies mapping exists and access is allowed</TD>
+        <TD>-</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>3a) Translate</B></TD>
+        <TD>continues normally</TD>
+        <TD>produces physical address `p` and performs memory access</TD>
+        <TD>-</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>3b) Fault</B></TD>
+        <TD>cannot complete the access</TD>
+        <TD>raises a trap/exception</TD>
+        <TD>handles violation or missing mapping (terminate, allocate, page-in, etc.)</TD>
+      </TR>
+    </TABLE>
+  >];
+}
+

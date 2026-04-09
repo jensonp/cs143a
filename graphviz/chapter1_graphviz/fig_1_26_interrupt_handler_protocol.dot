@@ -1,0 +1,46 @@
+digraph G {
+  graph [rankdir=TB, pad=0.2, bgcolor="white"];
+  node [shape=plain, fontname="Helvetica"];
+
+  trace [label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#5B6B73">
+      <TR>
+        <TD BGCOLOR="#F5F5F5"><B>Phase</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>CPU / hardware</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Kernel</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Why it exists</B></TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Interrupt arrives</B></TD>
+        <TD>forces control transfer into privileged mode</TD>
+        <TD>begins an interrupt entry path</TD>
+        <TD>kernel regains control even if the current code never yields</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Save (trap frame)</B></TD>
+        <TD>records PC/flags (and often registers) for later resumption</TD>
+        <TD>treats the interrupted context as resumable state</TD>
+        <TD>return is only correct if the old state is preserved</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Handle (ISR)</B></TD>
+        <TD>-</TD>
+        <TD>runs interrupt service routine; records completion; wakes waiters</TD>
+        <TD>turns \"device finished\" into a durable kernel state change</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Restore + return</B></TD>
+        <TD>restores saved state; executes privileged return to prior mode</TD>
+        <TD>resumes the interrupted instruction stream (or returns to kernel)</TD>
+        <TD>interrupt is a detour, not corruption</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Nested interrupts</B></TD>
+        <TD>may accept a second interrupt while handling the first</TD>
+        <TD>multiple trap frames can stack in time order</TD>
+        <TD>reduces latency but increases reentrancy complexity</TD>
+      </TR>
+    </TABLE>
+  >];
+}
+

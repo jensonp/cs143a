@@ -258,6 +258,23 @@ Systems choose among policies:
 Masking simplifies reasoning but risks lost/buffered interrupts and longer latency.
 Nesting reduces latency but increases concurrency complexity inside the kernel.
 
+#### Interrupt Handling Is A Save-Handle-Restore Protocol
+
+The phrase “an interrupt transfers control to the interrupt service routine” hides the critical invariant:
+the OS must be able to **return** to the interrupted computation as if the interrupt were a brief detour, not a corruption event.
+
+Operationally, an interrupt handler is a protocol:
+
+1. **save** enough CPU state to resume the interrupted instruction stream
+2. **handle** the device/timer event in privileged code
+3. **restore** the saved state and return to user mode (or to the kernel code that was interrupted)
+
+The saved record is often called a `trap frame`.
+If interrupts are allowed to nest, you must assume there can be multiple trap frames stacked in time order: “interrupt A interrupted user code; interrupt B interrupted interrupt A,” and so on.
+Masking is the mechanism that reduces (or eliminates) such reentrancy pressure.
+
+![Supplement: interrupt handling is save -> handle -> restore; nesting means multiple trap frames can exist](../graphviz/chapter1_graphviz/fig_1_26_interrupt_handler_protocol.svg)
+
 #### Memory Protection (Minimal Model): Base + Limit (Bounds) Registers
 
 The simplest hardware memory-protection model is:
@@ -271,6 +288,35 @@ If valid, it translates to `physical = base + virtual`; otherwise it raises a tr
 Loading base/limit must be privileged, and kernel mode must be able to access all memory; otherwise a user process could expand its accessible range and escape isolation.
 
 ![Supplement: base+limit translation enforces a per-process accessible range; invalid references trap into the kernel](../graphviz/chapter1_graphviz/fig_1_25_base_limit_protection.svg)
+
+#### Virtual vs Physical Addresses: What The CPU Is Actually Checking
+
+When we say “a process has an address space,” we are talking about **virtual addresses**: the addresses the program uses in its instructions.
+Physical memory is accessed using **physical addresses**: the locations in RAM the hardware actually reads and writes.
+
+Hardware address translation (an `MMU`) sits between those worlds.
+Base+limit is the simplest possible translator: it treats the virtual address as an offset into one contiguous physical region.
+Modern OSes use page tables (later chapters) to generalize this into many regions with per-page permissions, but the core logic is the same:
+
+- translate a virtual address to a physical address *if allowed*
+- otherwise raise a trap/exception so the kernel can handle the violation (or the missing mapping)
+
+![Supplement: MMU translation either yields a physical address or raises a fault that traps into the kernel](../graphviz/chapter1_graphviz/fig_1_27_address_translation_or_fault.svg)
+
+#### I/O Protection: Why User Code Talks To Devices Through Syscalls
+
+Devices are not “just memory.” They have side effects.
+If an unprivileged program could program a disk controller, a network card, or an interrupt controller directly, it could:
+
+- read or corrupt other processes’ data
+- bypass filesystem permissions
+- disable interrupts/timers (denial of service)
+- impersonate devices or exfiltrate data
+
+Therefore, raw device programming is privileged.
+User code performs I/O by calling syscalls; the kernel and its drivers validate permissions and translate those requests into safe device operations, then use interrupts (or polling) to learn completion.
+
+![Supplement: I/O is privileged; syscalls route requests through drivers that mediate device access and interrupts](../graphviz/chapter1_graphviz/fig_1_28_io_protection_syscall_driver.svg)
 
 **Invariants**
 

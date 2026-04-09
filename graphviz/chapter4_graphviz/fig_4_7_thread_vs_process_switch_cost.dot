@@ -1,0 +1,40 @@
+digraph G {
+  graph [rankdir=TB, pad=0.2, bgcolor="white"];
+  node [shape=plain, fontname="Helvetica"];
+
+  cmp [label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#5B6B73">
+      <TR>
+        <TD BGCOLOR="#F5F5F5"><B>Question</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Thread switch (same process)</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Process switch (different address space)</B></TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Must save/restore registers?</B></TD>
+        <TD>yes (PC/registers/SP + kernel bookkeeping)</TD>
+        <TD>yes (same requirement)</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Does the address space change?</B></TD>
+        <TD>usually no (same page-table root)</TD>
+        <TD>yes (different page-table root)</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>TLB impact</B></TD>
+        <TD>often smaller (translations remain meaningful)</TD>
+        <TD>often larger (translations invalid/need tagging)</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Cache/locality impact</B></TD>
+        <TD>working set often still related</TD>
+        <TD>working set often changes more drastically</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Why this matters</B></TD>
+        <TD>motivates threads as “cheap concurrency inside one protection container”</TD>
+        <TD>explains why “process per activity” can be expensive for tight cooperation</TD>
+      </TR>
+    </TABLE>
+  >];
+}
+

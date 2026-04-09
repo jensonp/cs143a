@@ -1,0 +1,50 @@
+digraph G {
+  graph [rankdir=TB, pad=0.2, bgcolor="white"];
+  node [shape=plain, fontname="Helvetica"];
+
+  lanes [label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#5B6B73">
+      <TR>
+        <TD BGCOLOR="#F5F5F5"><B>Lane</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>User mode</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Kernel + driver</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Device</B></TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Request</B></TD>
+        <TD>calls `read`/`write`/`open`/`ioctl`</TD>
+        <TD>validates permissions + arguments</TD>
+        <TD>-</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Program</B></TD>
+        <TD>-</TD>
+        <TD>programs controller / DMA safely</TD>
+        <TD>starts operation</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Wait</B></TD>
+        <TD>thread may block</TD>
+        <TD>records wait condition; schedules other work</TD>
+        <TD>runs asynchronously</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Complete</B></TD>
+        <TD>-</TD>
+        <TD>interrupt handler records completion; wakes waiters</TD>
+        <TD>raises interrupt (or status flag for polling)</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Return</B></TD>
+        <TD>receives result / bytes</TD>
+        <TD>copies data + returns to user mode</TD>
+        <TD>-</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Protection invariant</B></TD>
+        <TD COLSPAN="3">raw device programming and interrupt control must not be accessible to user mode; syscalls route I/O through a privileged mediation layer</TD>
+      </TR>
+    </TABLE>
+  >];
+}
+

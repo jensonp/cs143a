@@ -1,0 +1,36 @@
+digraph G {
+  graph [rankdir=TB, pad=0.2, bgcolor="white"];
+  node [shape=plain, fontname="Helvetica"];
+
+  cmp [label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#5B6B73">
+      <TR>
+        <TD BGCOLOR="#F5F5F5"><B>Problem</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>What user passes</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Kernel rule</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Mechanism</B></TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Read input</B></TD>
+        <TD>pointer + length (\"my buffer is here\")</TD>
+        <TD>do not trust user pointers as kernel addresses</TD>
+        <TD>`copyin` validates range, then copies into kernel memory</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Write output</B></TD>
+        <TD>pointer + length (\"write results here\")</TD>
+        <TD>must not write into kernel or unmapped memory</TD>
+        <TD>`copyout` validates destination, then copies out</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>What can go wrong?</B></TD>
+        <TD COLSPAN="3">invalid addresses, short buffers, unmapped pages, races (TOCTTOU), and attempts to trick the kernel into reading/writing privileged memory</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Why it matters</B></TD>
+        <TD COLSPAN="3">argument validation is correctness + security: it prevents kernel corruption, information leaks, and privilege escalation</TD>
+      </TR>
+    </TABLE>
+  >];
+}
+

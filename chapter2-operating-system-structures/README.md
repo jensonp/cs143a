@@ -267,6 +267,55 @@ Argument passing may use:
 
 ![Baby photo 2: how arguments travel from wrapper to syscall handler](../graphviz/chapter2_graphviz/fig_2_12_argument_paths.png)
 
+#### 3.3.1 What A System Call *Is* At The Machine Level (ABI + Trap Frame)
+
+So far, “system call” can still sound like a vague magic portal.
+At the machine level, it is a very specific protocol:
+
+1. **A user-space wrapper speaks the syscall ABI.**
+   It places a syscall identifier (number) and arguments in the agreed locations (typically registers; sometimes a pointer to an argument block in user memory).
+2. **A special instruction transfers control into the kernel.**
+   On x86 this is `syscall`/`sysenter` (or older `int 0x80`); other ISAs have their own privileged entry instructions.
+3. **Hardware switches privilege and records a resumable snapshot.**
+   The CPU enters kernel mode and saves enough state to resume the interrupted instruction stream safely.
+   That saved snapshot is often described as a `trap frame` (PC + flags + registers, plus any metadata the entry path records).
+4. **The kernel dispatches and runs privileged code.**
+   It uses the syscall number to select a handler, validates arguments (especially pointers), and performs the protected operation by updating authoritative state.
+5. **The kernel returns through a controlled exit instruction.**
+   It places a return value (or error) where the ABI expects, restores the saved state, and returns to user mode so the caller continues.
+
+This is why syscalls are a *mechanism* (a controlled privilege transfer with a calling convention), not merely “some function the OS provides.”
+
+![Supplement: syscall mechanics are ABI packaging + privileged entry + trap frame + kernel dispatch + controlled return](../graphviz/chapter2_graphviz/fig_2_49_syscall_mechanics_trap_frame.svg)
+
+#### 3.3.2 Why Pointer Arguments Are Dangerous (Copyin/Copyout)
+
+Many syscall arguments are pointers: “here is a buffer,” “here is a pathname,” “here is a struct.”
+But pointers in user space are not trustworthy facts; they are untrusted *claims* about where data lives.
+
+Kernel code therefore cannot safely do “normal” loads/stores through user pointers.
+Instead, kernels follow a disciplined pattern:
+
+- `copyin`: copy bytes from user memory into a kernel buffer *after validating* the user address range is mapped and accessible
+- `copyout`: copy bytes from a kernel buffer back into user memory *after validating* the destination is writable
+
+The validation is part of correctness (don’t crash/corrupt kernel memory) and part of security (don’t let an attacker trick the kernel into reading/writing privileged memory).
+
+![Supplement: user pointers must be validated; copyin/copyout are the mechanism that makes pointer arguments safe](../graphviz/chapter2_graphviz/fig_2_50_copyin_copyout_validation.svg)
+
+#### 3.3.3 A Syscall Can Block, So The Wrapper Is Not The Scheduler
+
+The wrapper is not “the thing that does the operation.”
+It only performs ABI packaging and boundary crossing.
+
+Once in the kernel, the syscall handler may:
+
+- complete immediately
+- block the calling thread (e.g., waiting for I/O, a lock, or a message)
+- trigger a context switch and return much later when the wait condition becomes true
+
+This is another reason “API != syscall” matters: the library wrapper is not allowed to assume control flow is immediate, and it cannot provide the global scheduling and wakeup semantics needed for blocking.
+
 An API and a system call are different objects.
 The API defines the programmer-facing function surface.
 The system call performs the privilege transfer that allows the kernel to validate and update protected state.

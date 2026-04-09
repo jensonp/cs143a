@@ -137,6 +137,24 @@ The key “Lecture 2” mental split is simply: shared process container state v
 
 ![Supplement: thread state divides into process-shared state and per-thread state (TCB)](../graphviz/chapter4_graphviz/fig_4_4_thread_shared_private_state.svg)
 
+### 3.1.1 Why Thread Switching Can Be Cheaper Than Process Switching
+
+Lecture 2 makes a concrete performance claim: switching between two threads in the *same* process does not require “memory-management work” in the same way a process switch does.
+Here is the first-principles reason.
+
+**Mechanism**
+
+Every context switch must save and restore a schedulable execution context (PC/registers/stack pointers).
+But a **process switch** typically also changes the *address space* (the page-table root or equivalent), which implies:
+
+- the meaning of virtual addresses changes
+- cached translations (TLB entries) may be invalidated or require tagging rules
+- caches and memory locality may suffer because the working set shifts to a different address space
+
+A **thread switch within one process** still switches registers/stack, but it usually keeps the same address space, so the expensive “change what addresses mean” work is reduced.
+
+![Supplement: thread switch vs process switch differs mainly by whether the address space/page-table root changes (TLB/cache effects)](../graphviz/chapter4_graphviz/fig_4_7_thread_vs_process_switch_cost.svg)
+
 ### 3.2 Why Threads Exist (And What They Cost)
 
 **Problem**

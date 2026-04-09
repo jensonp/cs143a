@@ -222,6 +222,56 @@ The kernel still must coordinate ownership of buffers, record completion, and wa
 
 ![Supplement: distinct paths into kernel mode](../graphviz/chapter1_graphviz/fig_s4_kernel_entry_paths.svg)
 
+#### I/O Completion: Polling vs Interrupts
+
+When the kernel (or a driver) starts I/O, it must later learn when it is done.
+Lecture 1 emphasizes two completion styles:
+
+- `polling`: the CPU repeatedly checks a device status flag in a loop
+- `interrupts`: the device raises an interrupt when the operation completes
+
+Polling is simple but wastes CPU time under latency.
+Interrupt completion preserves CPU for other runnable work, at the cost of interrupt delivery and handler overhead.
+
+![Supplement: I/O completion via polling versus interrupts](../graphviz/chapter1_graphviz/fig_1_23_io_completion_polling_vs_interrupt.svg)
+
+#### Interrupt Dispatch: Polling All Devices vs An Interrupt Vector Table
+
+After the CPU takes an interrupt, the OS must decide *which* device/event caused it.
+Two common shapes:
+
+- `interrupt-handler polling`: a generic handler runs, then checks devices to discover the cause
+- `interrupt vector table`: hardware indexes to a specific handler for a specific interrupt source
+
+The vector table is part of the trusted control plane: if a user process could rewrite it, it could redirect control to arbitrary code in privileged context.
+
+![Supplement: interrupt dispatch via a shared handler (polling) vs interrupt vector table](../graphviz/chapter1_graphviz/fig_1_24_interrupt_dispatch_vector_table.svg)
+
+#### Interrupt Concurrency: Masking vs Nested Interrupts
+
+While the kernel is handling one interrupt, a new interrupt can arrive.
+Systems choose among policies:
+
+- `masking`: temporarily disable (mask) some or all interrupts while handling one
+- `nesting`: allow higher-priority interrupts to preempt the current handler
+
+Masking simplifies reasoning but risks lost/buffered interrupts and longer latency.
+Nesting reduces latency but increases concurrency complexity inside the kernel.
+
+#### Memory Protection (Minimal Model): Base + Limit (Bounds) Registers
+
+The simplest hardware memory-protection model is:
+
+- `base register`: smallest legal physical address for the process
+- `limit/bound register`: size of the legal range
+
+On each user-mode memory reference, the CPU checks `0 <= virtual < limit`.
+If valid, it translates to `physical = base + virtual`; otherwise it raises a trap/exception.
+
+Loading base/limit must be privileged, and kernel mode must be able to access all memory; otherwise a user process could expand its accessible range and escape isolation.
+
+![Supplement: base+limit translation enforces a per-process accessible range; invalid references trap into the kernel](../graphviz/chapter1_graphviz/fig_1_25_base_limit_protection.svg)
+
 **Invariants**
 
 - Every kernel entry must preserve enough state to resume or terminate the interrupted computation correctly.

@@ -1,0 +1,29 @@
+digraph G {
+  graph [rankdir=TB, pad=0.2, bgcolor="white"];
+  node [shape=plain, fontname="Helvetica"];
+
+  cmp [label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#5B6B73">
+      <TR>
+        <TD BGCOLOR="#F5F5F5"><B>Dispatch approach</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>What happens on interrupt?</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Main tradeoff</B></TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>One handler + polling</B></TD>
+        <TD>enter a generic ISR; ISR checks devices to find the cause</TD>
+        <TD>simple but adds per-interrupt overhead</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Interrupt vector table</B></TD>
+        <TD>hardware indexes to a specific handler for the source</TD>
+        <TD>fast dispatch, but the table is security-critical state</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Protection invariant</B></TD>
+        <TD COLSPAN="2">user mode must not be able to rewrite the vector table (or it could redirect privileged control flow)</TD>
+      </TR>
+    </TABLE>
+  >];
+}
+

@@ -1,0 +1,32 @@
+digraph G {
+  graph [rankdir=TB, pad=0.2, bgcolor="white"];
+  node [shape=plain, fontname="Helvetica"];
+
+  prot [label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#5B6B73">
+      <TR>
+        <TD BGCOLOR="#F5F5F5"><B>Component</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Meaning</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Rule enforced by hardware</B></TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Base register</B></TD>
+        <TD>smallest physical address the process may access</TD>
+        <TD ROWSPAN="2">on user-mode memory reference: if `0 &lt;= v &lt; limit`, use `p = base + v`; else trap</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Limit/bound register</B></TD>
+        <TD>size of the legal address range</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Why privileged?</B></TD>
+        <TD COLSPAN="2">loading/changing base/limit must be a privileged action; otherwise a process can expand its own accessible range and break isolation</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Kernel mode</B></TD>
+        <TD COLSPAN="2">kernel must be able to access all memory to enforce policies, handle traps, and manage devices</TD>
+      </TR>
+    </TABLE>
+  >];
+}
+

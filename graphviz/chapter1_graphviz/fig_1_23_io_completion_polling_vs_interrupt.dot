@@ -1,0 +1,35 @@
+digraph G {
+  graph [rankdir=TB, pad=0.2, bgcolor="white"];
+  node [shape=plain, fontname="Helvetica"];
+
+  cmp [label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#5B6B73">
+      <TR>
+        <TD BGCOLOR="#F5F5F5"><B>Question</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Polling</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Interrupt completion</B></TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>How does the CPU learn completion?</B></TD>
+        <TD>reads a device status flag in a loop</TD>
+        <TD>device raises an interrupt when done</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>CPU cost</B></TD>
+        <TD>wastes cycles while waiting (busy-wait)</TD>
+        <TD>CPU can run other work while device is busy</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Latency</B></TD>
+        <TD>bounded by poll frequency</TD>
+        <TD>often low; delivered on completion event</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Why it exists</B></TD>
+        <TD>simple; sometimes OK for very short waits</TD>
+        <TD>enables overlap of I/O with computation (multiprogramming)</TD>
+      </TR>
+    </TABLE>
+  >];
+}
+

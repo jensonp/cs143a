@@ -531,6 +531,140 @@ If you imagine the CPU “waiting for the disk,” you will systematically misun
 
 ### 3.3 Processes, Multiprogramming, And Time Sharing
 
+#### Why This Section Exists
+
+At this point you know there is a privileged kernel boundary and that control enters the kernel through syscalls, interrupts, and faults. That is enough to explain *how* the OS regains authority, but it is not yet enough to explain *what* the OS is regulating over time. Chapter 1 cannot talk coherently about scheduling, blocking, memory protection, or I/O without a precise object that answers the question: "what is the unit of execution the OS can pause, resume, and account for?"
+
+That unit is the **process**. The process concept exists because the OS needs something that is (1) resumable after an interruption, (2) isolatable from other work, and (3) accountable (CPU time, memory, open files, credentials). Multiprogramming and time sharing are then not "features" but consequences of having many processes and a control loop that can move the CPU between them.
+
+#### The Object Being Introduced (A Process As An OS-Managed Execution Container)
+
+The key object here is not a buzzword. It is a *container of running-ness* with a stable identity in the kernel.
+
+What is fixed:
+
+- The hardware provides a CPU that executes one instruction stream at a time per core, and provides privileged entry points (timer interrupts, traps).
+- The kernel provides authoritative data structures that can store and restore a resumable execution context.
+
+What varies:
+
+- Which instruction stream is currently executing.
+- Which code and data mappings are currently installed.
+- Which kernel-managed resources (files, sockets, memory mappings) are attached to that executing work.
+
+What conclusions this object licenses:
+
+- You can explain preemption and blocking as state transitions of one kernel-recorded object, rather than as "the CPU waiting."
+- You can reason about isolation ("process A cannot read process B's memory") by pointing to concrete kernel-managed mappings and checks.
+- You can reason about accounting and fairness ("A used too much CPU") because the OS has a stable identity for "A" that persists across interruptions.
+
+![Supplement: one program can yield many process instances; a process is a live, resumable entity tracked by the kernel](../graphviz/chapter1_graphviz/fig_s29_program_vs_process_instances.svg)
+
+#### Formal Definitions (Program, Process, PCB, Context Switch)
+
+Definition (program): A program is a passive artifact: instructions and data stored in some format (typically a file) that can be loaded and executed. A program by itself does not have a current instruction pointer, does not have live registers, and is not "running" in any operational sense.
+
+Definition (process): A process is an OS-managed, resumable execution container consisting of:
+
+1. an **address space** (the virtual memory mapping that defines which addresses mean what for this execution),
+2. one or more **execution contexts** (CPU register state that makes "resume here" well-defined), and
+3. a set of **owned kernel resources** (files, sockets, credentials, timers, mappings, etc.) referenced through kernel-managed handles.
+
+Definition (process control block, PCB): A PCB is the kernel-resident record that represents a process: it stores the process identity and enough pointers/metadata to find or reconstruct the process's execution context, address-space mapping, and owned resources. The PCB is not a copy of the entire address space; it is the authoritative index into the kernel's representation of the process.
+
+Definition (context switch): A context switch is the kernel action that (1) saves the currently running execution context into kernel-managed storage, (2) selects another runnable execution context, and (3) restores that new context so the CPU begins executing a different instruction stream. On systems with virtual memory, a context switch also typically installs a different page-table root (so the active address space changes as well).
+
+#### Interpretation (What These Definitions Are Really Saying)
+
+The deepest mistake to avoid is to treat "process" as "a program in memory." That phrase hides the essence: **the kernel must be able to stop and later resume the computation without losing correctness**. Resumption requires two separate kinds of continuity:
+
+1. **Control-flow continuity**: the CPU must know *which instruction comes next* and the values of registers that the code expects to persist.
+2. **Meaning continuity**: the bytes the code reads and writes must continue to mean the same things. That is the role of the address space: it makes the same virtual address refer to the same logical object across time.
+
+The PCB exists because "running-ness" cannot be stored in user memory safely. If user code could rewrite its own saved PC/privilege state or forge kernel pointers, it could break isolation or regain privilege. So the kernel stores the authoritative bookkeeping about where and how a process may resume.
+
+![Supplement: process state is split across CPU registers, the address space mapping, and kernel bookkeeping (PCB) that makes resumption safe](../graphviz/chapter1_graphviz/fig_s31_context_switch_components.svg)
+
+#### Boundary Conditions / Assumptions / Failure Modes
+
+This conceptual package relies on several hidden assumptions:
+
+- The CPU supports a **privileged mode** and a controlled return to user mode. Otherwise, there is no trustworthy "kernel decides who runs next" moment.
+- There exists a **timer interrupt** (or equivalent preemption mechanism) that the kernel can configure and that user code cannot disable permanently. Otherwise, time sharing is not enforceable.
+- There is some **memory protection mechanism** (at minimum, a way to prevent one process from overwriting another). Otherwise, "process" is not an isolation container; it is merely a scheduling label.
+
+Common failure modes and what they mean:
+
+- No timer preemption: a single process can run forever unless it voluntarily yields, so interactive responsiveness and fairness are not kernel-enforceable properties.
+- Saving "only some registers": subtle corruption. Code may run for a while and then fail because a register that was assumed preserved was not restored.
+- Switching CPU context but not memory mapping (or vice versa): the resumed code observes a nonsensical world (it is running with a different memory meaning than it was compiled for), which is correctness failure, not just performance failure.
+
+#### Fully Worked Example: Why Multiprogramming Improves Utilization (Even On One CPU)
+
+Set up a minimal world with one CPU and two workloads.
+
+- Process A is compute-heavy: it runs 9 ms of CPU work, then occasionally performs a quick I/O.
+- Process B is I/O-heavy: it runs 1 ms of CPU work, then waits 9 ms for an I/O completion (disk/network).
+
+If the OS runs only one job at a time, the CPU must often sit idle during B's I/O wait. Multiprogramming exists to eliminate that waste without losing the ability to resume B correctly.
+
+Step by step:
+
+1. **B runs for 1 ms and issues a read.**
+   The read is a syscall: it transfers control to the kernel and asks for I/O. The kernel validates the request, programs the device (or the driver), and then B cannot make progress until completion.
+2. **The kernel blocks B and records the wait condition.**
+   This is not "B waiting in place." The kernel changes B's state to blocked and places it on a wait queue associated with the device or I/O completion event.
+3. **The CPU is now free to run A.**
+   The kernel selects A from the ready queue, performs a context switch (save B's context, restore A's), and returns to user mode. A executes while the device works in parallel.
+4. **The device completes B's I/O and interrupts the CPU.**
+   The interrupt enters the kernel asynchronously. The handler records completion, moves B from blocked to ready, and B becomes eligible to run again.
+5. **Later, the scheduler returns the CPU to B.**
+   The kernel restores B's saved context and the syscall returns to user mode with a result. From B's perspective, it called `read` and then continued; from the system perspective, many other instructions ran between those points.
+
+This example illustrates a general pattern you will reuse:
+
+- a syscall can suspend the caller,
+- the kernel represents that suspension as a data-structure fact (state + queue membership),
+- an interrupt can make suspended work runnable again,
+- and the scheduler chooses when runnable work actually runs.
+
+![Supplement: canonical process state machine with events that cause transitions](../graphviz/chapter1_graphviz/fig_s30_process_state_machine.svg)
+
+#### Misconceptions To Kill Early (Because They Create Wrong Traces Later)
+
+Misconception 1: "A process is the same thing as a program."
+
+- A program is a template (a file). A process is an instance with live state. Many processes can be instances of the same program, and a single process can execute different programs over its lifetime (for example via an `exec`-style replacement).
+
+Misconception 2: "A context switch is just saving registers."
+
+- Saving registers is necessary but not sufficient. The *meaning* of addresses matters, so the active address space (page-table root) must match the execution context. In addition, kernel bookkeeping must ensure the resumed process has the correct privilege boundaries, signal/interrupt masks, and ownership of kernel resources.
+
+Misconception 3: "Blocked means the CPU is idle."
+
+- Blocked means "not eligible for CPU selection because a wakeup condition is unsatisfied." The CPU can be busy running other runnable work during that time. Confusing blocked with idle destroys your ability to reason about utilization, throughput, and why multiprogramming exists at all.
+
+Misconception 4: "Threads make processes obsolete."
+
+- Threads change the unit of scheduling from "process" to "execution context," but the process remains the unit of protection and resource ownership in most designs. You will later need both objects: process for isolation, thread for parallelism within an isolation boundary.
+
+#### Connection To Later Material
+
+Everything that follows in the course builds on this module:
+
+- Chapter 2 will use processes as the reason system calls and kernel boundaries exist: you need a protected authority to create and manage these containers.
+- Chapter 3 will deepen process creation/termination, PCB structure, and process state transitions in real implementations.
+- Chapters 4 and 5 will explain why threads exist (multiple execution contexts per process) and how blocking/wakeup interacts with synchronization and IPC.
+- CPU scheduling (later chapters) is essentially the study of which runnable execution context should run next and why.
+
+#### Retain / Do Not Confuse
+
+Retain: a process is an OS-managed, resumable execution container whose identity persists across interrupts and syscalls.
+
+Retain: multiprogramming overlaps CPU work with I/O wait by switching among runnable work; time sharing bounds interactive response by forced preemption.
+
+Do not confuse: program (passive template) with process (live instance), and process (protection + resource container) with thread (execution context that can be multiplexed within a process).
+
 **Problem**
 
 The CPU is too valuable to sit idle while one job waits for I/O, and users do not want to wait through long uninterrupted runs of someone else's job before the machine reacts to their input.
@@ -605,6 +739,126 @@ The context save/restore is the concrete mechanism that makes “fairness” rea
 
 ### 3.4 Memory, Storage, Files, And Copies
 
+#### Why This Section Exists
+
+Processes and scheduling only explain *who* runs. To explain *what running code can see and change*, you need a story about where code and data live, how they move, and which copy the system treats as authoritative at each moment. Chapter 1 must introduce this now because later topics (virtual memory, page faults, filesystems, and crash recovery) are not independent chapters; they are refinements of a single core problem:
+
+"How can software act as if it has fast, stable storage, when the hardware actually provides a hierarchy of media with very different speed, capacity, and failure behavior?"
+
+An OS is forced to answer this problem because applications cannot safely coordinate it on their own. Once the system has multiple processes, the OS must enforce sharing and isolation for memory, and once the system has persistence, the OS must define durability and consistency rules that remain meaningful even across crashes.
+
+#### The Object Being Introduced (Hierarchy + Abstractions + Authority)
+
+There are three interacting objects here:
+
+1. **The storage hierarchy**: a physical fact. Registers and caches are fast but tiny; RAM is larger but slower; disks/SSDs are persistent but much slower; networks are slower still and fail differently.
+2. **The abstractions** we use to hide that hierarchy:
+   - **memory** as a load/store address space for running code,
+   - **files** as named, durable byte sequences (plus metadata),
+   - and later **virtual memory** as the mapping that makes "addresses" stable even as physical placement changes.
+3. **Authority rules**: the correctness contract that says which copy is current, when updates become visible to readers, and when updates become durable against power loss.
+
+When you read a paragraph about "caches" or "buffers," you should translate it into: "the system created another copy, so it must now define a rule that prevents stale copies from silently winning."
+
+#### Formal Definitions (Resident, Cache, Durability, Coherence)
+
+Definition (resident): A byte is resident in a level of the hierarchy if the hardware can access it with the operations required at that level. For CPU execution, "resident" typically means "in RAM and mapped into the current address space," because the CPU cannot execute instructions directly from disk blocks.
+
+Definition (cache): A cache is a faster storage level that holds a copy of data whose authoritative source is elsewhere. A cache only helps if the system can answer two questions correctly:
+
+1. validity: is this copy still the right one to read?
+2. propagation: if I write, when and how does the authoritative copy get updated?
+
+Definition (coherence): Coherence is the property that reads observe writes according to some well-defined rule. On CPUs, coherence is often discussed for hardware caches; in OS design, the same idea reappears for page caches, buffer caches, and distributed replicas.
+
+Definition (durability): A write is durable at the moment the system guarantees it will survive a crash or power loss. "Returned from `write()`" is not the same thing as "durable." Durability is defined by the OS and filesystem contract (and sometimes requires explicit synchronization such as `fsync`).
+
+#### Interpretation (Why OS Storage Is A Correctness Subject, Not Just An Optimization)
+
+It is tempting to treat the hierarchy as a performance footnote: "RAM is faster than disk." That framing is too weak. The hierarchy forces a correctness problem because the system must often:
+
+- keep data in RAM for speed,
+- delay writes for batching,
+- reorder writes for throughput,
+- and still provide a meaningful notion of "the current contents of the file" and "what survives a crash."
+
+Those are semantic promises. They require authority decisions ("which copy wins") and ordering decisions ("what must be written before what"). Those decisions cannot be made ad hoc by each application, because applications do not have global knowledge of all other readers/writers, and because applications cannot safely program devices directly.
+
+#### Boundary Conditions / Assumptions / Failure Modes
+
+Assumptions that matter:
+
+- The CPU executes from memory, not from disk: the OS must bring code and data into RAM (often via demand paging) before it can run.
+- Devices complete asynchronously: I/O is initiated now and finishes later, so the OS must track in-flight operations and wake blocked processes on completion.
+- Crashes happen: so the OS must define what "committed" means for storage and how metadata/data updates are ordered.
+
+Failure modes you should be able to name:
+
+- Stale-copy reads: a program reads a cached copy that is no longer valid because an update happened elsewhere and coherence rules were violated.
+- Lost writes: a program sees `write()` return success, but the system crashes before the update becomes durable, and the update disappears.
+- Metadata-data inconsistency: a directory entry points to blocks whose contents were not written (or blocks were written but metadata did not update), producing corruption after crash.
+
+![Supplement: why writes are subtle; the page cache is fast authority for reads, but durability depends on explicit commit points and ordered writeback](../graphviz/chapter1_graphviz/fig_s32_writeback_and_durability.svg)
+
+#### Fully Worked Example: Reading And Writing A File Is A Journey Through Copies
+
+Consider a process that does:
+
+1. `fd = open("notes.txt", O_RDWR)`
+2. `read(fd, buf, 4096)`
+3. modify `buf`
+4. `write(fd, buf, 4096)`
+
+We will narrate what must be true, not just what "usually happens."
+
+1. **`open` resolves a name to an authoritative object.**
+   The name "notes.txt" is not a physical location; it is a logical identifier. The filesystem must map the name to metadata (an inode or equivalent), check permissions, and return a handle (file descriptor) that the kernel can later interpret as "this open instance of this file."
+2. **`read` may be satisfied from RAM without touching the disk.**
+   If the requested bytes are already in the page cache, the kernel can copy data from cached pages to `buf` (after validating the user pointer). This is fast, but it is only correct if the cache validity rules are upheld.
+   If the bytes are not in cache, the kernel initiates disk I/O, blocks the process, and later wakes it when the data arrives; then the bytes are placed in the cache and copied to the user buffer.
+3. **Modifying `buf` does not modify the file yet.**
+   `buf` is user memory. Until the process calls `write`, the kernel has not been asked to update authoritative file state.
+4. **`write` often updates cached pages first, not the disk directly.**
+   Many systems write into the page cache (marking pages dirty) and return before the data is durable. That is not a bug; it is an intentional trade that enables batching and reordering for throughput.
+5. **Durability requires an explicit or implicit commit point.**
+   The write becomes durable only when the filesystem writes the relevant data and metadata to persistent storage according to its crash-consistency rules. Some APIs expose this explicitly (`fsync`), and some durability is implicit at file close or other barriers, depending on system and configuration.
+
+The general lesson is the pattern:
+
+- user code manipulates private copies,
+- syscalls request authoritative updates,
+- caches introduce intermediate authoritative copies for performance,
+- and the OS defines when and how authority transfers to persistent media.
+
+#### Misconceptions (The Ones That Cause False Confidence)
+
+Misconception 1: "If `write()` returns, the data is on disk."
+
+- `write()` returning usually means "the OS accepted your data into its buffering/caching machinery." It does not necessarily mean "the disk has committed it." Durability is a stronger property than acceptance.
+
+Misconception 2: "Caches are only about speed, so they cannot affect correctness."
+
+- The moment there are multiple copies, correctness is at risk. A cache is safe only if validity and propagation rules are enforced.
+
+Misconception 3: "A file is 'just bytes on disk.'"
+
+- A file is a *name plus metadata plus a mapping to storage blocks plus rules*. Those rules include who may access it, how concurrent accesses interleave, and what survives crashes.
+
+#### Connection To Later Material
+
+This module is the conceptual runway for:
+
+- Virtual memory and address translation: how the OS makes an address space stable even as physical memory is scarce.
+- Page faults and demand paging: the mechanism by which the OS brings data into RAM when a process touches it.
+- Filesystems and crash recovery: how the OS defines ordering and commit rules so a crash does not leave the filesystem meaningless.
+- Synchronization: because caches and shared structures force concurrency control to preserve invariants under parallel access.
+
+#### Retain / Do Not Confuse
+
+Retain: performance comes from copies; copies force coherence and durability rules; those rules are part of correctness.
+
+Do not confuse: "in memory / in cache" with "durable on persistent storage."
+
 **Problem**
 
 Execution requires fast, directly addressable memory, but persistence requires larger and slower storage.
@@ -672,6 +926,100 @@ Later filesystem chapters are mostly details of this same story: which write bec
 **A:** Physical block layout, free-space management, device scheduling, caching/writeback policy, and crash recovery rules (journaling/ordering). Apps operate on names/streams; the OS preserves the mapping and durability.
 
 ### 3.5 Scaling: SMP, NUMA, Clusters, Virtualization, Real-Time
+
+#### Why This Section Exists
+
+If you only ever study a single-core machine, many OS mechanisms look like "implementation details." Scaling forces you to confront what those mechanisms are really for. The moment you add more CPUs, add non-uniform memory, add a network boundary, add a hypervisor layer, or add deadlines, the system starts failing in qualitatively new ways:
+
+- concurrency failures (races, deadlocks, contention) become dominant,
+- locality and communication costs become first-order constraints,
+- and failure is no longer all-or-nothing (especially across a network).
+
+This section exists to give you the conceptual taxonomy that lets you read later chapters without confusing "more hardware" with "more of the same problem." The kernel's job changes shape as the machine organization changes, because the control problem changes shape.
+
+#### The Object Being Introduced (A Scaling Model Is A Failure Model)
+
+The object here is a **machine organization model**: a statement about what is shared and what is not.
+
+What is fixed in each model:
+
+- which memory is shared with uniform cost (SMP) or non-uniform cost (NUMA),
+- whether there is one failure domain (one box) or many (cluster),
+- whether the OS kernel is the top authority (bare metal) or a guest (virtualization),
+- whether time is only a performance metric or part of correctness (real-time).
+
+What varies:
+
+- where your data is physically located,
+- how quickly one CPU can observe another CPU's writes,
+- whether "communication" is loads/stores or explicit messages,
+- and what kinds of failures are possible (whole-machine failure vs partial failure).
+
+The payoff is predictive power: if you can name the scaling model, you can predict the dominant OS problems before you see any code.
+
+#### Formal Definitions (SMP, NUMA, Cluster, Virtualization, Real-Time)
+
+Definition (SMP): Symmetric multiprocessor. Multiple CPUs share one physical address space and run one kernel instance. Communication between CPUs is fundamentally shared-memory communication, mediated by caches and coherence.
+
+Definition (NUMA): Non-uniform memory access. The machine still has one shared address space, but the latency/bandwidth of memory access depends on where the memory is physically attached relative to the CPU. "Shared memory" exists, but it is not equally cheap everywhere.
+
+Definition (cluster): A set of separate machines connected by a network. There is no shared physical memory image, so cross-node communication is explicit. Failure is partial: one node can fail while others continue.
+
+Definition (virtualization): A system layer (hypervisor) multiplexes hardware across isolated guest OS instances. Guests run with the illusion of hardware authority, but some operations cause traps (VM exits) into the hypervisor, which is the real authority.
+
+Definition (real-time system): A system in which correctness depends on meeting deadlines (often worst-case bounds), not merely on producing the right value eventually. Schedulers and resource managers are judged by their ability to meet timing constraints under load.
+
+#### Interpretation (What Changes When You "Scale")
+
+Scaling is not only about throughput. It is about which costs and which failures dominate.
+
+- On SMP, the dominant new cost is **coordination on shared kernel state**. Locks, run queues, allocator metadata, and filesystem caches become contention points.
+- On NUMA, the dominant new cost is **remote memory access** and the performance cliffs it creates. Placement and migration decisions become part of OS correctness in the practical sense that "the system works" depends on them.
+- On clusters, the dominant new failure mode is **partial failure**. The OS and system software must define what it means for an operation to succeed when some participants can crash or become unreachable.
+- Under virtualization, the dominant new twist is **a second control boundary beneath the kernel**. The guest kernel is no longer the final authority.
+- Under real-time constraints, the dominant new requirement is **bounded latency**, not just average-case performance.
+
+![Supplement: NUMA turns "memory access" into a locality problem; the same load instruction can have very different cost depending on placement](../graphviz/chapter1_graphviz/fig_s33_numa_locality.svg)
+
+#### Fully Worked Example: Why NUMA Forces Placement Policy
+
+Suppose a server has two CPU sockets, each with its own local memory. Two threads repeatedly update a shared in-memory queue. If both threads run on CPU 0 but the queue's pages live in CPU 1's memory, then every access becomes a remote memory access. The program still computes correct values, but performance collapses because the hardware must traverse an interconnect for every load/store.
+
+Operationally, the OS has two levers:
+
+1. **place/migrate threads** so the threads run near the data, or
+2. **place/migrate pages** so the data lives near the threads.
+
+If the OS ignores locality, the system can be "correct" in the abstract sense but unusable in the engineering sense. That is why NUMA-aware scheduling and memory placement are not minor optimizations; they are part of making the machine behave like the programmer expects.
+
+#### Misconceptions
+
+Misconception 1: "A cluster is just SMP with longer wires."
+
+- In SMP/NUMA, communication is shared memory with coherence rules. In a cluster, there is no shared physical memory, so communication is explicit and failures are partial. Those differences force different algorithms and different guarantees.
+
+Misconception 2: "Virtualization is just multiprogramming."
+
+- Multiprogramming time-slices processes under one kernel. Virtualization introduces another privileged layer that can intercept and emulate privileged operations beneath a guest kernel. That changes observability, performance, and the meaning of "privileged."
+
+Misconception 3: "Real-time is about being fast."
+
+- Real-time is about being predictably on time. A system can be fast on average and still be real-time-incorrect if it occasionally misses a deadline.
+
+#### Connection To Later Material
+
+Later chapters will revisit the same mechanisms (scheduling, memory management, synchronization) in the presence of scaling constraints:
+
+- CPU scheduling becomes multi-core scheduling (load balancing, affinity, per-CPU run queues).
+- Synchronization becomes the bottleneck (lock contention, scalability, deadlocks).
+- Memory management becomes about locality and migration, not only about allocation.
+- Virtualization and containers reuse the same boundary concepts (privileged entry, authoritative state, enforced isolation) with an extra layer.
+
+#### Retain / Do Not Confuse
+
+Retain: a scaling model is a statement about what is shared and what failure/communication semantics you get "for free."
+
+Do not confuse: shared-memory coherence (SMP/NUMA) with message passing (cluster), and kernel authority (bare metal) with guest authority (virtualization).
 
 **Problem**
 

@@ -1,0 +1,29 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.55, ranksep=0.8, splines=true, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75, fontname="Helvetica"];
+
+  program [label="program file on disk\n(passive template)", fillcolor="#F5F5F5"];
+
+  subgraph cluster_instances {
+    label="multiple process instances";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+
+    p1 [label="process P1\n(live instance)", fillcolor="#BFE2F1"];
+    p2 [label="process P2\n(live instance)", fillcolor="#BFE2F1"];
+    p3 [label="process P3\n(live instance)", fillcolor="#BFE2F1"];
+
+    note [label="each process has its own:\n- CPU context\n- address space mapping\n- kernel resource table\n(while sharing the same\nprogram template)", fillcolor="#DDEAF1"];
+  }
+
+  program -> p1 [label="load/map"];
+  program -> p2 [label="load/map"];
+  program -> p3 [label="load/map"];
+
+  p1 -> note [style=dashed, arrowhead=none];
+  p2 -> note [style=dashed, arrowhead=none];
+  p3 -> note [style=dashed, arrowhead=none];
+}
+

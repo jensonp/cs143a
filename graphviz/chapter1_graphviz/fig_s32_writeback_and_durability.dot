@@ -1,0 +1,33 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.5, ranksep=0.75, splines=true, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75, fontname="Helvetica"];
+
+  app [label="user process\n(owns buf in user memory)", fillcolor="#F5F5F5"];
+  sys [label="syscall boundary\n(copyin/copyout, validate)", fillcolor="#D5EDF7"];
+
+  subgraph cluster_cache {
+    label="kernel in-memory copies";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+
+    pcache [label="page cache\n(dirty/clean pages)", fillcolor="#BFE2F1"];
+    jnl [label="journal / log (optional)\n(ordering + crash rules)", fillcolor="#DDEAF1"];
+  }
+
+  disk [label="persistent storage\n(SSD/HDD)\n(authoritative after commit)", fillcolor="#F2D6D6"];
+
+  app -> sys [label="write(fd, buf, n)"];
+  sys -> pcache [label="copy bytes\nmark dirty"];
+  pcache -> jnl [label="record intent / metadata\n(if journaling)"];
+  jnl -> disk [label="commit barrier\n(ordered writeback)"];
+  pcache -> disk [label="data writeback\n(eventual)", style=dashed];
+
+  note1 [label="acceptance point:\nwrite() returns when data is\naccepted into kernel buffering", fillcolor="#FFFFFF", shape=note, color="#9AA7AE", fontcolor="#233238"];
+  note2 [label="durability point:\ncommit after ordered writeback\n(fs rules, fsync barrier)", fillcolor="#FFFFFF", shape=note, color="#9AA7AE", fontcolor="#233238"];
+
+  sys -> note1 [style=dotted, arrowhead=none];
+  disk -> note2 [style=dotted, arrowhead=none];
+}
+

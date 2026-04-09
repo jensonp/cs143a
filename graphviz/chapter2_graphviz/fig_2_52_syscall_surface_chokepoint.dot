@@ -1,0 +1,65 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.4, ranksep=0.65, splines=polyline, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75, fontname="Helvetica", fontsize=11];
+
+  subgraph cluster_if {
+    label="interfaces (express intent)";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+
+    gui [label="GUI", fillcolor="#F5F5F5"];
+    cli [label="CLI / shell", fillcolor="#F5F5F5"];
+    api [label="library API", fillcolor="#F5F5F5"];
+  }
+
+  subgraph cluster_pkg {
+    label="user-space packaging";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+
+    shell [label="shell / utility", fillcolor="#D5EDF7"];
+    wrap [label="wrapper\n(ABI marshalling)", fillcolor="#D5EDF7"];
+  }
+
+  subgraph cluster_boundary {
+    label="kernel boundary (authority transfer)";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+
+    sys [label="syscall surface\n(chokepoint)", fillcolor="#BFE2F1"];
+  }
+
+  subgraph cluster_impl {
+    label="privileged implementation (enforces invariants)";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+
+    proc [label="process mgmt", fillcolor="#DDEAF1"];
+    vfs [label="filesystem / VFS", fillcolor="#DDEAF1"];
+    mm [label="virtual memory", fillcolor="#DDEAF1"];
+    net [label="networking", fillcolor="#DDEAF1"];
+    drv [label="drivers", fillcolor="#DDEAF1"];
+  }
+
+  gui -> shell [label="requests"];
+  cli -> shell [label="requests"];
+  api -> wrap [label="calls"];
+
+  shell -> sys [label="invokes"];
+  wrap -> sys [label="invokes"];
+
+  sys -> proc [label="dispatch"];
+  sys -> vfs [label="dispatch"];
+  sys -> mm [label="dispatch"];
+  sys -> net [label="dispatch"];
+  sys -> drv [label="dispatch"];
+
+  note [shape=note, label="Key idea:\ninterfaces vary freely,\nservice semantics stay stable,\nprotected effects must pass\nthrough a small syscall surface\nso the kernel can validate and\ncommit updates to authoritative state.", fillcolor="#FFFFFF", color="#9AA7AE", fontcolor="#233238"];
+  sys -> note [style=dotted, arrowhead=none];
+}
+

@@ -125,6 +125,103 @@ The later chapters use these words with specific meanings. If a sentence feels s
 
 ### 3.1 Services, Interfaces, And Implementations
 
+#### Why This Section Exists
+
+Operating systems are often taught as lists: "the OS provides X, Y, Z." That style makes it impossible to reason about real systems, because it collapses three different questions into one sentence:
+
+1. What capability exists? (service)
+2. How does a human or program request it? (interface)
+3. What privileged machinery actually enforces it? (implementation)
+
+Chapter 2 exists because Chapter 1's boundary story is only useful if you can locate where that boundary appears in an end-to-end system. If you cannot separate services, interfaces, and implementations, you will misattribute authority to the wrong layer (for example, thinking that `rm` "is the delete service" or that a GUI "enforces security"). The chapter cannot proceed to kernel structures (monolithic vs microkernel) until you can state what is being structured: the implementation of privileged mechanisms behind stable service semantics.
+
+#### The Object Being Introduced (A Three-Layer Mental Model)
+
+The object here is a three-layer model that you should treat as a reasoning tool:
+
+- **Service**: the abstract capability and its semantics (what the OS promises will happen).
+- **Interface**: the request surface that expresses intent (how you ask).
+- **Implementation**: the code paths and data structures that validate intent and commit effects to authoritative state (how it is enforced).
+
+What is fixed:
+
+- The service semantics are defined by the OS contract (and should remain stable enough that programs can depend on them).
+- The kernel boundary is where protected effects must be committed.
+
+What varies:
+
+- Which interface is used (GUI, CLI, API).
+- Which user-space packaging code runs (shell, utility, library wrapper).
+- Which internal implementation structure the kernel uses (monolithic, layered, microkernel, modules).
+
+The model lets you answer the most important question in OS structure:
+
+"If I replace this layer, what changes: the service semantics, the interface convenience, or only the internal organization?"
+
+#### Formal Definitions (Service, Interface, Implementation)
+
+Definition (service): A service is an OS-provided capability defined by semantics, not by a particular command or UI. Examples: "create a new process," "read bytes from a file," "send data on a socket," "map memory."
+
+Definition (interface): An interface is a way to express and package a request for a service. Interfaces can be human-facing (GUI, CLI) or program-facing (API).
+
+Definition (implementation): The implementation is the enforcing machinery: the privileged code and protected data structures that validate the request and update authoritative system state to realize the service semantics.
+
+#### Interpretation (Where Authority Actually Lives)
+
+Interfaces can be bypassed. A GUI can be replaced, a shell can be swapped, and a utility can be rewritten. If "security" or "correctness" depended on those layers, any program could bypass them by issuing syscalls directly. That is why the implementation layer, reached through controlled kernel entry, is where the system must enforce universal rules.
+
+This also clarifies why OS structure matters: the structure is about organizing the privileged implementation so bugs are contained, performance is acceptable, and evolution is possible, while keeping service semantics stable and interfaces flexible.
+
+![Supplement: many interfaces converge on a small syscall surface (a chokepoint) where privileged state changes are validated and committed](../graphviz/chapter2_graphviz/fig_2_52_syscall_surface_chokepoint.svg)
+
+#### Boundary Conditions / Assumptions / Failure Modes
+
+Assumptions:
+
+- There exists a privileged enforcement boundary (syscalls, traps) that cannot be bypassed for protected operations.
+- The kernel maintains authoritative state (file descriptors, page tables, credentials).
+
+Failure modes:
+
+- If you confuse interface with service, you will learn "commands" instead of learning "capabilities," and you will not transfer knowledge across systems.
+- If you confuse interface with implementation, you will think user-space code can enforce universal protection (it cannot).
+- If you confuse service with implementation, you will treat internal kernel reorganization as a user-visible semantic change (it often is not).
+
+#### Fully Worked Example: "Delete A File" Is One Service With Many Interfaces
+
+Take the user intent: "remove the name `report.txt` so future opens fail."
+
+1. A GUI expresses the intent via a click; a CLI expresses it as `rm report.txt`; a program expresses it by calling `unlink("report.txt")`.
+2. Those front ends do packaging: parsing text, resolving relative paths, rendering confirmation prompts, etc.
+3. Eventually they all must request the privileged action through a syscall surface, because removing a directory entry is an update to authoritative filesystem metadata.
+4. The kernel validates permissions, updates metadata, and returns a status code that the interface can render to the user.
+
+The important transfer lesson is: you can change the interface (new shell, new file manager) without changing what "delete" *means*, as long as the kernel's service semantics remain stable.
+
+#### Misconceptions
+
+Misconception 1: "`rm` is the delete service."
+
+- `rm` is an interface utility. The delete service is the kernel-enforced capability to update filesystem metadata under permission checks and integrity invariants.
+
+Misconception 2: "A GUI is safer because it can prevent bad actions."
+
+- A GUI can prevent *accidental* actions, but it cannot enforce security. Any program can bypass the GUI and invoke syscalls directly. Enforcement must live at the privileged boundary.
+
+#### Connection To Later Material
+
+This three-layer model will be reused immediately:
+
+- In system call sections, you will separate API convenience wrappers from the syscall mechanism and from the kernel subsystem that implements the service.
+- In kernel structure sections, you will evaluate designs by asking: what changes in implementation organization, and what stays stable in service semantics?
+- In debugging and observability sections, you will place tools at the correct layer (user-space tracing vs kernel logging vs hypervisor introspection).
+
+#### Retain / Do Not Confuse
+
+Retain: services are capabilities with semantics; interfaces are request surfaces; implementations are enforcing machinery.
+
+Do not confuse: a user-space command or GUI with the privileged authority that must validate and commit protected effects.
+
 **Problem**
 
 The operating system must provide services such as running code, reading files, communicating, and controlling devices.
@@ -205,6 +302,111 @@ At that row and below it, the system can enforce permissions and modify authorit
 ![Supplement: service, interface, and implementation are distinct layers that converge on a common privileged enforcement boundary](../graphviz/chapter2_graphviz/fig_2_1_service_interface_implementation.svg)
 
 ### 3.2 Human Interfaces And Why Shells Stay Out Of The Kernel
+
+#### Why This Section Exists
+
+Students often learn "the OS runs programs" and then see a shell launching programs and conclude that the shell must be part of the kernel. That confusion is not cosmetic; it breaks your ability to reason about privilege, security, and evolution. Chapter 2 must address it early because later sections discuss system calls, kernel structures, and system programs. If you cannot locate the shell correctly, you will misplace the kernel boundary and misunderstand why system calls exist at all.
+
+This section exists to answer a precise question:
+
+"Why does the OS keep most human-facing interface complexity unprivileged, and what is the exact moment where user intent becomes an authoritative system state change?"
+
+#### The Object Being Introduced (Interface Logic vs Authority Transfer)
+
+The object here is the **request path** from human intent to privileged effect.
+
+What is fixed:
+
+- Human intent must eventually be turned into operations on authoritative kernel objects (processes, files, sockets).
+- Protected effects require privileged code (kernel mode), because unprivileged code cannot safely update page tables, schedule globally, or program devices.
+
+What varies:
+
+- How intent is expressed (text command, script, GUI action).
+- How much packaging happens in user space before the kernel is asked to do anything.
+
+The crucial conclusion this object licenses is boundary placement:
+
+The shell can be replaced, extended, or even broken without changing the kernel's authority, as long as the kernel provides stable process and file services.
+
+#### Formal Definitions (Shell, CLI, Batch, GUI)
+
+Definition (shell): A shell is a user-space command interpreter that reads commands, parses them, performs expansion and control flow (variables, loops, pipes, redirection), and launches programs by invoking process-management syscalls.
+
+Definition (CLI): A command-line interface is an interaction mode in which the user expresses requests as text commands.
+
+Definition (batch interface): A non-interactive command stream (script or job file) that the system executes without the user present.
+
+Definition (GUI): A graphical interface that packages requests through widgets and events, usually by calling into user-space libraries and services that eventually invoke syscalls for privileged effects.
+
+#### Interpretation (Why The Shell Is Powerful But Not Privileged)
+
+The shell is powerful because it is a programmable interface layer. It can compose programs (pipes), control data flow (redirection), and orchestrate processes (jobs). But none of that power requires privilege. The shell's job is to *decide what to ask for* and *package the request*; the kernel's job is to *validate and commit the protected effect*.
+
+Keeping the shell out of the kernel is therefore not an accident. It is a damage-containment choice:
+
+- shell bugs should not corrupt kernel memory,
+- new shell features should not require kernel changes,
+- and third-party command ecosystems should not expand the trusted computing base.
+
+#### Boundary Conditions / Assumptions / Failure Modes
+
+Assumptions:
+
+- The kernel provides a small set of process and file primitives (create, replace image, wait, signal, I/O).
+- User space can be scheduled and preempted like any other computation; it does not get special authority.
+
+Failure modes:
+
+- If the shell were privileged, every parsing bug or plugin bug would be a potential kernel compromise.
+- If the kernel attempted to "understand" shell syntax, the kernel would harden around UI choices and become difficult to evolve.
+- If you treat the shell as the authority, you will misunderstand what system calls do and where permissions are enforced.
+
+#### Fully Worked Example: A Pipeline Requires Process + I/O Primitives, Not A Privileged Shell
+
+Consider the pipeline:
+
+`cat access.log | grep "ERROR" | wc -l`
+
+What the shell does (user space):
+
+1. parse tokens and construct a pipeline graph,
+2. create pipes (requesting kernel pipe objects),
+3. launch three processes and connect their standard input/output to pipe endpoints via file-descriptor operations,
+4. wait for completion and print status.
+
+What the kernel enforces (privileged):
+
+- creation of new execution contexts (processes),
+- allocation of pipe buffers and kernel objects,
+- installation of file-descriptor tables and redirections,
+- scheduling and wakeups when reads/writes block.
+
+The shell is orchestration logic; the kernel is the authority that makes the orchestration real and safe. You can write a different shell, or no shell at all, and still build the same pipeline if you can use the same syscalls.
+
+#### Misconceptions
+
+Misconception 1: "Shell scripts run inside the kernel."
+
+- A shell script is executed by a user-space interpreter (the shell or another runtime). The kernel sees only syscalls and does not interpret script syntax.
+
+Misconception 2: "The OS must include a specific shell."
+
+- The OS must include process and file primitives. A shell is a replaceable interface program built on top of those primitives.
+
+#### Connection To Later Material
+
+You will reuse this mental model when:
+
+- distinguishing an API function (user-space convenience) from a syscall (authority transfer),
+- analyzing system programs and daemons (user-space services that rely on kernel primitives),
+- and evaluating kernel structures (what privileged code must exist vs what can safely be outside).
+
+#### Retain / Do Not Confuse
+
+Retain: shells are user-space interfaces that package intent; the kernel is the enforcement boundary that creates processes and commits protected effects.
+
+Do not confuse: a human-facing OS layer (shell/GUI) with the privileged authority that enforces protection and scheduling.
 
 **Problem**
 
@@ -635,6 +837,105 @@ Good OS design keeps mechanisms general and stable so policies can change with h
 **A:** It can hardcode assumptions (workload mix, CPU topology, I/O latency) into privileged code paths so that performance is great under one regime. The cost is coupling: changing a scheduler rule, VM heuristic, or driver behavior now risks breaking hidden invariants across subsystems. Brittle systems often "work fast" until the environment changes, then become difficult to modify safely.
 
 ### 3.7 Kernel Structures: Monolithic, Layered, Microkernel, Modular, Hybrid
+
+#### Why This Section Exists
+
+Up to now, we have treated "the kernel" as if it were one blob of privileged code. That simplification is fine for explaining boundaries, but it becomes false the moment you care about real-world engineering: performance, reliability, security, and maintainability are dominated by how privileged code is organized and how requests flow through it.
+
+This section exists to answer the question:
+
+"Where should each subsystem run, and what communication path should connect subsystems, so that the system is fast enough but failures are contained?"
+
+You cannot answer that question later (or evaluate microkernels, modules, and hybrids) without a precise understanding of the trade: boundary crossings cost time, but shared privilege enlarges the blast radius of bugs.
+
+#### The Object Being Introduced (A Kernel Structure Is A Boundary Placement)
+
+The object is a **kernel structure**: a statement about protection domains and communication paths.
+
+What is fixed:
+
+- Protected effects must be committed under privilege somewhere.
+- Subsystems must coordinate: filesystems call storage drivers; networking calls drivers; memory management interacts with paging and I/O.
+
+What varies:
+
+- whether that coordination is a direct call inside one privileged address space, or a message across a boundary,
+- which components are restartable without rebooting the whole system,
+- and how big the trusted computing base (TCB) must be.
+
+#### Formal Definitions (TCB, Fault Scope, Boundary Crossing)
+
+Definition (trusted computing base, TCB): The set of code that must be correct and non-compromised for the system's core security and isolation guarantees to hold. In a classic kernel design, the kernel and its in-kernel drivers are in the TCB.
+
+Definition (fault scope): The set of components that can be corrupted or brought down by a single bug or exploit in one component. Code running in the same privileged address space tends to share fault scope.
+
+Definition (boundary crossing cost): The runtime overhead of moving a request across a protection boundary, typically including argument validation, message passing, context switching, and cache/TLB effects.
+
+#### Interpretation (Why This Is A Real Trade, Not A Style Preference)
+
+The reason kernel structures are debated is that they move a single lever in opposite directions:
+
+- Put more code in-kernel: requests are cheaper (direct calls, shared data structures), but a bug has a larger privilege blast radius.
+- Push services out of the kernel: bugs can be contained and services can be restarted, but requests cost more (IPC + switching + copying/mapping).
+
+If you remember nothing else, remember that a kernel structure is not primarily about "organization." It is about **where the boundaries are**, which determines both performance and what happens when something goes wrong.
+
+![Supplement: same bug, different fault scope depending on whether the driver/service shares kernel privilege or is isolated as a user-space server](../graphviz/chapter2_graphviz/fig_2_53_fault_scope_driver_bug.svg)
+
+#### Boundary Conditions / Assumptions / Failure Modes
+
+Assumptions:
+
+- User-space servers can only be meaningfully isolated if the microkernel (or kernel core) provides strong mechanisms: IPC, scheduling, memory mapping, and controlled device mediation.
+- Modularity in deployment (loadable modules) is not the same as isolation. Loading a module into kernel space still extends the TCB and fault scope.
+
+Failure modes:
+
+- If boundary crossings are too expensive on hot paths, the system may become correct but impractically slow.
+- If too much code is privileged, the system may be fast but fragile: one driver bug can crash or compromise the whole machine.
+
+#### Fully Worked Example: A Network Driver Bug In Different Kernel Organizations
+
+Consider a bug in a network driver that writes past the end of a buffer.
+
+Monolithic kernel:
+
+1. The driver runs in kernel space.
+2. The overflow can corrupt kernel memory (including scheduler queues, credential structures, or page tables).
+3. The entire system may crash or, worse, continue running in a compromised state.
+
+Microkernel-style with driver in user space:
+
+1. The driver runs as a user-space server.
+2. The overflow corrupts the driver's process memory, not the kernel.
+3. The driver server can crash and be restarted; the kernel's isolation invariants can remain intact, as long as the kernel's device-mediation interfaces are correct.
+
+This is the concrete meaning of "fault containment." It is not an abstract claim. It is a statement about which memory can be corrupted by a bug.
+
+#### Misconceptions
+
+Misconception 1: "Modular kernels are safer because they are modular."
+
+- Loadable modules are mainly a deployment technique. If modules run with kernel privilege, they still widen the TCB and share fault scope with the kernel.
+
+Misconception 2: "Microkernels are always slower."
+
+- Microkernels pay boundary-crossing costs, but performance depends on hardware support (fast IPC, mapping tricks), workload, and design. The correct mental model is "microkernels trade communication cost for fault isolation," not "microkernels are slow by definition."
+
+#### Connection To Later Material
+
+This structure story will reappear whenever you study:
+
+- drivers and I/O paths (where does code run? who can crash whom?),
+- security boundaries (what is in the TCB?),
+- observability and debugging (where can you instrument without compromising safety?),
+- and virtualization (a second control boundary beneath the kernel changes the same tradeoffs again).
+
+#### Retain / Do Not Confuse
+
+Retain: kernel structure is primarily boundary placement, which sets communication cost and fault scope.
+
+Do not confuse: modular deployment with isolation, and "small kernel" (lines of code) with "small TCB" (privileged authority).
 
 **Problem**
 

@@ -1,0 +1,24 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.6, ranksep=0.9, splines=true, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75, fontname="Helvetica"];
+
+  new [label="new\n(created, not yet runnable)", fillcolor="#F5F5F5"];
+  ready [label="ready\n(runnable, waiting for CPU)", fillcolor="#BFE2F1"];
+  run [label="running\n(executing on CPU)", fillcolor="#D5EDF7"];
+  blocked [label="blocked / waiting\n(not runnable until event)", fillcolor="#F7E9C5"];
+  term [label="terminated\n(exited or killed)", fillcolor="#F2D6D6"];
+
+  new -> ready [label="admit\n(loaded, initialized)"];
+  ready -> run [label="dispatch\n(scheduler chooses)"];
+  run -> ready [label="preempt\n(timer interrupt)\nOR yield"];
+  run -> blocked [label="block\n(I/O wait, lock wait,\npage fault wait)"];
+  blocked -> ready [label="wakeup\n(I/O complete,\nlock released,\npage becomes available)"];
+  run -> term [label="exit\n(normal)"];
+  run -> term [label="fatal fault\n/ kill", color="#8B3A3A", fontcolor="#8B3A3A"];
+
+  edge [style=dashed, color="#9AA7AE", fontcolor="#6D7B82"];
+  ready -> term [label="kill while waiting"];
+  blocked -> term [label="kill while waiting"];
+}
+

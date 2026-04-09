@@ -1,0 +1,43 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.55, ranksep=0.8, splines=true, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75, fontname="Helvetica"];
+
+  subgraph cluster_cpu {
+    label="CPU (what is live right now)";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+    regs [label="registers\n(PC, SP, GPRs, flags)", fillcolor="#BFE2F1"];
+    mode [label="mode\n(user / kernel)", fillcolor="#DDEAF1"];
+  }
+
+  subgraph cluster_kernel {
+    label="kernel memory (authoritative bookkeeping)";
+    color="#B0C7D3";
+    style="rounded,filled";
+    fillcolor="#F3FAFD";
+
+    pcb [label="PCB\n(identity, state, pointers)", fillcolor="#D5EDF7"];
+    kstack [label="kernel stack\n(per execution context)", fillcolor="#DDEAF1"];
+    mmu [label="address-space root\n(page-table pointer)", fillcolor="#DDEAF1"];
+    queues [label="run / wait queues\n(scheduling state)", fillcolor="#F5F5F5"];
+  }
+
+  subgraph cluster_user {
+    label="user memory (the process's world)";
+    color="#D0D0D0";
+    style="rounded,filled";
+    fillcolor="#FFFFFF";
+    as [label="address space\n(code, data, heap, user stacks)", fillcolor="#F5F5F5"];
+  }
+
+  regs -> kstack [label="saved on kernel entry\n(trap frame)"];
+  pcb -> kstack [label="points to"];
+  pcb -> mmu [label="selects"];
+  pcb -> queues [label="membership"];
+  mmu -> as [label="defines meaning of\nvirtual addresses", style=dashed];
+
+  kstack -> regs [label="restored on return\nto user mode"];
+}
+

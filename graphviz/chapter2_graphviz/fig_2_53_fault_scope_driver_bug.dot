@@ -1,0 +1,37 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.45, ranksep=0.7, splines=polyline, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75, fontname="Helvetica", fontsize=11];
+
+  subgraph cluster_mono {
+    label="monolithic: driver in kernel space";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+
+    k1 [label="kernel address space\n(scheduler, VM, VFS, net stack)", fillcolor="#BFE2F1"];
+    d1 [label="network driver\n(kernel mode)", fillcolor="#F7E9C5"];
+    k1 -> d1 [label="direct calls\nshared memory"];
+
+    bug1 [shape=note, label="bug: buffer overflow\ncan corrupt kernel memory\nwide fault scope", fillcolor="#FFFFFF", color="#9AA7AE", fontcolor="#233238"];
+    d1 -> bug1 [style=dotted, arrowhead=none];
+  }
+
+  subgraph cluster_micro {
+    label="microkernel-style: driver as user-space server";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+
+    k2 [label="minimal kernel core\n(IPC, scheduling,\naddress spaces)", fillcolor="#BFE2F1"];
+    srv [label="network driver server\n(user space)", fillcolor="#DDEAF1"];
+    app [label="applications\n(user space)", fillcolor="#F5F5F5"];
+
+    app -> k2 [label="syscall / IPC"];
+    k2 -> srv [label="IPC / message\n(mediated)"];
+
+    bug2 [shape=note, label="bug: overflow corrupts\nserver process memory\nkernel can stay intact\nserver can be restarted", fillcolor="#FFFFFF", color="#9AA7AE", fontcolor="#233238"];
+    srv -> bug2 [style=dotted, arrowhead=none];
+  }
+}
+

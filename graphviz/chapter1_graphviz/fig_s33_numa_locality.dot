@@ -1,0 +1,38 @@
+digraph G {
+  graph [rankdir=LR, pad=0.25, nodesep=0.55, ranksep=0.85, splines=true, bgcolor="white"];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", color="#5B6B73", fontcolor="#233238"];
+  edge [color="#5B6B73", penwidth=1.05, arrowsize=0.75, fontname="Helvetica"];
+
+  subgraph cluster_sock0 {
+    label="socket 0";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+    cpu0 [label="CPU 0 cores\n(run queues, caches)", fillcolor="#BFE2F1"];
+    mem0 [label="local memory 0\n(low latency)", fillcolor="#DDEAF1"];
+  }
+
+  subgraph cluster_sock1 {
+    label="socket 1";
+    color="#9EC9DA";
+    style="rounded,filled";
+    fillcolor="#EAF6FB";
+    cpu1 [label="CPU 1 cores\n(run queues, caches)", fillcolor="#BFE2F1"];
+    mem1 [label="local memory 1\n(low latency)", fillcolor="#DDEAF1"];
+  }
+
+  fabric [label="interconnect\n(higher latency,\nlimited bandwidth)", fillcolor="#F5F5F5"];
+
+  cpu0 -> mem0 [label="local access\nfast"];
+  cpu1 -> mem1 [label="local access\nfast"];
+
+  cpu0 -> fabric [label="remote request"];
+  fabric -> mem1 [label="remote memory\nslower"];
+
+  cpu1 -> fabric [label="remote request"];
+  fabric -> mem0 [label="remote memory\nslower"];
+
+  note [shape=note, label="OS placement matters:\n- place threads near their pages\n- migrate pages near their threads\nOtherwise the same instruction stream\npays a remote penalty repeatedly.", fillcolor="#FFFFFF", color="#9AA7AE", fontcolor="#233238"];
+  fabric -> note [style=dotted, arrowhead=none];
+}
+

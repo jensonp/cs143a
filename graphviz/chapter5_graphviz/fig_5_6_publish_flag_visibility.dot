@@ -1,0 +1,34 @@
+digraph G {
+  graph [rankdir=TB, pad=0.2, bgcolor="white"];
+  node [shape=plain, fontname="Helvetica"];
+
+  tbl [label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#5B6B73">
+      <TR>
+        <TD BGCOLOR="#F5F5F5"><B>Scenario</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Producer (Thread A)</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Consumer (Thread B)</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>What can happen</B></TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Naive flag</B></TD>
+        <TD>`data = 42;` then `ready = 1;`</TD>
+        <TD>wait for `ready==1`, then read `data`</TD>
+        <TD>consumer can observe `ready==1` but still see old `data` (reordering/visibility)</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Lock-based publish</B></TD>
+        <TD>write `data`, set `ready` while holding mutex; then unlock</TD>
+        <TD>lock; check `ready`; read `data`; unlock</TD>
+        <TD>lock/unlock establish ordering: if B sees `ready`, it also sees `data`</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Atomic publish</B></TD>
+        <TD>write `data`; then store `ready=1` with <B>release</B></TD>
+        <TD>load `ready` with <B>acquire</B>; then read `data`</TD>
+        <TD>acquire/release make `ready` a real visibility boundary</TD>
+      </TR>
+    </TABLE>
+  >];
+}
+

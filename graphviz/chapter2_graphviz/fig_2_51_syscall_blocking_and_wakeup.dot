@@ -1,0 +1,46 @@
+digraph G {
+  graph [rankdir=TB, pad=0.2, bgcolor="white"];
+  node [shape=plain, fontname="Helvetica"];
+
+  flow [label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#5B6B73">
+      <TR>
+        <TD BGCOLOR="#F5F5F5"><B>Phase</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Caller thread</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Kernel</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>External event</B></TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Enter syscall</B></TD>
+        <TD>runs in user mode; requests service</TD>
+        <TD>mode switch; trap frame saved; handler begins</TD>
+        <TD>-</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Validate + decide</B></TD>
+        <TD>paused at boundary</TD>
+        <TD>validates args; checks resource state (buffer space, I/O readiness, lock availability)</TD>
+        <TD>-</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Block (if needed)</B></TD>
+        <TD>becomes non-runnable</TD>
+        <TD>records a wait condition; enqueues on a wait queue; schedules another runnable thread</TD>
+        <TD>device runs or lock holder runs elsewhere</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Wakeup</B></TD>
+        <TD>still asleep</TD>
+        <TD>interrupt or unlock path records completion; moves caller back to runnable set</TD>
+        <TD>interrupt signals I/O completion (or lock released)</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Resume + return</B></TD>
+        <TD>runs again; receives return value</TD>
+        <TD>finishes syscall; returns to user mode through controlled exit</TD>
+        <TD>-</TD>
+      </TR>
+    </TABLE>
+  >];
+}
+

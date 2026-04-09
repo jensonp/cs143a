@@ -316,6 +316,63 @@ Once in the kernel, the syscall handler may:
 
 This is another reason “API != syscall” matters: the library wrapper is not allowed to assume control flow is immediate, and it cannot provide the global scheduling and wakeup semantics needed for blocking.
 
+![Supplement: a syscall can suspend the caller, enqueue it on a wait structure, and let other runnable work execute until an interrupt or event re-admits it](../graphviz/chapter2_graphviz/fig_2_51_syscall_blocking_and_wakeup.svg)
+
+**Worked Example: `write(1, buf, 3)` Is Not “A C Function That Prints”**
+
+This example is deliberately small, because the point is not “printing,” but the structure of authority transfer.
+Assume a user process wants to write three bytes to standard output (file descriptor `1`).
+The *fixed* object is the syscall mechanism: ABI + controlled trap + kernel validation + authoritative state update.
+The *varying* objects are the specific descriptor, buffer pointer, and byte count.
+
+1. **In user space, the program calls a library API.**
+   In C it looks like `write(1, buf, 3)`.
+   At this moment, nothing privileged has happened: `buf` is just a user-space pointer, and `1` is just an integer.
+2. **The wrapper packages arguments according to the syscall ABI.**
+   Concretely this means placing a syscall number and the three arguments in the agreed places (usually registers).
+   The wrapper does not validate permissions; it cannot, because it does not own the authoritative state that defines “which file does fd=1 refer to?” or “is this process allowed to write it?”
+3. **The CPU executes the syscall entry instruction and creates a resumable snapshot.**
+   Hardware switches to kernel mode and records enough state (PC/flags/registers) so the interrupted instruction stream can be resumed.
+   This is the pivot: from here on, the kernel is running with privilege, and it is responsible for preserving system invariants even if the caller is buggy or malicious.
+4. **The kernel validates the descriptor and the user buffer.**
+   The integer `1` must be checked against the process’s file-descriptor table to find the *actual* kernel object (a file/terminal/pipe/socket endpoint).
+   The pointer `buf` must be treated as an untrusted claim; the kernel validates the address range and copies bytes into a kernel-owned buffer (`copyin`) before interacting with devices or filesystem state.
+5. **The kernel commits the effect against authoritative state.**
+   If stdout is a terminal, this may hand bytes to a driver.
+   If stdout is a pipe, it may enqueue into a pipe buffer (possibly blocking if full).
+   If stdout is a file, it may update in-memory file offsets and dirty pages that will later be written back to disk.
+6. **The kernel returns a count or an error through the ABI, and user code continues.**
+   The return value is the *contract surface*: it tells user space what the authoritative outcome was.
+   The wrapper may translate that outcome into the language runtime’s convention, but it cannot reinterpret kernel truth.
+
+The lesson is not “write prints characters.”
+The lesson is that a syscall is a controlled authority transfer whose *entire purpose* is to make “an untrusted request” become “a validated state transition” without letting the caller forge access or corrupt global invariants.
+
+**Misconceptions To Kill Early**
+
+Do not treat `write()` as “a library function that happens to be in libc.”
+The wrapper is a compatibility and packaging layer; the kernel object that `fd=1` points to is the real authority, and it may change across `fork`, `dup`, redirection, and `exec`.
+
+Do not treat “pointer arguments” as “the kernel can just read memory at that address.”
+In the kernel, a user pointer is not an address in the kernel’s own trust domain; it is a potentially hostile reference that must be validated and copied through explicit mechanisms.
+
+Do not assume “syscall” implies “context switch.”
+A syscall *may* block and cause a switch, but it can also complete immediately and return to the same thread without scheduling anyone else.
+Scheduling is a consequence of blocking and preemption, not an automatic property of “entering the kernel.”
+
+**Connection To Later Material**
+
+This is the structural reason later chapters can be written precisely:
+
+- Chapter 3 can treat processes as schedulable/resumable entities because syscalls and interrupts create explicit save/restore boundaries.
+- File systems and VM can rely on “copyin/copyout + validation” as the way untrusted pointers become safe inputs to kernel invariants.
+- Concurrency chapters can treat “blocking in the kernel” as a first-class control event (sleep queues, wakeups, and re-admission conditions), not as a mysterious “my thread stopped.”
+
+**Retain / Do Not Confuse**
+
+Retain: API expresses intent; wrapper speaks the ABI; syscall is the controlled privilege transfer; kernel validates and commits effects to authoritative state.
+Do not confuse: “library call” with “authority,” “pointer” with “trusted reference,” or “kernel entry” with “automatic context switch.”
+
 An API and a system call are different objects.
 The API defines the programmer-facing function surface.
 The system call performs the privilege transfer that allows the kernel to validate and update protected state.

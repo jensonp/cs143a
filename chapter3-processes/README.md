@@ -785,6 +785,15 @@ If you cannot point to where correlation (which reply matches which request) and
 This chapter optimizes for mental models, but Lecture 2 also expects you to recognize a few canonical POSIX shapes.
 Treat these as “minimal API traces” that anchor the abstractions in concrete mechanisms.
 
+Why this section exists: the earlier IPC modules explain *models* (shared memory vs message passing), but real systems force you to reason about where the boundary is drawn in actual code.
+POSIX mechanisms are not important because you will memorize their signatures; they are important because they embody the same conceptual splits the whole chapter relies on:
+
+- “setup once, then communicate cheaply” (shared memory)
+- “stream bytes through a kernel-managed conduit” (pipes)
+- “name endpoints and speak a protocol over a transport” (sockets)
+
+If you can explain *why* each mechanism looks the way it does, the API details become learnable rather than arbitrary.
+
 #### 3.13.1 POSIX Shared Memory: `shm_open` + `ftruncate` + `mmap`
 
 Shared memory has two phases:
@@ -804,6 +813,11 @@ After `mmap`, the “send/receive” path is just memory reads/writes.
 That is why shared memory can be fast and also why it demands correct synchronization discipline.
 
 ![Supplement: POSIX shared memory is setup once (open/size/map), then communicate via loads/stores plus synchronization](../graphviz/chapter3_graphviz/fig_3_10_posix_shm_flow.svg)
+
+Interpretation: `shm_open` and `mmap` are not “communication operations” in the same sense as `send/receive`.
+They establish a shared *place* where communication can happen.
+After that, the OS is no longer mediating each exchange, which is why shared memory shifts the burden onto the program: you must define what each byte means, when it is valid, and how readers and writers synchronize visibility.
+Chapter 5 exists largely to teach how to do that without races and without burning CPU.
 
 #### 3.13.2 Pipes: Ordinary vs Named
 
@@ -831,6 +845,30 @@ if (pid > 0) {           // parent: producer
 
 ![Supplement: ordinary pipes are typically parent-child and unidirectional; named pipes decouple processes via a filesystem name](../graphviz/chapter3_graphviz/fig_3_11_pipes_types.svg)
 
+Interpretation: the key semantic feature of pipes is not “they pass bytes,” but “they impose an ordering and a blocking rule.”
+A read from a pipe can block until data exists; a write can block until buffer space exists; and end-of-file is expressed structurally by **closing** the write end so readers can conclude “no more bytes will ever arrive.”
+That is why the `close()` calls in the sketch are not cleanup trivia; they are part of the communication protocol.
+
+**Worked Example: Why `ls | wc -l` Is A Process + Pipe + Descriptor-Rewiring Story**
+
+Shell pipelines look like “one command feeds another,” but the OS truth is: *two processes* cooperate through a pipe whose ends are installed into standard streams.
+A minimal trace (names vary across OSes, but the structure is stable):
+
+1. The shell creates a pipe: two file descriptors exist, one for reading and one for writing.
+2. The shell forks twice to create two children.
+3. In the left child (`ls`), the shell duplicates the pipe write end onto `stdout` (fd 1), then closes both original pipe fds, then `exec`s `ls`.
+4. In the right child (`wc -l`), the shell duplicates the pipe read end onto `stdin` (fd 0), then closes both original pipe fds, then `exec`s `wc`.
+5. The parent closes its copies of the pipe fds, so it does not accidentally keep the pipe alive.
+
+Now the programs are ordinary user-space code:
+`ls` writes to fd 1, `wc` reads from fd 0.
+The only reason “fd 1 means pipe” is because the parent rewired the descriptor table before `exec`.
+
+![Supplement: a shell pipeline is pipe() + fork() + dup2() + close() + exec(); EOF depends on closing the write end](../graphviz/chapter3_graphviz/fig_3_13_pipe_pipeline_trace.svg)
+
+Misconception to avoid: “pipes are bidirectional because data can flow between processes.”
+An ordinary pipe is fundamentally one-directional at the byte-stream level; full-duplex patterns use two pipes (or a socketpair) for two directions.
+
 #### 3.13.3 Sockets: Addressing As `IP:port` and Common Port Conventions
 
 A socket endpoint is commonly named as `IP:port`.
@@ -849,6 +887,13 @@ close(sockfd);
 ```
 
 ![Supplement: sockets are named endpoints (IP:port); loopback and well-known ports are conventions that shape real systems](../graphviz/chapter3_graphviz/fig_3_12_socket_addressing.svg)
+
+Interpretation: sockets add two things that pipes do not emphasize:
+
+1. **naming and binding**: “which peer do I mean?” becomes explicit as an address/port
+2. **protocol**: once you have a byte stream (TCP) or datagrams (UDP), you still must define message boundaries, requests vs replies, and failure handling
+
+The reason sockets and pipes both show up in this chapter is that they solve the same core problem (structured communication between isolated execution contexts), but they sit on different boundaries: pipes are usually local and ancestry-friendly; sockets generalize the naming and can cross machines.
 
 ## 4. Canonical Traces To Reproduce From Memory
 

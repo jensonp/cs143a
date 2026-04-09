@@ -275,6 +275,27 @@ Masking is the mechanism that reduces (or eliminates) such reentrancy pressure.
 
 ![Supplement: interrupt handling is save -> handle -> restore; nesting means multiple trap frames can exist](../graphviz/chapter1_graphviz/fig_1_26_interrupt_handler_protocol.svg)
 
+**Worked Example: One Disk Read, One DMA Completion Interrupt, And The Meaning Of “Return”**
+
+Suppose a process issues a blocking `read` from a disk-backed file.
+At the moment of the syscall, what is *fixed* is the control contract: the kernel must either complete the request or record precisely what the caller is waiting for and then safely resume it later.
+What varies is the device latency and the exact interleaving with other runnable work.
+
+1. The process enters the kernel via a syscall trap. The kernel validates parameters, programs the driver/DMA, and records the caller as waiting for “this I/O completion.”
+2. The scheduler runs other work. This is not an optimization detail; it is the entire point of multiprogramming. The waiting process is not “half running.” It is *not runnable*.
+3. When the device finishes, it interrupts the CPU. The CPU does not “jump into the driver” in the way a function call jumps; it performs a privileged control transfer and creates a resumable snapshot.
+4. The interrupt handler runs with one job: turn “device finished” into authoritative kernel state (mark request complete, place the waiting thread back in the runnable set).
+5. The handler returns. The CPU resumes whatever was interrupted (perhaps another user process, perhaps kernel code). Later, when the scheduler chooses the original reader again, the kernel returns from the syscall, delivering the bytes or an error.
+
+The conceptual pitfall is to imagine “the interrupt returns to the original read syscall.” It does not.
+It returns to the interrupted instruction stream. The *kernel’s bookkeeping* is what links “this completion interrupt” to “wake that sleeping reader” across time.
+
+**Misconception Block: Interrupts Are Not Context Switches**
+
+Do not confuse “an interrupt happened” with “the OS switched processes.”
+An interrupt is a forced kernel entry that lets the OS *choose* to context-switch, but the handler itself is not the switch.
+If you collapse these, you will later misreason about performance (“interrupts always mean process switches”) and correctness (“interrupt returns to the thing that asked for I/O”).
+
 #### Memory Protection (Minimal Model): Base + Limit (Bounds) Registers
 
 The simplest hardware memory-protection model is:
@@ -288,6 +309,17 @@ If valid, it translates to `physical = base + virtual`; otherwise it raises a tr
 Loading base/limit must be privileged, and kernel mode must be able to access all memory; otherwise a user process could expand its accessible range and escape isolation.
 
 ![Supplement: base+limit translation enforces a per-process accessible range; invalid references trap into the kernel](../graphviz/chapter1_graphviz/fig_1_25_base_limit_protection.svg)
+
+**Worked Example: Base+Limit As “A Contiguous Legal Region”**
+
+Assume `base = 300000` and `limit = 120000`.
+This means the process is allowed to use virtual addresses in `[0, 120000)`, and those translate to physical addresses in `[300000, 420000)`.
+
+- If the program references virtual address `v = 500`, the CPU checks `0 <= 500 < 120000` (valid), then translates to `p = 300000 + 500 = 300500`.
+- If the program references virtual address `v = 200000`, the check fails (`200000 >= 120000`), so the CPU raises an exception (a trap) and the kernel gets control.
+
+Notice what is *not* happening: there is no “best effort” attempt by the user program to stay in bounds, and no “soft warning.”
+The hardware boundary is the mechanism of isolation. The kernel then decides what the fault means (bug, attack, or missing mapping in a more advanced VM design).
 
 #### Virtual vs Physical Addresses: What The CPU Is Actually Checking
 
@@ -303,6 +335,12 @@ Modern OSes use page tables (later chapters) to generalize this into many region
 
 ![Supplement: MMU translation either yields a physical address or raises a fault that traps into the kernel](../graphviz/chapter1_graphviz/fig_1_27_address_translation_or_fault.svg)
 
+**Misconception Block: A Fault Is Not Automatically “A Crash”**
+
+At this point in the course, it is tempting to treat “fault” as synonymous with “the program died.”
+Later, virtual memory uses faults as a normal control mechanism: a missing page can be *resolved* by the kernel (bring data in from disk, install a mapping) and then resume execution.
+The key lesson to keep now is structural: a fault is a controlled kernel entry caused by an attempted action that cannot proceed under the current protection/translation state.
+
 #### I/O Protection: Why User Code Talks To Devices Through Syscalls
 
 Devices are not “just memory.” They have side effects.
@@ -317,6 +355,11 @@ Therefore, raw device programming is privileged.
 User code performs I/O by calling syscalls; the kernel and its drivers validate permissions and translate those requests into safe device operations, then use interrupts (or polling) to learn completion.
 
 ![Supplement: I/O is privileged; syscalls route requests through drivers that mediate device access and interrupts](../graphviz/chapter1_graphviz/fig_1_28_io_protection_syscall_driver.svg)
+
+**Connection To Later Material**
+
+Everything above is not “hardware trivia.” It is the minimum set of control levers the OS needs to make later abstractions precise:
+processes are resumable because trap frames exist; threads can block and be re-admitted because interrupts turn external completion into kernel-visible state; memory protection exists because translation is enforced by hardware and faults are recoverable kernel entries; and device access is safe because syscalls route I/O through drivers that own the authoritative device state.
 
 **Invariants**
 

@@ -1,0 +1,50 @@
+digraph G {
+  graph [rankdir=TB, pad=0.2, bgcolor="white"];
+  node [shape=plain, fontname="Helvetica"];
+
+  tbl [label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#5B6B73">
+      <TR>
+        <TD BGCOLOR="#F5F5F5"><B>Time</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>User runtime</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Kernel-visible entity</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>What runs next?</B></TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>T0</B></TD>
+        <TD>runtime schedules user thread A</TD>
+        <TD>one kernel thread is running</TD>
+        <TD>A executes in user mode</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>T1</B></TD>
+        <TD>A calls blocking `read()`</TD>
+        <TD>kernel thread enters syscall</TD>
+        <TD>kernel may block this thread</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>T2</B></TD>
+        <TD>runtime cannot run (no CPU)</TD>
+        <TD>kernel thread sleeps on I/O wait queue</TD>
+        <TD>process has no runnable kernel entity</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>T3</B></TD>
+        <TD>user thread B is runnable (in runtime bookkeeping)</TD>
+        <TD>still sleeping</TD>
+        <TD>B still cannot run</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>T4</B></TD>
+        <TD>runtime resumes only after wakeup</TD>
+        <TD>interrupt/event wakes kernel thread</TD>
+        <TD>kernel returns to user mode; runtime can schedule A or B</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Key invariant</B></TD>
+        <TD COLSPAN="3">the kernel schedules only what it can see; if it parks the only execution resource, user-level scheduling cannot make progress</TD>
+      </TR>
+    </TABLE>
+  >];
+}
+

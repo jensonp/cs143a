@@ -316,6 +316,32 @@ When you memorize it, focus on the kernel-visible schedulable unit, because that
 The table is why “cheap user threads” can still be an expensive design mistake: the kernel cannot schedule what it cannot see.
 Reason about blocking by naming the kernel-visible schedulable unit first; everything else follows.
 
+**Worked Example: Two “Green Threads,” One Blocking `read()`, And A Frozen Server**
+
+Imagine an application runtime that implements user-level threads (M:1) inside one process.
+Thread A handles a request that needs to read from a socket.
+Thread B handles a different request that is ready to compute and respond.
+
+What the program *wants* is: “A can wait on I/O while B continues.”
+What the OS *actually sees* is: “this process has one kernel-visible thread, and it is about to block.”
+
+Step by step:
+
+1. The runtime schedules A and A issues a blocking `read()` syscall.
+2. The kernel puts the *only* kernel-visible thread to sleep on the socket’s wait queue.
+3. Because the process has no runnable kernel thread, the runtime is not executing, so it cannot run B even though B is “runnable” in the runtime’s own bookkeeping.
+4. The process becomes runnable again only after an interrupt/event makes the socket readable and the kernel wakes the sleeping kernel thread.
+5. Only then does user space regain CPU time and the runtime can pick either A (to complete the read) or B (to run other work).
+
+This is the concrete meaning of “one blocks, all block.”
+The failure is not that the runtime is stupid; it is that the runtime cannot schedule what the kernel has parked.
+To get the intended behavior you need either (a) kernel threads the kernel can block independently (1:1), or (b) nonblocking/async I/O so the kernel never parks the only execution resource, or (c) an M:N design with kernel cooperation so blocked kernel threads can be replaced with runnable ones.
+
+![Supplement: in M:1, a blocking syscall can park the only kernel-visible execution resource; the runtime cannot run other user threads until the kernel wakes it](../graphviz/chapter4_graphviz/fig_4_8_m1_blocking_timeline.svg)
+
+Misconception to avoid: “user-level threads are just like kernel threads but cheaper.”
+They can be cheaper for creation and user-space switching, but they are not equivalent in the presence of blocking syscalls and preemption, because the kernel is still the authority over which execution contexts may run.
+
 **Code Bridge**
 
 - In POSIX, identify which calls are “cancellation points” or likely to block, then reason about how that interacts with the model.

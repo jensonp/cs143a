@@ -73,6 +73,65 @@ Even if two threads never “run at the same time” in your head, modern CPUs a
 In practice, acquiring a lock is also a memory-ordering event:
 it must make preceding writes visible to other threads that later acquire the same lock.
 
+Why this section exists: earlier sections make synchronization sound like “only one thread at a time.”
+But many real bugs are not “both were in the critical section” bugs.
+They are “the reader observed a flag but not the data the flag was supposed to mean” bugs.
+If you do not understand visibility and ordering, you will mistakenly believe that correct logic implies correct communication.
+
+The object being introduced is a **happens-before relationship** created by synchronization operations.
+You can think of it as the rule that turns “writes happened” into “other threads are allowed to rely on seeing them.”
+Locks and atomics do not merely prevent simultaneous execution; they define a communication contract that constrains reordering and caching effects.
+
+**Worked Example: Publishing Data With A Flag (And Why It Can Fail Without Ordering)**
+
+Suppose thread A produces data and thread B consumes it:
+
+```c
+// shared:
+int ready = 0;
+int data = 0;
+
+// Thread A (producer):
+data = 42;
+ready = 1;
+
+// Thread B (consumer):
+while (ready == 0) { /* spin */ }
+printf("%d\n", data);
+```
+
+Read the programmer intention: `ready==1` is meant to *mean* “data is now valid.”
+The fixed object is the intended protocol (“flag implies data is visible”).
+The varying object is the hardware/compiler execution: loads/stores may be reordered, cached, or observed in different orders by different cores.
+
+What can go wrong:
+
+1. The compiler or CPU reorders stores so `ready=1` becomes visible before `data=42` becomes visible to the other core.
+2. Thread B observes `ready==1` and exits the loop.
+3. Thread B reads `data` and still sees the old value (e.g., `0`) because visibility did not match the protocol’s meaning.
+
+No mutual exclusion was “violated.” The bug is that the program used a shared flag as a communication boundary without a mechanism that actually establishes the required ordering.
+
+How to make it correct:
+
+- Put both the data write and the flag write behind a mutex, and read behind the same mutex.
+  The lock/unlock operations establish the ordering boundary.
+- Or use atomics with `release` on the producer store to `ready` and `acquire` on the consumer load of `ready`.
+  This makes `ready` a real publish/observe boundary.
+
+![Supplement: without ordering, a consumer can observe a flag before the data it is supposed to publish; acquire/release or locks make the protocol real](../graphviz/chapter5_graphviz/fig_5_6_publish_flag_visibility.svg)
+
+Misconception block: “volatile fixes it.”
+`volatile` can stop some compiler optimizations, but it does not create the cross-core ordering and visibility guarantees required for correct synchronization on modern CPUs.
+Correctness needs a synchronization primitive whose contract includes ordering (mutex/cond, semaphores, atomics with acquire/release, etc.).
+
+Connection to later material: this is the hidden reason “shared memory is hard.”
+In Chapter 3, shared memory looks like “just load/store.”
+In Chapter 5, you learn that “just load/store” is only safe after you introduce a real boundary that gives those loads/stores a stable interpretation across cores.
+
+Retain / do not confuse: “mutual exclusion” is about who may update at once; “visibility/ordering” is about what another thread is allowed to conclude from what it observes.
+Locks often give both; ad-hoc flags give neither unless you use correct atomic semantics.
+
 ## 3. Mastery Modules
 
 ### 3.1 Race Conditions and the Critical-Section Problem

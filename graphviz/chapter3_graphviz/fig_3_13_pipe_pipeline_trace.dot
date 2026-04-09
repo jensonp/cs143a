@@ -1,0 +1,50 @@
+digraph G {
+  graph [rankdir=TB, pad=0.2, bgcolor="white"];
+  node [shape=plain, fontname="Helvetica"];
+
+  trace [label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#5B6B73">
+      <TR>
+        <TD BGCOLOR="#F5F5F5"><B>Phase</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Shell (parent)</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Left child (producer)</B></TD>
+        <TD BGCOLOR="#F5F5F5"><B>Right child (consumer)</B></TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Create conduit</B></TD>
+        <TD>`pipe(r,w)` creates read end `r` and write end `w`</TD>
+        <TD>-</TD>
+        <TD>-</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Fork</B></TD>
+        <TD>`fork()` twice to create two children</TD>
+        <TD>inherits `r,w`</TD>
+        <TD>inherits `r,w`</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Rewire streams</B></TD>
+        <TD>-</TD>
+        <TD>`dup2(w, 1)` so stdout points to pipe write end</TD>
+        <TD>`dup2(r, 0)` so stdin points to pipe read end</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Close extras</B></TD>
+        <TD>closes its copies of `r,w`</TD>
+        <TD>closes `r` and original `w`</TD>
+        <TD>closes `w` and original `r`</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>Exec</B></TD>
+        <TD>-</TD>
+        <TD>`exec(\"ls\")` (writes to fd 1)</TD>
+        <TD>`exec(\"wc -l\")` (reads from fd 0)</TD>
+      </TR>
+      <TR>
+        <TD BGCOLOR="#E6F3F9"><B>EOF rule</B></TD>
+        <TD COLSPAN="3">reader sees EOF only after all write ends are closed; forgetting a `close(w)` can make the consumer block forever</TD>
+      </TR>
+    </TABLE>
+  >];
+}
+

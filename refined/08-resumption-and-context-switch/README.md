@@ -2,6 +2,10 @@
 
 ## Why These Ideas Belong Together
 
+### Scope note for “execution context”
+
+In the early single-threaded teaching model, you can read **execution context** as “the currently running process’s machine-level continuation state.” Later, when the thread chapter appears, this will be refined: the saved-and-restored machine state belongs most directly to a **thread**, while the broader resource container belongs to the **process**. This chapter is compatible with both views; it is introducing the resumption mechanism before the final process/thread split is fully sharpened.
+
 Operating systems do not merely *run* programs. They repeatedly stop one computation, preserve enough of its state that it can be resumed later, choose some other computation to run, and then reconstruct the chosen computation’s state so that the CPU continues as if nothing had interrupted it. That entire story is the resumption problem.
 
 The six ideas in this cluster are six parts of one mechanism.
@@ -67,6 +71,8 @@ One subtle point is that not all process state lives in registers. Much of it is
 ## Definition 3: Process Control Block
 
 **Definition.** A **process control block** (PCB) is a kernel-resident data structure that stores the operating system’s record of a process, including enough execution state and management information for the kernel to track, schedule, suspend, and resume that process.
+
+If you want the cleanest mental model, read the PCB here as “the kernel’s durable record of a resumable computation in the simplified process-first model.” Later chapters will separate process-level and thread-level records more carefully.
 
 In plain technical English, the PCB is the operating system’s official file on a process. If the CPU forgets the process because it is no longer running, the kernel does not forget it, because the PCB preserves what the kernel needs to know.
 

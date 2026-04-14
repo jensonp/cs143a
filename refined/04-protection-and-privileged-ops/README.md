@@ -30,6 +30,10 @@ That enforcement comes from three linked ideas:
 
 The rest of the cluster is best understood as a consequence of those three ideas.
 
+### Local minimum definition of process for this chapter
+
+This chapter uses the word **process** before the full process chapter appears. For the purposes of this chapter only, treat a process as **a running user-level computation together with the operating system record that identifies it as a separately managed execution**. Later chapters will expand that into address space, rights, process state, lifecycle, and resource ownership. Here the term is needed only so we can say clearly that hardware is protecting one user computation from taking control of the whole machine.
+
 ## User Mode and Kernel Mode
 
 ### Formal definition: processor mode

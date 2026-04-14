@@ -176,6 +176,18 @@ Conceptually, a successful `exec` does not “come back” to the old program be
 
 This boundary condition is crucial. A student who thinks successful `exec` returns normally has not yet internalized what replacement means.
 
+### Local bridge for the shell example
+
+Three compact meanings are needed before the shell example.
+
+A **shell** is a command interpreter that reads user commands and asks the operating system to create and manage processes on the user’s behalf.
+
+**Redirection** means changing which open file descriptor a process uses for standard input, standard output, or standard error before the new program begins running.
+
+An **inherited file descriptor** is a file descriptor in the child that refers to kernel-managed open-file state passed along from the parent during process creation.
+
+With those meanings fixed, the shell example can be read as a precise lifecycle protocol rather than as a bag of Unix trivia.
+
 ## Worked example: how a shell runs a command
 
 This example is worth studying because it teaches the general pattern used throughout Unix-like systems.

@@ -20,6 +20,16 @@ If dual mode explains **why** the boundary must exist, the syscall boundary clus
 
 ## The Problem the Boundary Solves
 
+### Local vocabulary bridge for this chapter
+
+Three small terms should be fixed before the detailed syscall path begins.
+
+An **ABI** (application binary interface) is the low-level calling convention that says where arguments, return values, and control-transfer details live at the machine boundary.
+
+A **file descriptor** is a small integer used by a process to name an already-open kernel-managed object such as a file, pipe, or socket.
+
+A **user pointer** is a pointer value supplied from user space. Even if it is numerically well formed, the kernel must still treat it as untrusted until it has checked that the referenced range is valid and accessible in that process’s address space.
+
 A process should be able to ask for privileged work while remaining unable to seize privileged power. That sentence is the entire design goal.
 
 The kernel therefore needs a mechanism with all of the following properties.
@@ -89,6 +99,8 @@ The first call is an ordinary user-space function call from your program into a 
 The second is the privileged boundary crossing from the wrapper into the kernel via the trap instruction.
 
 Students often collapse these into one event. Do not. The wrapper is not the kernel. The trap is the actual boundary crossing.
+
+The safest reading rule is: **library call first, privilege crossing second, kernel service third**. Keeping those three stages separate prevents a large fraction of beginner confusion.
 
 ## Why Arguments Need Special Handling
 

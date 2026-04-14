@@ -12,6 +12,10 @@ What is fixed in this topic is the abstract structure of execution: there is sto
 
 This topic supports almost everything that follows in operating systems. Once you understand normal sequential execution, you can understand what it means to interrupt that execution, what it means for one process to resume where it left off, why saving the program counter matters, what a system call must preserve, why privilege transitions are meaningful, and why the kernel can be described as taking control of the machine.
 
+### Dependency bridge: later control-flow terms
+
+This chapter will occasionally name later operating-systems terms such as **interrupt**, **exception**, **fault**, **trap**, **handler**, and **vector entry**. In this chapter, treat those words only as **forward references** to ways in which normal sequential execution can later be redirected. You do **not** need their full formal meaning yet. The only fact needed here is simpler: ordinary execution follows the current program counter, while later mechanisms will sometimes replace the normal next-PC rule with a protected control transfer defined by the architecture and the operating system.
+
 ## The CPU
 
 ### Formal definition
@@ -144,7 +148,7 @@ It is important to be explicit about what is being checked here. The decoded ins
 
 The most important conclusion execute produces is the **next machine state**. That next state includes more than the obvious data result. It also includes the next PC value. Students often pay attention to arithmetic results and forget that every instruction, even a simple one, participates in control flow because execution must continue somewhere.
 
-This is where normal sequential execution and altered control flow separate clearly. For a straight-line arithmetic instruction on a fixed-length instruction set, the next PC is usually the old PC plus the instruction length. For a taken branch or jump, the next PC becomes the branch target or jump target. For a not-taken conditional branch, the next PC becomes the sequential successor. For an exception, the normal next PC may be replaced by a trap vector or handler entry determined by the machine.
+This is where normal sequential execution and altered control flow separate clearly. For a straight-line arithmetic instruction on a fixed-length instruction set, the next PC is usually the old PC plus the instruction length. For a taken branch or jump, the next PC becomes the branch target or jump target. For a not-taken conditional branch, the next PC becomes the sequential successor. For an exception, the normal next PC may be replaced by an architecture-defined control-transfer target chosen by the machine. Later chapters will make this more precise by introducing traps, interrupts, and vector-table-based handler selection.
 
 A common misconception is to think execute is only about ALU work such as addition or subtraction. In fact, execute means “carry out the instruction semantics,” which includes memory access and control transfer. Another confusion is to think the PC update is a separate optional detail. It is not optional. Without determining the next PC, the machine cannot continue normal execution.
 
@@ -164,7 +168,7 @@ Students often form the wrong mental model that the CPU always runs instructions
 
 This distinction matters. Sequentiality is not a metaphysical law; it is a consequence of how the PC is updated for ordinary instructions. In a fixed-length instruction set where each instruction is 4 bytes, if the current PC is 100 and the current instruction does not redirect control, then the next PC may simply be 104. That looks like automatic linear execution, but really it is just repeated PC advancement by a fixed increment.
 
-Once you see it this way, all control mechanisms become easier to understand. A branch is just an instruction whose execution sets the next PC differently. A call is just an instruction that both saves return information and sets the next PC to the callee’s address. A return restores the next PC from saved state. An interrupt or exception is an event that causes control to be redirected to a handler address. The conceptually central object is not “line order”; it is the rule that determines the next PC.
+Once you see it this way, all control mechanisms become easier to understand. A branch is just an instruction whose execution sets the next PC differently. A call is just an instruction that both saves return information and sets the next PC to the callee’s address. A return restores the next PC from saved state. A later control-transfer event such as an interrupt or exception can redirect execution away from the ordinary sequential successor and toward an architecture-defined handler address. The full distinction among those events is introduced in later chapters. The conceptually central object is not “line order”; it is the rule that determines the next PC.
 
 ## A Fully Worked Example
 

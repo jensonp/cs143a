@@ -22,6 +22,18 @@ If you study these one by one as isolated vocabulary words, the picture stays bl
 
 ## The problem before the solution
 
+### Minimum bridge needed before this chapter
+
+This chapter appears before the full protection chapter, so fix the following temporary meanings before reading further.
+
+A **running program** in this chapter should be understood as the execution entity the operating system is managing; later chapters will formalize that entity as a **process**.
+
+When this chapter says the CPU transfers control to a handler, treat that handler as **operating-system code** that runs under hardware control rather than as ordinary user code. The full explanation of **user mode**, **kernel mode**, and **privileged execution** comes in the next cluster.
+
+When this chapter says the machine “saves the current context,” read that as: the machine preserves enough state of the interrupted computation—especially the program counter, status, and other live register state—that ordinary execution can later resume correctly. The full saved-context / PCB / context-switch treatment comes later.
+
+This bridge is enough to study interrupts correctly now without pretending the protection machinery has already been fully developed.
+
 Suppose a process wants to read data from a disk, receive a network packet, or send bytes to a printer. The CPU cannot directly talk to the physical medium in raw electrical detail. It does not sit there measuring voltage on the wire or spinning the magnetic platter. There is hardware between the CPU and the device. Also, the device does not typically complete the request immediately. That means the system needs answers to several questions.
 
 First, where does the intelligence for controlling the device live? Second, where does incoming or outgoing data wait while hardware and software operate at different speeds? Third, how does the CPU discover that the device has become ready, completed a request, or encountered an error? Fourth, once the event is known, what code runs, and how does the processor know where that code is? Fifth, if multiple device events compete for attention, which may interrupt which? Sixth, if many bytes must move, who actually copies them?
@@ -132,6 +144,8 @@ A common confusion is to treat the vector table as if it were the handler itself
 
 **Definition.** An **interrupt service routine** (ISR) is the software routine executed in response to a delivered interrupt in order to acknowledge the event, perform the minimum necessary service, update system state, and arrange any further processing.
 
+A useful dependency note belongs here. An interrupt service routine is **not** ordinary application code. Even though this chapter introduces ISRs before the full protection chapter, you should already read an ISR as operating-system-controlled code that executes because hardware redirected control to it. The next cluster will explain exactly why ordinary user code is not allowed to masquerade as that handler.
+
 In plain technical English, the ISR is the first piece of software that deals with the interrupt after the CPU has been redirected to the appropriate handler address.
 
 To understand an ISR well, do not think of it as "the whole driver." It is usually only the urgent front-end response. It runs in a context where latency matters and where the system must be careful about what it does before returning or before deferring more work.
@@ -217,6 +231,8 @@ A process requests I/O, for example reading a disk block. The operating system c
 Once started, the DMA engine arbitrates for access to the memory bus and transfers data directly between the device-side buffer or controller path and main memory. During this phase, the CPU may execute unrelated work, though memory-system bandwidth is now shared. The transfer continues until the byte count reaches zero or an error condition occurs.
 
 At that boundary condition, the DMA hardware or associated controller sets completion or error status and raises an interrupt if configured to do so. The CPU later receives the interrupt, vectors to the ISR, checks whether the transfer completed successfully, acknowledges the condition, updates kernel state to mark the buffer valid or failed, and wakes or advances whatever software was waiting on that I/O.
+
+The phrase “kernel state” is a forward reference here. At this stage, read it simply as the operating system’s own trusted bookkeeping about requests, buffers, wait conditions, and completion status. Later chapters will unpack this into process records, scheduler-visible states, and other concrete kernel data structures.
 
 Notice the division of checks.
 

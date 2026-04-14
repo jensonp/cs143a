@@ -68,6 +68,12 @@ As soon as processes cooperate, correctness no longer depends only on what each 
 
 That is why IPC cannot be separated from synchronization. Communication alone is not enough. The system also needs rules about timing and access.
 
+### Local definition: synchronization
+
+**Synchronization** is the set of rules and mechanisms that determine when concurrent execution entities may safely proceed relative to one another.
+
+In plain technical English, communication answers **what information moves**, while synchronization answers **when each side is allowed to act on that information**. This chapter will keep both ideas visible, because IPC is rarely correct if you understand only one of them.
+
 ## Two Fundamental IPC Models
 
 Operating systems texts usually divide IPC into two major models:
@@ -144,6 +150,12 @@ A third hidden assumption is lifetime management. The shared region must outlive
 Think of shared memory as placing a whiteboard in a room that two isolated workers are now both allowed to see. The operating system gives both workers access to the room. But the OS does not tell them when to write, when to erase, how to signal “new content,” or what part of the board means what. They must establish those rules themselves.
 
 ## Message Passing
+
+### Local definition: communication channel
+
+A **communication channel** is the operating-system-managed path or object through which messages are sent, buffered, and received.
+
+In plain technical English, a channel is the thing whose state determines whether a send can succeed now, whether a receive has data available now, and whether communication requires waiting. Later references to full channels, empty channels, buffered channels, and rendezvous channels all depend on this object.
 
 ### Formal definition
 
@@ -438,7 +450,11 @@ But do not mistake abstraction for disappearance of the underlying problem. The 
 
 This distinction is one of the most commonly misunderstood parts of IPC.
 
-Students often use “blocking,” “non-blocking,” “synchronous,” “asynchronous,” and “busy waiting” as if they were interchangeable. They are not. The differences matter.
+Students often use “blocking,” “non-blocking,” “synchronous,” “asynchronous,” and “busy waiting” as if they were interchangeable.
+
+They are related, but they answer different questions. **Blocking/non-blocking** is about whether the caller waits. **Synchronous/asynchronous** is about the structure and timing contract of the interaction. **Busy waiting** is about how waiting is implemented. Keeping those axes separate prevents a large amount of later confusion.
+
+They are not. The differences matter.
 
 ## Blocking Operations
 

@@ -10,6 +10,8 @@ To understand the role of the OS, it helps to treat it as a cluster of roles rat
 
 These roles are not separate modules sitting side by side. The same mechanism often serves several roles at once. Virtual memory is both a protective boundary and an illusion. The file system is both a unifying interface and a persistence mechanism. Scheduling is both resource allocation and conflict resolution. The point of this chapter is to build the conceptual frame in which these later mechanisms make sense.
 
+This chapter will use later objects such as **processes**, **files**, **virtual memory**, and **sockets** as examples of what the operating system manages. At this stage, treat them as preview objects. The goal here is not to define each one fully, but to understand why the OS must exist before those objects are studied in detail.
+
 ## The three actors: hardware, applications, and the operating system
 
 We should first identify the basic actors in the system and what each can and cannot do.

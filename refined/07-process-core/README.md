@@ -20,6 +20,8 @@ Those questions lead naturally to the five subtopics in this chapter:
 4. Process state model.
 5. The relationships among all of them.
 
+This chapter deliberately revisits **address space** and **rights** as properties of a process even if earlier clusters already introduced them separately. Read those sections here as **process-centered synthesis**, not as the first place those ideas ever appear.
+
 ---
 
 ## 1. Program vs Process

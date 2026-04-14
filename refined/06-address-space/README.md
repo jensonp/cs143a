@@ -2,6 +2,12 @@
 
 ## Why This Cluster Exists
 
+### Minimum process definition for this chapter
+
+This chapter needs a temporary definition of **process** before the full process chapter appears.
+
+For this chapter, treat a process as **the currently running protected program instance whose memory references the operating system and hardware interpret together**. Later chapters will expand “process” into a richer object with rights, scheduling state, parent-child relationships, and lifecycle transitions. Here we need only one fact: an address space belongs to one managed running computation at a time, not to “the machine in general.”
+
 An operating system cannot manage memory well unless it first separates three different questions that beginners often collapse into one. The first question is: **what addresses does a running program think it is using?** The second is: **where are the actual bytes stored in hardware right now?** The third is: **what is the program allowed to access, and what must be forbidden?** The address-space cluster exists because these are not the same question.
 
 A user program behaves as if it owns a large, orderly, private memory. It generates addresses while executing instructions, loading variables, following pointers, indexing arrays, and calling functions. But the machine has only one physical memory system shared among many programs, the kernel, and hardware devices. If programs were allowed to issue raw physical-memory references directly, every program could potentially read or overwrite every other program’s data, or overwrite the operating system itself. That would destroy both correctness and security.
@@ -9,6 +15,8 @@ A user program behaves as if it owns a large, orderly, private memory. It genera
 So operating systems introduce an abstraction. The program works inside an **address space**. The addresses it generates are **virtual addresses**. Hardware and the operating system cooperate to translate those into locations in **physical memory**. At the same time, the system checks whether the access is permitted. That is why address translation and memory protection are conceptually tied together. Translation tells the machine **where** to go. Protection tells the machine **whether** it is allowed to go there.
 
 This cluster appears early in operating-systems study because later topics depend on it. Process isolation, paging, segmentation, page tables, TLBs, shared memory, kernel/user separation, memory-mapped files, copy-on-write, and even efficient multiprogramming all rely on the distinction between virtual and physical memory.
+
+This chapter is therefore using **process** in a narrow memory-management sense before the later full process chapter. That is deliberate. The full process object is larger than an address space, but an address space is one of its most important components.
 
 ## 1. Address Space
 

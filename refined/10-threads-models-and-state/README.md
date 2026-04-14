@@ -8,6 +8,8 @@ A serious understanding starts from the question: *what exactly is it that the C
 
 The topic matters because threads sit exactly at the boundary between several central OS concerns: scheduling, concurrency, synchronization, blocking, context switching, memory sharing, protection, and performance. If you do not distinguish carefully between a process and a thread, later topics such as locks, races, deadlock, condition variables, thread libraries, and multicore scheduling become confused immediately.
 
+Those later terms are being used here as **forward-reference labels**, not as fully developed mechanisms yet. At this stage, the only fact you need is simpler: once multiple threads share one process state, correctness will later require explicit coordination rules to prevent one thread’s actions from invalidating another’s assumptions.
+
 ## The Problem a Thread Solves
 
 Suppose a server process handles network requests. While it waits for one client’s disk read to complete, it would like to make progress on a different client. Suppose a browser tab needs to render the interface while also performing network activity. Suppose a program wants one activity to compute while another waits for user input. In all of these cases, there is a single larger task or application, but within it there are multiple independent control flows.

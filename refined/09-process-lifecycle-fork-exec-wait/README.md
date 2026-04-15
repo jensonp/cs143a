@@ -8,6 +8,16 @@ Operating systems are not only collections of files, memory, and devices. They a
 
 This material must be introduced once you already know what a **process** is and how it differs from a mere program file. The earlier question that forces this topic to appear is simple: if processes are running entities, **where do they come from, how are they related, and what exactly happens when one ends?** You cannot reason well about shells, pipelines, daemons, background jobs, login sessions, servers, or process synchronization until this lifecycle is understood as one connected mechanism.
 
+## Local Working Terms Used in This Chapter
+
+Three terms need local working definitions here because they matter to the lifecycle logic itself.
+
+**Copy-on-write** means the parent and child are allowed to behave *as if* they each received separate memory copies after `fork`, while the implementation may delay real copying until one of them writes to a shared page. The local conceptual point is logical separation of memory, not immediate physical duplication of every page.
+
+**Inherited open-file state** means that after `fork`, the child receives file-descriptor entries that may refer to the same underlying open-file kernel object as the parent’s corresponding entries. The local conceptual point is that “descriptor copied” does not automatically mean “underlying file state unshared.”
+
+To **reap** a child means to collect its recorded termination status with `wait`-style logic so the kernel can finally remove the child’s remaining zombie bookkeeping entry. The local conceptual point is that child death and final cleanup are related but distinct events.
+
 The large-scale role of this topic inside operating systems is that it explains how the kernel maintains control over computation over time. The kernel is not just scheduling anonymous work; it is managing a structured population of processes with inheritance, identity, and cleanup obligations.
 
 ## The process as the central object
@@ -360,6 +370,10 @@ A process **whose parent has died while it remains alive** is an orphan.
 A process **that is sleeping or blocked** is not necessarily any of the above special family states; it is simply alive but waiting for some event.
 
 These are different axes. “Who is the parent?” and “is the process still executing?” are separate questions.
+
+## Do Not Confuse: Zombie, Orphan, and Blocked Child
+
+A zombie is already dead as an execution entity but still present as a termination record awaiting collection. An orphan is still alive, but its original parent is gone. A blocked child is still alive and simply waiting for some event. These states answer different questions: “is the child alive?”, “has the parent survived?”, and “can the child make progress right now?” Do not collapse them.
 
 ## Subtleties that matter for real understanding
 

@@ -20,6 +20,73 @@ So the process solves one problem: *resource ownership and protection*. The thre
 
 That distinction is the foundation for everything that follows.
 
+## Multiprocessing, Multiprogramming, and Multithreading
+
+### Why This Section Exists
+
+Once processes and threads have both been introduced, students are immediately confronted with three similar-looking words:
+
+- multiprocessing
+- multiprogramming
+- multithreading
+
+These are easy to blur because all three involve “more than one thing happening.” But they answer three different questions:
+
+- **How many CPUs or cores does the machine have available?**
+- **How many processes or jobs is the operating system managing at once?**
+- **How many execution streams exist inside one process?**
+
+This section exists to force those questions apart. Without this distinction, later reasoning about scheduling, blocking, concurrency, and parallelism becomes vague.
+
+### The Three Definitions
+
+#### Multiprocessing
+
+**Multiprocessing** means the system has multiple processors or CPU cores available for execution.
+
+In plain technical English, multiprocessing is about the **hardware execution capacity** of the machine. It answers: how many hardware execution engines can run simultaneously?
+
+#### Multiprogramming
+
+**Multiprogramming** means the operating system keeps multiple jobs or processes in the system so the CPU can stay busy by switching among them when one cannot make progress.
+
+In plain technical English, multiprogramming is about the **OS managing multiple active processes over time**, even on one CPU core.
+
+#### Multithreading
+
+**Multithreading** means one process contains multiple threads of execution.
+
+In plain technical English, multithreading is about the **internal execution structure of one process**, not about the whole machine.
+
+### Concurrency vs Parallelism
+
+**Concurrency** means multiple activities are logically in progress, even if they are not all executing at the exact same instant.
+
+**Parallelism** means multiple activities are physically executing at the same time on different processors or cores.
+
+A single-core system can support concurrency without parallelism. Multiple cores allow parallelism. A multithreaded process may therefore be concurrent without automatically being parallel.
+
+### One Important Constraint
+
+Only **one thread can run on one CPU core at a time**. Threads may be interleaved on a single core, or run truly simultaneously on multiple cores if the hardware and scheduling model allow it.
+
+### Why This Belongs in the Thread Chapter
+
+This taxonomy explains why one blocked thread may or may not stall the rest, why kernel visibility matters, and why “more threads” is not the same thing as “more cores.” The deeper thread model makes more sense once these terms are fixed.
+
+### Retain / Do Not Confuse
+
+Retain:
+- multiprocessing = multiple CPUs/cores
+- multiprogramming = multiple jobs/processes managed by the OS
+- multithreading = multiple threads inside one process
+- concurrency is not the same as parallelism
+
+Do not confuse:
+- hardware multiplicity with software multiplicity
+- many threads with automatic simultaneous execution
+- many processes with one multithreaded process
+
 ## First Definition: Process
 
 **Definition.** A **process** is an executing program together with the resources and execution environment that the operating system associates with it, including its address space, protection domain, open resources, and bookkeeping information.
@@ -163,6 +230,10 @@ Creating or switching processes often has more overhead than creating or switchi
 Protection is process-oriented, not thread-oriented in the usual model. One thread cannot, by default, be prevented from accessing ordinary shared process memory that another thread can access. That is why a wild pointer in one thread can corrupt another thread’s data in the same process.
 
 So threads improve concurrency and sharing, but they do not provide isolation from one another in the way separate processes do.
+
+## Deep Trace: One Blocked Thread Under Different Threading Models
+
+Suppose one process contains two logical threads, T1 and T2. T1 is computing. T2 issues a blocking I/O request. In a one-to-one kernel-thread model, the kernel sees T1 and T2 as separate schedulable execution entities. When T2 blocks, the kernel marks T2 blocked, saves its execution state, and can still schedule T1 because T1 remains runnable. The process as a whole stays alive and partially active. In a many-to-one pure user-thread model, the kernel may see only one kernel execution entity for the whole process. When T2 performs a blocking system call, the kernel blocks that one kernel-visible execution entity. At that point, even though the runtime conceptually still has T1 and T2 as separate user threads, the kernel cannot schedule T1 independently because it does not know T1 exists as a separate schedulable object. This trace teaches why “what blocks?” depends on the threading model and on which execution entities are visible to the kernel.
 
 ## Kernel Threads
 
@@ -337,6 +408,10 @@ This topic refers to nearby concepts that it does not fully teach. In particular
 Homework-relevant or lecture-relevant facts that are not covered fully here include the exact API behavior of a particular threading library, the concrete system calls used to create threads on a given operating system, the detailed layout of a real kernel’s thread structures, and the low-level assembly steps of a specific architecture’s context switch routine. Those details matter for implementation courses or systems labs, but they are downstream from the conceptual model built here.
 
 The concepts that should be studied immediately before this topic are: execution state, CPU registers, stacks and function calls, trap and interrupt basics, processes, virtual address spaces, and the purpose of protection boundaries. The concepts that should be studied immediately after this topic are: context switching, CPU scheduling, synchronization primitives such as mutexes and condition variables, races and critical sections, blocking versus nonblocking I/O, and deadlock.
+
+## Do Not Confuse: Thread, Process, Core, and Parallelism
+
+A thread is an execution context. A process is a resource container. A core is a hardware execution engine. Parallelism is actual simultaneous execution on multiple cores. One process may contain many threads, and a machine may have many cores, but the existence of many threads does not by itself imply parallel execution.
 
 ## Retain / Do Not Confuse
 

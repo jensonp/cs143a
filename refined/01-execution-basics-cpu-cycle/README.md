@@ -12,9 +12,21 @@ What is fixed in this topic is the abstract structure of execution: there is sto
 
 This topic supports almost everything that follows in operating systems. Once you understand normal sequential execution, you can understand what it means to interrupt that execution, what it means for one process to resume where it left off, why saving the program counter matters, what a system call must preserve, why privilege transitions are meaningful, and why the kernel can be described as taking control of the machine.
 
-### Dependency bridge: later control-flow terms
+## Local Preview Definitions Used in This Chapter
 
-This chapter will occasionally name later operating-systems terms such as **interrupt**, **exception**, **fault**, **trap**, **handler**, and **vector entry**. In this chapter, treat those words only as **forward references** to ways in which normal sequential execution can later be redirected. You do **not** need their full formal meaning yet. The only fact needed here is simpler: ordinary execution follows the current program counter, while later mechanisms will sometimes replace the normal next-PC rule with a protected control transfer defined by the architecture and the operating system.
+This chapter must mention several later operating-systems ideas because they are part of the motivation for learning the machine loop. But those ideas should not remain mysterious placeholders here. So use the following local working definitions while reading this chapter.
+
+An **interrupt** is an external or independently progressing event that causes the CPU to stop ordinary sequential execution at an allowed boundary and transfer control elsewhere. At this stage, the important point is not the full interrupt mechanism. The important point is that normal PC-driven execution can be redirected by events outside the current instruction’s own meaning.
+
+A **trap** is a controlled transfer caused by the currently executing instruction stream itself, such as a deliberate request for system service or an exception-like condition detected during execution. At this stage, the important point is again only the control-flow fact: the next PC does not have to be the sequential successor.
+
+A **system call** is a request by user code for operating-system service. In machine terms, it eventually causes a controlled entry into privileged operating-system code. At this stage, the important point is that some instructions exist precisely to cross the user/kernel boundary in a disciplined way.
+
+A **fault** or **exception** is a condition discovered while trying to fetch, decode, or execute an instruction or its operands, such that ordinary continuation is not allowed to proceed unchanged. At this stage, the useful mental model is simple: not every instruction attempt successfully produces an ordinary next state.
+
+A **privilege transition** is a change in execution authority, typically between user-mode execution and kernel-mode execution. This chapter does not yet teach the protection machinery. It only needs the local fact that control flow can change not only in *where* execution goes next, but also in *what authority level* executes there.
+
+These are preview definitions, not full chapters. Their job is to keep the current chapter readable without forcing the reader to wait for later rescue.
 
 ## The CPU
 
@@ -269,6 +281,12 @@ If instead `R1 = 9` and `R2 = 4`, then the branch condition would be false. In t
 
 This example teaches the most important lesson about control flow: the essence of branching is not “skipping lines.” It is selecting the next PC based on current machine state.
 
+## Why These Later Boundary Events Already Matter Here
+
+The fetch-decode-execute cycle is the default machine story, not the only machine story. This matters because later operating-systems mechanisms are easiest to understand if you already know what they are interrupting or redirecting.
+
+An interrupt matters because it changes what would otherwise have been the next ordinary fetch. A trap matters because it redirects control due to the current instruction stream. A fault matters because the machine may discover that a requested step cannot legally complete. A system call matters because it is a deliberate doorway from ordinary user computation into operating-system-managed service. All of these later mechanisms are variations on one deep fact established in this chapter: execution is a sequence of machine states, and the program counter is the immediate locator of continuation. Later OS material does not replace that model. It builds on it by adding disciplined ways for the “next PC” and the current authority level to change.
+
 ## Failure Modes and Boundary Conditions
 
 Execution basics sound clean because the idealized machine loop is clean. But the idealized story sits on several assumptions. If you do not make them explicit, later OS concepts become confusing.
@@ -286,6 +304,10 @@ A fifth boundary condition concerns instruction size. If instructions are variab
 A sixth subtle point concerns self-modifying code or code generation. If memory contents can change, then the instruction fetched from a given address can differ over time. The machine loop still works, but the assumption that “address 200 always means the same instruction” no longer holds.
 
 These failure modes are not side details. They are the bridge to operating systems. Many traps, faults, and protection mechanisms exist precisely because fetch, decode, or execute can fail or require intervention.
+
+## Do Not Confuse: Sequential Execution, Redirected Execution, and Failure of Execution
+
+Sequential execution means the next PC follows the ordinary default rule for the current instruction stream. Redirected execution means the next PC is chosen differently because of a branch, trap, interrupt, or other control event. Failure of execution means the attempted step cannot proceed normally at all because the fetch, decode, or execute path discovered an invalid or disallowed condition. These are related, but they are not the same thing. A branch is not an error. An interrupt is not the same as an invalid opcode. Keeping those apart now prevents later confusion when the OS handles them differently.
 
 ## Common Misconceptions to Eliminate Early
 

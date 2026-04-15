@@ -10,6 +10,16 @@ The moment you understand dual mode, a problem appears: user programs still need
 
 This cluster is not one thing. It is a chain:
 
+Before continuing, fix three local terms that the rest of the chapter depends on.
+
+**User space** means the ordinary execution environment of the application process, where code runs without direct authority over protected machine resources.
+
+**Kernel space** means the privileged execution environment and protected memory domain in which the operating system implements authoritative services.
+
+An **ABI** — application binary interface — is the machine-level calling and data-passing convention that lets independently written code agree on how to pass control and arguments. In this chapter, the syscall ABI is the rule for where the syscall number, arguments, return values, and saved state are expected to live during the boundary crossing.
+
+These terms are not supposed to feel like imported jargon. They are simply the names for the two sides of the syscall boundary and the machine convention that lets the crossing be decoded correctly.
+
 1. a **system call** as an abstract request for an operating-system service,
 2. a **trap** or special control-transfer instruction that intentionally enters the kernel,
 3. **kernel entry** code that safely transitions privilege and machine state,

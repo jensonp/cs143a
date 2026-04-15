@@ -24,6 +24,14 @@ This chapter treats the standard cluster of ideas that usually appears together 
 
 These concepts belong together because each solves a part of the same larger problem. A process needs to cooperate with another process. To do that, it needs some communication mechanism. Once communication exists, it also needs coordination rules so that the sender and receiver know when data is available and what to do if it is not. That coordination question is exactly where blocking and non-blocking behavior enters.
 
+Before going further, separate two ideas that students often collapse too early.
+
+**Communication** answers: how does information move between isolated processes?
+
+**Synchronization** answers: when is an attempted operation allowed to proceed?
+
+They are tightly related, but they are not identical. Shared memory is a communication mechanism, while mutual exclusion or blocking-on-empty/full are synchronization rules layered on top of that communication structure. Message passing is also a communication mechanism, while the rules for when send or receive waits are synchronization rules. Making this distinction early keeps the rest of the chapter from sounding like “all coordination is one vague thing.”
+
 ## The Problem That Forces IPC to Exist
 
 A process is typically given its own virtual address space. That means the memory references made by one process are interpreted relative to mappings that belong to that process alone. Under normal circumstances, process A cannot simply read some pointer value from process B's memory and dereference it. That pointer is meaningful only inside B's address space. The separation is deliberate.
@@ -447,6 +455,10 @@ This often yields a cleaner abstraction. The producer can be written as “send 
 But do not mistake abstraction for disappearance of the underlying problem. The boundedness question is still there. Waiting behavior is still there. Deadlock risk is still there if protocols are poorly designed.
 
 ## Blocking vs Non-Blocking
+
+## Do Not Confuse: Blocking, Non-Blocking, Synchronous, and Busy Waiting
+
+A blocking operation may wait until its required condition becomes true. A non-blocking operation returns immediately even if that condition is false. A synchronous communication pattern is about coordination structure, often rendezvous-like timing, not merely about waiting behavior. Busy waiting is repeated checking while consuming CPU instead of sleeping. These terms often overlap in casual speech, but they are not interchangeable.
 
 This distinction is one of the most commonly misunderstood parts of IPC.
 

@@ -18,6 +18,16 @@ A CPU can only execute one instruction stream per core at a time. If more than o
 
 That dependency chain is why these ideas should be learned together.
 
+## Local Working Distinction Used in This Chapter
+
+This chapter must sometimes speak in the traditional textbook language of “the process that is running,” even though a later chapter will separate process and thread more sharply. So fix the local working distinction now.
+
+An **execution context** is the thing that has a live program counter, register state, stack pointer, and schedulable continuation. In a single-threaded teaching model, it is usually acceptable to identify this with “the process.” In a multithreaded model, the execution context is more precisely a thread living inside a process.
+
+A **resource container** is the larger OS object that owns the address space, files, credentials, and other shared process-level resources.
+
+This chapter is primarily about the execution-context side of the story: what must be saved, restored, and chosen so computation can resume correctly. The later thread chapter will refine the vocabulary, but the current mechanism is readable now if you hold this local distinction in mind.
+
 ## The Problem the Cluster Solves
 
 Suppose a user runs a text editor, a compiler, a music player, and a web browser at the same time on a single CPU core. Physically, the core cannot execute four instruction streams simultaneously. Yet the system must preserve the illusion that each program continues to make progress.

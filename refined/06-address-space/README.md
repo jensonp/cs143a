@@ -2,12 +2,6 @@
 
 ## Why This Cluster Exists
 
-### Minimum process definition for this chapter
-
-This chapter needs a temporary definition of **process** before the full process chapter appears.
-
-For this chapter, treat a process as **the currently running protected program instance whose memory references the operating system and hardware interpret together**. Later chapters will expand “process” into a richer object with rights, scheduling state, parent-child relationships, and lifecycle transitions. Here we need only one fact: an address space belongs to one managed running computation at a time, not to “the machine in general.”
-
 An operating system cannot manage memory well unless it first separates three different questions that beginners often collapse into one. The first question is: **what addresses does a running program think it is using?** The second is: **where are the actual bytes stored in hardware right now?** The third is: **what is the program allowed to access, and what must be forbidden?** The address-space cluster exists because these are not the same question.
 
 A user program behaves as if it owns a large, orderly, private memory. It generates addresses while executing instructions, loading variables, following pointers, indexing arrays, and calling functions. But the machine has only one physical memory system shared among many programs, the kernel, and hardware devices. If programs were allowed to issue raw physical-memory references directly, every program could potentially read or overwrite every other program’s data, or overwrite the operating system itself. That would destroy both correctness and security.
@@ -16,7 +10,21 @@ So operating systems introduce an abstraction. The program works inside an **add
 
 This cluster appears early in operating-systems study because later topics depend on it. Process isolation, paging, segmentation, page tables, TLBs, shared memory, kernel/user separation, memory-mapped files, copy-on-write, and even efficient multiprogramming all rely on the distinction between virtual and physical memory.
 
-This chapter is therefore using **process** in a narrow memory-management sense before the later full process chapter. That is deliberate. The full process object is larger than an address space, but an address space is one of its most important components.
+## Local Working Definition: Process for This Chapter
+
+This chapter needs the word **process** before the later process chapter gives the full execution-oriented treatment. So here is the local working definition you should use while reading this file.
+
+A **process**, for the purposes of this chapter, is the operating system’s protected execution container to which a virtual memory view is attached. At this stage, you do not yet need the full process story about lifecycle, parent-child relations, signals, and scheduling state. You only need the local fact that the machine interprets virtual addresses relative to the currently active protected execution context, and that this context is what we are calling a process.
+
+This is not a shortcut around the later process chapter. It is a local memory-management definition strong enough to make the current chapter readable now.
+
+## Why This Chapter Comes Before the Full Process Chapter
+
+The process chapter later explains the operating-system object that owns execution state, rights, lifecycle, and scheduling identity. This chapter explains one dimension of that object first: its memory view. The order is acceptable because a student can understand that “a process has a protected virtual memory world” before yet knowing the entire process model. But that only works if the current file states that local rule explicitly. So read this chapter as: “here is the memory world attached to a process,” not “here is the full theory of processes.”
+
+## Address-Space Interpretation Trace
+
+A running process executes an instruction that refers to some address. The CPU first produces that address in the process’s virtual-address world, not as a direct physical-memory location. The system then asks which process’s address space is currently active, because the same numeric virtual address can mean different things in different processes. Once the active address-space context is known, the system checks whether the virtual address lies inside some valid mapping for that process. If it does not, no legal interpretation exists for this access and the reference must fault. If a mapping does exist, the system then checks whether the requested access type — read, write, or execute — is permitted by that mapping. A write to a read-only mapping fails even though the address is otherwise valid. If the mapping exists and the access type is allowed, the translation logic then determines the corresponding physical location according to the active mapping mechanism. Only after those checks does the machine continue with the memory access itself. This trace matters because it makes clear that translation and protection are not separate optional afterthoughts. They are the interpretation path of a memory reference.
 
 ## 1. Address Space
 
@@ -223,6 +231,10 @@ If the process generates virtual address 999, the check still succeeds, because 
 If the process generates virtual address 1000, the check fails. The process has attempted to address one byte beyond its allocated region. The hardware raises a fault, and the operating system can terminate the process or otherwise handle the exception.
 
 This example teaches something general. Translation and protection are not separate add-ons here. The same mechanism both relocates legal references and blocks illegal ones.
+
+## Do Not Confuse: Address Space, Virtual Address, and Physical Memory
+
+An address space is the process’s memory world and mapping context. A virtual address is one address generated inside that world. Physical memory is the underlying hardware storage. A virtual address is not the same thing as “the address space,” and neither is the same thing as “a location in RAM.” If you collapse those three objects into one, process isolation and translation stop making sense.
 
 ## 9. Fully Worked Example Chosen for What It Teaches
 

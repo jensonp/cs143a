@@ -14,6 +14,8 @@ This entire cluster of ideas answers that one question.
 
 The key move is this: the processor supports at least two execution states, and hardware enforces different rules in those states. Once hardware enforces the boundary, the operating system can build everything else on top of it: process isolation, system calls, scheduling, device control, safe sharing of I/O, and recovery from faults.
 
+This chapter is also the point where several earlier preview terms become first-class concepts rather than motivational placeholders. Earlier files may have mentioned interrupts, traps, or kernel handling in order to explain why execution structure matters, but this is the first file where the authority boundary itself is being taught as a mechanism. Read it that way: earlier references were previews; here the protection machinery becomes formally intelligible.
+
 ## The Core Problem: Unrestricted Execution Is Incompatible with Multi-Program Systems
 
 Suppose a user program could do all of the following directly:

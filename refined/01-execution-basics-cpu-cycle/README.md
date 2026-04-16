@@ -14,19 +14,19 @@ This topic supports almost everything that follows in operating systems. Once yo
 
 ## Local Preview Definitions Used in This Chapter
 
-This chapter must mention several later operating-systems ideas because they are part of the motivation for learning the machine loop. But those ideas should not remain mysterious placeholders here. So use the following local working definitions while reading this chapter.
+This chapter must mention several later operating-systems ideas because they motivate the machine loop. To keep the chapter readable now, use the following local meanings.
 
-An **interrupt** is an external or independently progressing event that causes the CPU to stop ordinary sequential execution at an allowed boundary and transfer control elsewhere. At this stage, the important point is not the full interrupt mechanism. The important point is that normal PC-driven execution can be redirected by events outside the current instruction’s own meaning.
+An **interrupt** is an event outside the current instruction stream that can redirect normal sequential execution.
 
-A **trap** is a controlled transfer caused by the currently executing instruction stream itself, such as a deliberate request for system service or an exception-like condition detected during execution. At this stage, the important point is again only the control-flow fact: the next PC does not have to be the sequential successor.
+A **trap** is a controlled transfer caused by the current instruction stream itself, such as a deliberate service request or exception-like condition.
 
-A **system call** is a request by user code for operating-system service. In machine terms, it eventually causes a controlled entry into privileged operating-system code. At this stage, the important point is that some instructions exist precisely to cross the user/kernel boundary in a disciplined way.
+A **system call** is a user request for operating-system service that eventually causes a controlled entry into privileged OS code.
 
-A **fault** or **exception** is a condition discovered while trying to fetch, decode, or execute an instruction or its operands, such that ordinary continuation is not allowed to proceed unchanged. At this stage, the useful mental model is simple: not every instruction attempt successfully produces an ordinary next state.
+A **fault** or **exception** is a condition discovered during fetch, decode, or execute such that ordinary continuation cannot proceed unchanged.
 
-A **privilege transition** is a change in execution authority, typically between user-mode execution and kernel-mode execution. This chapter does not yet teach the protection machinery. It only needs the local fact that control flow can change not only in *where* execution goes next, but also in *what authority level* executes there.
+A **privilege transition** is a change in execution authority, typically between user-level execution and kernel-level execution.
 
-These are preview definitions, not full chapters. Their job is to keep the current chapter readable without forcing the reader to wait for later rescue.
+These are only local working definitions. Their job here is to keep the current chapter intelligible without pretending to teach the later chapters in advance.
 
 ## The CPU
 

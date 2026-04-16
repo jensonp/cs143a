@@ -10,17 +10,11 @@ So operating systems introduce an abstraction. The program works inside an **add
 
 This cluster appears early in operating-systems study because later topics depend on it. Process isolation, paging, segmentation, page tables, TLBs, shared memory, kernel/user separation, memory-mapped files, copy-on-write, and even efficient multiprogramming all rely on the distinction between virtual and physical memory.
 
-## Local Working Definition: Process for This Chapter
+## Local Process Bridge for This Chapter
 
-This chapter needs the word **process** before the later process chapter gives the full execution-oriented treatment. So here is the local working definition you should use while reading this file.
+This chapter needs the word **process** before the later process chapter gives the full execution-oriented treatment. So use this local meaning here: a **process**, for the purposes of this chapter, is the operating system’s protected execution container to which a virtual memory view is attached.
 
-A **process**, for the purposes of this chapter, is the operating system’s protected execution container to which a virtual memory view is attached. At this stage, you do not yet need the full process story about lifecycle, parent-child relations, signals, and scheduling state. You only need the local fact that the machine interprets virtual addresses relative to the currently active protected execution context, and that this context is what we are calling a process.
-
-This is not a shortcut around the later process chapter. It is a local memory-management definition strong enough to make the current chapter readable now.
-
-## Why This Chapter Comes Before the Full Process Chapter
-
-The process chapter later explains the operating-system object that owns execution state, rights, lifecycle, and scheduling identity. This chapter explains one dimension of that object first: its memory view. The order is acceptable because a student can understand that “a process has a protected virtual memory world” before yet knowing the entire process model. But that only works if the current file states that local rule explicitly. So read this chapter as: “here is the memory world attached to a process,” not “here is the full theory of processes.”
+That is enough for the current chapter because the topic here is the process’s memory world, not yet its full lifecycle, scheduling role, or parent-child structure. The later process chapter will deepen the object. Here, the only fact you must hold firmly is that virtual addresses are interpreted relative to a current protected process context.
 
 ## Address-Space Interpretation Trace
 

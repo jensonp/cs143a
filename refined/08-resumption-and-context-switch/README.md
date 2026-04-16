@@ -4,7 +4,7 @@
 
 ### Scope note for “execution context”
 
-In the early single-threaded teaching model, you can read **execution context** as “the currently running process’s machine-level continuation state.” Later, when the thread chapter appears, this will be refined: the saved-and-restored machine state belongs most directly to a **thread**, while the broader resource container belongs to the **process**. This chapter is compatible with both views; it is introducing the resumption mechanism before the final process/thread split is fully sharpened.
+In the early single-threaded teaching model, you can read **execution context** as “the currently running process’s machine-level continuation state.” Later, the thread chapter will sharpen this: the saved-and-restored machine state belongs most directly to a **thread**, while the broader resource container belongs to the **process**. This chapter introduces the resumption mechanism first; the later thread chapter refines the ownership vocabulary.
 
 Operating systems do not merely *run* programs. They repeatedly stop one computation, preserve enough of its state that it can be resumed later, choose some other computation to run, and then reconstruct the chosen computation’s state so that the CPU continues as if nothing had interrupted it. That entire story is the resumption problem.
 

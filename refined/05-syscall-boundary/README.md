@@ -32,13 +32,11 @@ If dual mode explains **why** the boundary must exist, the syscall boundary clus
 
 ### Local vocabulary bridge for this chapter
 
-Three small terms should be fixed before the detailed syscall path begins.
+Two more terms should be fixed before the mechanism begins in detail.
 
-An **ABI** (application binary interface) is the low-level calling convention that says where arguments, return values, and control-transfer details live at the machine boundary.
+A **file descriptor** is a small integer a process uses to name an already-open kernel-managed object such as a file, pipe, or socket.
 
-A **file descriptor** is a small integer used by a process to name an already-open kernel-managed object such as a file, pipe, or socket.
-
-A **user pointer** is a pointer value supplied from user space. Even if it is numerically well formed, the kernel must still treat it as untrusted until it has checked that the referenced range is valid and accessible in that process’s address space.
+A **user pointer** is a pointer value supplied from user space; even if it is numerically well formed, the kernel must still treat it as untrusted until it has checked that the referenced range is valid and accessible.
 
 A process should be able to ask for privileged work while remaining unable to seize privileged power. That sentence is the entire design goal.
 

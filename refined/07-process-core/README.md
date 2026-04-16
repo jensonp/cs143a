@@ -4,21 +4,9 @@
 
 Operating systems exist because a computer is not running just one activity at one time in the simple, direct way a beginner first imagines. Even on a machine with a single CPU core, many independent computations must appear to make progress: a shell waits for input, an editor responds to keystrokes, a compiler translates code, a web browser loads pages, and background services react to external events. The machine therefore needs a disciplined way to represent “an executing program together with everything the operating system must know in order to manage it.” That representation is the **process**.
 
-This topic appears early in operating systems because several later ideas depend on it. Scheduling depends on processes because the scheduler chooses which process runs next. Memory management depends on processes because memory protection and virtual address spaces are usually defined per process. Synchronization depends on processes and threads because something must exist before it can wait, signal, block, or compete for resources. Security depends on processes because permissions and access checks are often attached to the currently executing process. File descriptors, signals, accounting, parent-child relationships, and termination all make sense only after the process has been defined.
+This topic appears early because several later ideas depend on it. Scheduling needs a unit that can run, wait, and be resumed. Memory management needs a unit that owns an address space. Security and resource control need a unit to which permissions, files, and accounting can attach.
 
-So this cluster solves a basic problem: how to describe, isolate, control, and track execution over time.
-
-The core questions are these:
-
-A **program** is just code and related static data stored somewhere. But what is the thing that is actually running? If two users launch the same editor, are those “the same thing” or two separate things? Where do local variables, function calls, heap allocations, and command-line arguments live? Who decides whether that running computation may open a file, send a signal, or bind a network port? And how does the operating system describe the fact that sometimes a computation is actively using the CPU, sometimes it is ready but not yet chosen, and sometimes it is blocked waiting for an event?
-
-Those questions lead naturally to the five subtopics in this chapter:
-
-1. Program vs process.
-2. Process address space.
-3. Process rights.
-4. Process state model.
-5. The relationships among all of them.
+So this chapter answers one central question: if a program on disk is passive, what is the live operating-system object that is actually executing, owning resources, and moving through states like ready, running, waiting, and terminated? The answer is the **process**. The rest of the chapter develops that object through four dimensions: program versus process, process address space, process rights, and process state.
 
 This chapter deliberately revisits **address space** and **rights** as properties of a process even if earlier clusters already introduced them separately. Read those sections here as **process-centered synthesis**, not as the first place those ideas ever appear.
 

@@ -42,17 +42,7 @@ The cluster in this chapter is the operating system and hardware answer to those
 
 ## Local Working Definitions Used in This Chapter
 
-This chapter must talk about handler code, kernel response, and saved CPU state before the protection chapter teaches dual mode in full. So use the following local working definitions here.
-
-The **kernel** is the operating system code that runs with the authority needed to manage devices, interrupts, and protected machine state.
-
-**User code** is ordinary application code that does not directly control hardware. This file does not yet need the full user-mode versus kernel-mode mechanism. It only needs the local fact that ordinary program execution and privileged interrupt handling are not the same control path.
-
-An **interrupt handler** or **interrupt service routine (ISR)** is the kernel-side code that runs after an interrupt has been recognized and routed to the right handler address.
-
-**Saving CPU state** means preserving enough of the interrupted execution context that the interrupted computation can later continue correctly. At this stage, the exact architecture-specific save set does not matter. The local point is that the interrupt path cannot simply discard the interrupted computation’s live machine state.
-
-These local definitions are enough to support the current chapter’s argument without deferring basic intelligibility to the protection chapter.
+This chapter must talk about handler code and saved CPU state before the protection chapter teaches privilege in full. So use the following local meanings here: the **kernel** is the operating-system code that manages devices, interrupts, and protected machine state; an **interrupt handler** or **interrupt service routine (ISR)** is the kernel-side code that runs after an interrupt has been recognized and routed; and **saving CPU state** means preserving enough of the interrupted execution context that the interrupted computation can later continue correctly. That is all this chapter needs locally.
 
 ## Device controller
 

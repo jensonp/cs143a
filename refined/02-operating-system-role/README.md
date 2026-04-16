@@ -10,7 +10,7 @@ To understand the role of the OS, it helps to treat it as a cluster of roles rat
 
 These roles are not separate modules sitting side by side. The same mechanism often serves several roles at once. Virtual memory is both a protective boundary and an illusion. The file system is both a unifying interface and a persistence mechanism. Scheduling is both resource allocation and conflict resolution. The point of this chapter is to build the conceptual frame in which these later mechanisms make sense.
 
-Before continuing, use one reading rule for this chapter: whenever a later mechanism is mentioned here — process, virtual memory, file system, scheduling, device handling — treat it as an example of the role cluster, not as assumed prior mastery. This chapter is not supposed to make you already know those mechanisms in detail. It is supposed to tell you what *kind* of problem those later mechanisms will solve. The chapter therefore operates one level above later implementation detail, but it should still remain readable because each role is defined locally and the later examples are used only to anchor the role, not to demand prior technical command.
+Read later mechanisms in this chapter — process, virtual memory, scheduling, file systems, device handling — as **examples of the OS role cluster**, not as assumed prior mastery. This chapter is defining the kinds of problems those later mechanisms solve, not asking you to already know their full mechanics.
 
 ## The three actors: hardware, applications, and the operating system
 

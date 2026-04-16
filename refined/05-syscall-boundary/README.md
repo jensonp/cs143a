@@ -10,21 +10,13 @@ The moment you understand dual mode, a problem appears: user programs still need
 
 This cluster is not one thing. It is a chain:
 
-Before continuing, fix three local terms that the rest of the chapter depends on.
-
-**User space** means the ordinary execution environment of the application process, where code runs without direct authority over protected machine resources.
-
-**Kernel space** means the privileged execution environment and protected memory domain in which the operating system implements authoritative services.
-
-An **ABI** — application binary interface — is the machine-level calling and data-passing convention that lets independently written code agree on how to pass control and arguments. In this chapter, the syscall ABI is the rule for where the syscall number, arguments, return values, and saved state are expected to live during the boundary crossing.
-
-These terms are not supposed to feel like imported jargon. They are simply the names for the two sides of the syscall boundary and the machine convention that lets the crossing be decoded correctly.
-
 1. a **system call** as an abstract request for an operating-system service,
 2. a **trap** or special control-transfer instruction that intentionally enters the kernel,
 3. **kernel entry** code that safely transitions privilege and machine state,
-4. a convention for placing **system-call arguments** in registers or memory,
+4. a convention for placing syscall number and arguments according to the syscall **ABI**,
 5. and often a user-space **wrapper** that presents a normal function-call interface to the programmer.
+
+Here, **user space** means the ordinary application execution environment, **kernel space** means the privileged execution environment in which the OS performs authoritative work, and a **user pointer** means a pointer supplied from user space that the kernel must treat as untrusted until checked.
 
 If dual mode explains **why** the boundary must exist, the syscall boundary cluster explains **how** the crossing actually works.
 
@@ -124,23 +116,19 @@ Then it must determine whether using those arguments is safe and legal.
 
 That is why syscall argument passing is not just a low-level calling-convention detail. It is part of the protection story.
 
-## How the Crossing Happens: End-to-End View
+## Mechanism Trace: End-to-End Syscall Crossing
 
-Before going deeper, it helps to see the whole chain in learning order.
+A user program reaches a point where it needs a privileged service, such as opening a file or writing bytes to a descriptor. In user space, a wrapper or calling sequence first places the syscall number and arguments in the locations required by the syscall ABI. Those arguments may be scalar register values, pointers to user memory, or a mix of both.
 
-A user program decides it needs a privileged service. Perhaps it wants to write bytes to a file descriptor.
+The program then executes the architecture’s syscall/trap instruction. Hardware recognizes that instruction as a protected entry path into the kernel. The processor records the user return state needed for later resumption, changes privilege level, and transfers control to the kernel entry path.
 
-It calls a wrapper. The wrapper places the syscall number in a designated register or location, places the arguments in designated registers or memory slots, and executes a special instruction such as `syscall`, `sysenter`, `svc`, or another architecture-specific trap instruction.
+Kernel entry code then makes the machine state safe and well-defined for kernel execution. Only after entry is complete does the kernel decode which syscall was requested. It reads the syscall number, checks that the number names a real service, and retrieves the arguments according to the ABI.
 
-The processor recognizes that instruction as a request for kernel entry. Hardware changes the privilege level, switches to a kernel-defined entry context, records enough return information to resume user execution later, and transfers control to a kernel entry point.
+If an argument is a user pointer, the kernel does **not** trust it merely because it was passed correctly. The kernel must check that the pointer refers to a valid user-space range with the required permissions and size. If the arguments are valid, the kernel performs the requested service on kernel-managed objects such as files, sockets, mappings, or process state.
 
-Low-level kernel entry code saves or normalizes relevant machine state, identifies the event as a syscall, reads the syscall number, and dispatches to the corresponding kernel handler.
+Finally, the kernel places the return value in the ABI-defined return location, restores the user execution context, and returns to user mode so that execution resumes after the syscall instruction.
 
-The kernel handler validates arguments, especially pointers to user memory, performs the requested service if permitted, and produces either a return value or an error indication.
-
-The kernel then places the result in the agreed return register or memory location, restores the user context, and executes the architecture's return-from-kernel mechanism so execution resumes in user mode after the trap instruction.
-
-This order matters. The kernel does not validate arguments before entry because it is not running yet. The wrapper does not perform the privileged service because it is not allowed to. Hardware does not implement the file write because hardware only provides the protection and transfer machinery.
+This order matters. The wrapper does not perform privileged work. The trap does not itself implement the service. The kernel does not validate arguments until kernel entry has safely completed.
 
 ## Step-by-Step: What Each Stage Checks
 

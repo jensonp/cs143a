@@ -2,19 +2,15 @@
 
 ## Why This Cluster Exists
 
-An operating system is not just a collection of helpful routines. It is a system for **controlled sharing of a machine**. The machine has one processor, some memory, and devices that can change the outside world: disks can overwrite files, network cards can send packets, displays can show data, and timers can interrupt execution. If every program could execute any machine instruction at any time, then the first bug or malicious program could overwrite the disk, disable interrupts, hang the processor forever, or read and alter another program’s state. In that world, there is no real operating system, only competing pieces of code fighting over hardware.
+An operating system is a system for **controlled sharing of a machine**. If every program could execute any machine instruction at any time, then any buggy or malicious computation could overwrite the disk, disable interrupts, monopolize the CPU, or alter another program’s state. In that world, there is no meaningful operating system — only competing code fighting over hardware.
 
-So this topic appears because a basic question from earlier operating-systems study becomes unavoidable:
+So this cluster answers one unavoidable question:
 
 **How can many programs run on one machine without being allowed to seize total control of that machine?**
 
-That question forces the need for a protection boundary. The boundary must separate ordinary program execution from system-control execution. It must let programs ask for services they are not allowed to perform directly. It must also let the operating system take control back even when a program does not voluntarily give it up.
+The answer is a hardware-enforced protection boundary. The processor supports different execution states, and hardware enforces different rules in those states. Once that boundary exists, the OS can build process isolation, system calls, device control, safe sharing of I/O, and fault handling on top of it.
 
-This entire cluster of ideas answers that one question.
-
-The key move is this: the processor supports at least two execution states, and hardware enforces different rules in those states. Once hardware enforces the boundary, the operating system can build everything else on top of it: process isolation, system calls, scheduling, device control, safe sharing of I/O, and recovery from faults.
-
-This chapter is also the point where several earlier preview terms become first-class concepts rather than motivational placeholders. Earlier files may have mentioned interrupts, traps, or kernel handling in order to explain why execution structure matters, but this is the first file where the authority boundary itself is being taught as a mechanism. Read it that way: earlier references were previews; here the protection machinery becomes formally intelligible.
+Earlier chapters may have previewed interrupts, traps, or kernel handling. Here the authority boundary itself becomes the mechanism.
 
 ## The Core Problem: Unrestricted Execution Is Incompatible with Multi-Program Systems
 

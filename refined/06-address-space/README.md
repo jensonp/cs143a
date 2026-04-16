@@ -10,15 +10,19 @@ So operating systems introduce an abstraction. The program works inside an **add
 
 This cluster appears early in operating-systems study because later topics depend on it. Process isolation, paging, segmentation, page tables, TLBs, shared memory, kernel/user separation, memory-mapped files, copy-on-write, and even efficient multiprogramming all rely on the distinction between virtual and physical memory.
 
-## Local Process Bridge for This Chapter
+## Process Context Assumed in This Chapter
 
-This chapter needs the word **process** before the later process chapter gives the full execution-oriented treatment. So use this local meaning here: a **process**, for the purposes of this chapter, is the operating system’s protected execution container to which a virtual memory view is attached.
+This chapter uses the word **process** in one specific sense: the protected execution container relative to which a virtual memory world is interpreted. That is the only process meaning needed here. The broader process chapter will later add lifecycle, rights, and scheduler-visible state. In this chapter, what matters is simpler: virtual addresses are interpreted relative to a current protected process context.
 
-That is enough for the current chapter because the topic here is the process’s memory world, not yet its full lifecycle, scheduling role, or parent-child structure. The later process chapter will deepen the object. Here, the only fact you must hold firmly is that virtual addresses are interpreted relative to a current protected process context.
+## Mechanism Trace: How a Memory Reference Is Interpreted
 
-## Address-Space Interpretation Trace
+A running process executes an instruction that refers to an address. The CPU first produces that address in the process’s virtual-address world, not as a direct physical-memory location. The system then asks which process context is currently active, because the same numeric virtual address can mean different things in different processes.
 
-A running process executes an instruction that refers to some address. The CPU first produces that address in the process’s virtual-address world, not as a direct physical-memory location. The system then asks which process’s address space is currently active, because the same numeric virtual address can mean different things in different processes. Once the active address-space context is known, the system checks whether the virtual address lies inside some valid mapping for that process. If it does not, no legal interpretation exists for this access and the reference must fault. If a mapping does exist, the system then checks whether the requested access type — read, write, or execute — is permitted by that mapping. A write to a read-only mapping fails even though the address is otherwise valid. If the mapping exists and the access type is allowed, the translation logic then determines the corresponding physical location according to the active mapping mechanism. Only after those checks does the machine continue with the memory access itself. This trace matters because it makes clear that translation and protection are not separate optional afterthoughts. They are the interpretation path of a memory reference.
+Once the active address-space context is known, the system checks whether the virtual address lies inside a valid mapping for that process. If no such mapping exists, the reference has no legal interpretation and must fault. If a mapping does exist, the system checks whether the requested access type — read, write, or execute — is allowed by that mapping. A write to a read-only mapping fails even if the address itself is otherwise valid.
+
+Only after both of those checks succeed does the translation logic determine the corresponding physical location according to the active mapping mechanism. Then, and only then, does the memory access proceed.
+
+This trace matters because translation and protection are not separate afterthoughts. Together they are the interpretation path of a memory reference.
 
 ## 1. Address Space
 
@@ -207,6 +211,21 @@ This boundary condition matters. Many beginners incorrectly allow `v = limit`, b
 ### Common misconception
 
 The most dangerous confusion is between “highest valid address” and “size.” If the register holds a size, then `v < limit` is correct. If it holds the largest valid offset, then `v <= limit` would be the right condition. You must know which meaning your system uses. Operating-systems courses often use “limit register” to mean size.
+
+## Mechanism Trace: Base-and-Bound Interpretation
+
+In the base-and-bound model, the CPU first produces a virtual address `v`. The machine does **not** immediately add `base` and continue. It first checks whether `v` lies inside the legal process-relative range. Under the size-based convention, that means checking whether `0 <= v < limit`.
+
+If that check fails, the process attempted to address outside its legal virtual range, so the access traps before any physical address is used.
+
+If that check succeeds, the machine computes the physical address `base + v`. Here `base` is the physical start of the process’s allocated region, and `limit` is the size of the legal virtual range.
+
+So the mechanism has a strict order:
+1. interpret `v` as a process-relative address,
+2. check whether it is legal,
+3. only then relocate it into physical memory.
+
+That order is why base-and-bound implements protection and translation together rather than as two separate steps glued together later.
 
 ## 8. How Base and Limit Implement Translation and Protection Together
 

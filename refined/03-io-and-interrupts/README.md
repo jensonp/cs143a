@@ -22,27 +22,16 @@ If you study these one by one as isolated vocabulary words, the picture stays bl
 
 ## The problem before the solution
 
-### Minimum bridge needed before this chapter
+Suppose a process wants to read data from a disk, receive a network packet, or send bytes to a printer. The CPU does not directly operate the physical medium in raw electrical detail. There is hardware between the CPU and the device, and the device usually does not complete the request immediately. That means the system needs clear answers to six questions:
 
-This chapter appears before the full protection chapter, so fix the following temporary meanings before reading further.
+1. Where does the device-specific control logic live?
+2. Where does data wait while hardware and software operate at different rates?
+3. How does the CPU learn that the device is ready, completed a request, or encountered an error?
+4. Once that event is known, what code runs, and how does the processor know where that code is?
+5. If multiple device events compete for attention, which may interrupt which?
+6. If many bytes must move, who actually copies them?
 
-A **running program** in this chapter should be understood as the execution entity the operating system is managing; later chapters will formalize that entity as a **process**.
-
-When this chapter says the CPU transfers control to a handler, treat that handler as **operating-system code** that runs under hardware control rather than as ordinary user code. The full explanation of **user mode**, **kernel mode**, and **privileged execution** comes in the next cluster.
-
-When this chapter says the machine “saves the current context,” read that as: the machine preserves enough state of the interrupted computation—especially the program counter, status, and other live register state—that ordinary execution can later resume correctly. The full saved-context / PCB / context-switch treatment comes later.
-
-This bridge is enough to study interrupts correctly now without pretending the protection machinery has already been fully developed.
-
-Suppose a process wants to read data from a disk, receive a network packet, or send bytes to a printer. The CPU cannot directly talk to the physical medium in raw electrical detail. It does not sit there measuring voltage on the wire or spinning the magnetic platter. There is hardware between the CPU and the device. Also, the device does not typically complete the request immediately. That means the system needs answers to several questions.
-
-First, where does the intelligence for controlling the device live? Second, where does incoming or outgoing data wait while hardware and software operate at different speeds? Third, how does the CPU discover that the device has become ready, completed a request, or encountered an error? Fourth, once the event is known, what code runs, and how does the processor know where that code is? Fifth, if multiple device events compete for attention, which may interrupt which? Sixth, if many bytes must move, who actually copies them?
-
-The cluster in this chapter is the operating system and hardware answer to those six questions.
-
-## Local Working Definitions Used in This Chapter
-
-This chapter must talk about handler code and saved CPU state before the protection chapter teaches privilege in full. So use the following local meanings here: the **kernel** is the operating-system code that manages devices, interrupts, and protected machine state; an **interrupt handler** or **interrupt service routine (ISR)** is the kernel-side code that runs after an interrupt has been recognized and routed; and **saving CPU state** means preserving enough of the interrupted execution context that the interrupted computation can later continue correctly. That is all this chapter needs locally.
+The cluster in this chapter is the hardware-and-operating-system answer to those six questions.
 
 ## Device controller
 
@@ -362,6 +351,10 @@ A **trap** is a synchronous control transfer caused by the current instruction s
 A **signal** is a process-level notification mechanism used later to tell a process that some event matters to it. Signals are not the same thing as interrupts, even though an interrupt may eventually contribute to a signal being generated for some process.
 
 You do not need full signal or trap machinery yet. You do need the distinction, because otherwise later files will feel as if three different event mechanisms are all secretly the same object.
+
+## Mechanism Trace: From Device Event to OS Response
+
+A device operation is started. The device controller progresses independently of the CPU. When the controller reaches a condition that matters — completion, readiness, error, or some other reportable event — the system must make that event visible to the processor. If the system uses polling, the CPU repeatedly checks device status until the condition becomes true. If the system uses interrupts instead, the device signals the CPU when attention is required. The processor then transfers control to the appropriate interrupt handler, after preserving enough of the interrupted execution state that normal execution can later resume. The handler identifies what happened, updates kernel-visible device or process state, and either completes the operation immediately or arranges whatever later work is still required. For large transfers, DMA changes one part of this story: the CPU still initiates and later observes the transfer, but the bulk byte movement is no longer performed by ordinary CPU copy instructions.
 
 ## Why this cluster matters later in operating systems
 

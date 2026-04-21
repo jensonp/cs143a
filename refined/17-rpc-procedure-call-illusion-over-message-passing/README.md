@@ -1,60 +1,29 @@
 # Remote Procedure Call (RPC): Procedure-Call Illusion Built Over Message Passing
 
-## RPC exists to make communication usable without pretending communication disappears
+RPC should be introduced as a **layered contrast**, not as a slogan. The real question is: when one computation boundary is no longer local, how do we make request/reply communication usable without pretending that communication has vanished?
 
-### Why this section exists
+The canonical contrast is this:
 
-The right way to begin RPC is not with syntax but with pressure. A distributed system needs one machine to ask another machine to do work. At the lowest level, the system can exchange messages. At a slightly higher level, it can organize those messages into requests and replies. But application programmers do not usually want to hand-assemble byte sequences, match replies to requests, and manually decode every argument and return value. RPC exists because raw communication is too low-level for large systems, yet replacing it with a purely local-call mental model is dangerously misleading. This section exists to fix the conceptual starting point: RPC is a disciplined abstraction over communication, not the disappearance of communication.
+- **Local procedure call**: control transfer within one tightly coupled execution environment.
+- **Message passing**: explicit send/receive communication between parties.
+- **Client/server request-reply**: messages organized as service request and response.
+- **RPC**: request-reply communication presented in the interface form of a procedure call.
 
-### The object being introduced
+That is the concept-level introduction. RPC is not a separate physical mechanism. It is a disciplined presentation of communication in call form.
 
-The object is **remote procedure call** as an interface discipline. A caller issues what looks like a procedure invocation against a named remote service operation. Underneath, the system performs communication, data conversion, request tracking, and reply delivery.
+So the canonical statement of the chapter is:
 
-### Formal definition
+**RPC is a call-shaped abstraction built over request/reply communication, which itself is built over message passing.**
 
-A **remote procedure call (RPC)** is an abstraction that presents inter-process or inter-machine request-reply communication in the interface form of a procedure call. The caller invokes a procedure-like operation with arguments; the RPC system marshals those arguments into a transmissible representation, sends a request to a server that exports the operation, causes the corresponding server-side procedure to execute, receives a reply containing the result or error information, unmarshals that reply, and returns control to the caller as though the call had produced a result in ordinary procedural style.
+That sentence matters because it prevents the main mistake. RPC is useful precisely because application programmers do not want to assemble raw messages by hand every time. But the abstraction is dangerous if the reader forgets that the middle of the apparent call is still communication: serialization, transport, server-side execution, reply delivery, timeout, retry, and partial failure.
 
-### Interpretation
+A clean formal definition follows naturally. A remote procedure call is an abstraction in which a caller invokes a procedure-like operation, the runtime marshals arguments, sends a request to a server, causes the corresponding server-side procedure to run, receives a reply, unmarshals the result, and presents the outcome back to the caller in procedure-call form.
 
-The defining feature of RPC is not “remote execution” by itself. Message passing can also cause remote execution. The defining feature is that communication is **presented in call form**. That presentation matters because it shapes how programs are structured, where service boundaries live, how APIs are designed, and what programmers are likely to assume. RPC is therefore an abstraction boundary: above it, code is written in terms of procedures and return values; below it, the system is still sending messages, waiting, retrying, decoding, timing out, and living with partial failure.
+The retention point should already be visible here: **RPC does not eliminate communication. It organizes communication behind a procedure-call interface.**
 
-To understand RPC rigorously, it has to be separated from three nearby objects.
+**Retain.** RPC is procedure-call-shaped request/reply communication layered over message passing.
 
-A **local procedure call** is a control transfer within one address space or one tightly coupled execution environment. Arguments are passed according to the local calling convention, the callee runs immediately on the same machine, and the caller and callee share the same basic failure domain. A local call may fail because the program is wrong, because memory is corrupted, or because the process crashes, but not because a network packet was delayed or a remote host became unreachable.
-
-**Message passing** is the underlying communication substrate. One party sends a message; another receives it. The abstraction is explicit about communication. The programmer sees sends, receives, message buffers, and communication endpoints. Message passing says nothing by itself about procedure-call structure, argument bindings, or return-value illusion.
-
-**Client/server request-reply** is a communication pattern. A client sends a request, and a server later returns a reply. This pattern is already higher level than arbitrary message passing because messages are organized around service interactions. But request-reply is still a communication protocol shape. RPC adds the procedural interface discipline on top of that shape.
-
-RPC therefore sits on top of request-reply, which itself sits on top of message passing. It is not a separate physical mechanism; it is a controlled presentation of communication as a call-return interaction.
-
-### Boundary conditions, assumptions, and failure modes
-
-RPC requires the caller and server to agree on much more than a function name. They must agree on operation identity, argument order or field names, data representation, error semantics, binding rules, and reply interpretation. If any of these agreements break, the call illusion fails because the two sides are no longer speaking the same protocol.
-
-The local-call analogy also has strict limits. Local calls assume a common address space discipline, a shared processor architecture abstraction, and immediate transfer of control. RPC has none of these for free. The arguments must cross a communication boundary. The remote procedure may be running in a different process, on a different machine, with a different byte order, a different language runtime, a different failure state, and a different scheduler timeline. Because of that, a call-shaped interface must not be mistaken for local-call semantics.
-
-A first failure mode appears before execution even begins: the caller may not know where the server is. A second appears in transit: the request may be delayed, dropped, duplicated, or reordered depending on the transport and runtime. A third appears at the server: the request may arrive, but execution may fail after partial work. A fourth appears on the way back: the server may execute successfully and send a reply that never reaches the caller. These are not implementation footnotes. They define the meaning of remote invocation.
-
-### Worked example or mechanism trace
-
-Suppose a client wants the current time from a remote time service and writes `getTime()`. In a true local call, the next machine instructions transfer into code already available in the process or process-local linkage context, and the result is returned according to the local calling convention. In RPC, the expression `getTime()` is only a local-looking entry point. Underneath, the runtime constructs a request such as “service = TimeService, operation = getTime, request-id = 41827, arguments = none,” sends that request to the server, waits for a reply, receives a timestamp or an error, and only then hands a value back to the caller. The call form is real at the API surface. The underlying action is communication.
-
-### Misconception block
-
-**Misconception: “RPC is just a normal function call but remote.”**
-
-That statement hides exactly the part that matters. RPC is deliberately shaped like a function call so that distributed interactions can be written against procedural interfaces, but the semantics are not those of an ordinary local call. A local call transfers control within one tightly coupled execution environment. RPC initiates communication with an independently failing execution context. The resemblance is an interface choice, not a semantic identity.
-
-### Connection to later material
-
-This section provides the conceptual base for everything that follows in distributed systems. Once RPC is seen as an abstraction over request-reply communication, later topics such as service contracts, idempotence, timeout policies, API versioning, microservice boundaries, and observability become consequences of the abstraction rather than isolated rules.
-
-### Retain / Do Not Confuse
-
-**Retain.** RPC is a procedural interface built over communication, usually request-reply communication built over message passing.
-
-**Do Not Confuse.** RPC does not eliminate communication. It organizes communication behind a procedure-call interface.
+**Do Not Confuse.** A clean call interface does not make remote invocation semantically equivalent to an ordinary local call.
 
 ## RPC has a runtime structure: client, server, stubs, marshalling, unmarshalling, and binding
 
@@ -374,48 +343,16 @@ This example connects immediately to sockets because the request and reply must 
 
 **Do Not Confuse.** Simplicity of signature does not imply simplicity of execution path.
 
-## RPC in the larger operating-systems and systems context
+## Why RPC belongs in this sequence
 
-### Why this section exists
+RPC belongs here because it is the disciplined answer to a systems question that appears after sockets: once computation is separated across processes or machines, how do we expose communication as an interface that programmers can use without writing raw transport logic every time?
 
-RPC is often taught as middleware folklore, but it belongs in a systems sequence because it is a disciplined answer to a core operating-systems problem: how to make process-separated computation usable across communication boundaries. This section exists to place RPC where it belongs conceptually.
+From below, RPC depends on endpoints and transports such as sockets. From above, RPC supports service boundaries and API contracts. It therefore sits between raw communication mechanisms and higher-level distributed service structure.
 
-### The object being introduced
+That placement explains both its power and its danger. It is powerful because it lets programmers think in terms of operations instead of packet handling. It is dangerous because the call-shaped interface can tempt them to forget the semantic realities underneath: latency, timeout, partial failure, retries, duplicates, and representation boundaries.
 
-The object is **RPC as a systems interface layer** between low-level communication mechanisms and high-level service-oriented program structure.
+So the correct closing retention point is simple: **RPC is not “networking hidden away.” It is communication disciplined into a procedure-call interface, with all distributed failure semantics still in force.**
 
-### Formal definition
+**Retain.** RPC is a middle layer between raw endpoint communication and service-oriented program structure.
 
-RPC is a communication abstraction that uses procedure-call interfaces to structure distributed request-reply interactions between separated components, typically implemented over transport mechanisms such as sockets and governed by explicit interface, representation, and failure semantics.
-
-### Interpretation
-
-From below, RPC depends on communication primitives such as sockets, transports, and packet or stream handling. From above, RPC supports service boundaries and API contracts. It is therefore a middle layer: lower than application logic, higher than raw communication. That placement explains both its power and its danger. It is powerful because it lets applications program against operations instead of transport mechanics. It is dangerous because it can tempt programmers to forget that the transport mechanics still define correctness under failure.
-
-This is why RPC is central to distributed systems. Once components are no longer sharing one address space, every cross-boundary interaction needs some disciplined communication interface. RPC is one of the dominant answers because procedure-call structure is natural for developers and compositional for services. But as systems become more distributed, API design becomes inseparable from failure semantics. An RPC method signature is not just a function name. It is a statement about operation granularity, retries, idempotence, deadlines, error taxonomy, authentication, authorization, and compatibility over time.
-
-### Boundary conditions, assumptions, and failure modes
-
-RPC is not the only communication abstraction. Stream protocols, event queues, publish-subscribe systems, and raw message-oriented interfaces may be more appropriate when interaction is asynchronous, many-to-many, or throughput-oriented rather than call-return-oriented. Forcing every distributed interaction into RPC form can produce poor boundaries and brittle semantics.
-
-RPC also inherits the limits of the transports and runtimes beneath it. If the transport is unreliable, the abstraction must compensate. If the naming system is unstable, binding becomes fragile. If the service boundary is poorly chosen, the system may incur chatty high-latency interactions that would never matter in local procedure structure.
-
-### Worked example or mechanism trace
-
-A useful systems-level trace is this: an application component needs user information, so it invokes an RPC method rather than opening a raw socket. The RPC runtime binds the service name to an endpoint, serializes the request, sends it over a socket-based transport, receives the reply, deserializes it, and returns a structured object. The application remains decoupled from byte framing and connection management, but not from timeout, schema, and service-contract semantics. This is what makes RPC a systems interface layer rather than a mere programming convenience.
-
-### Misconception block
-
-**Misconception: “Once a system uses RPC, sockets no longer matter.”**
-
-Sockets and transports still matter because they determine connection behavior, buffering, congestion interaction, backpressure, and part of the failure model. RPC moves the programmer to a higher abstraction level, but the lower layer still shapes latency, throughput, and correctness.
-
-### Connection to later material
-
-This section connects directly to sockets, transport protocols, API gateways, service discovery, distributed tracing, microservice design, and fault-tolerant distributed computation. It also connects back to operating-systems ideas about process boundaries, communication primitives, and abstraction layers.
-
-### Retain / Do Not Confuse
-
-**Retain.** RPC is a middle-layer abstraction: above message transport, below application service logic.
-
-**Do Not Confuse.** Using RPC does not remove the distributed-systems problem; it gives that problem a disciplined interface.
+**Do Not Confuse.** The abstraction improves usability; it does not erase distributed uncertainty.

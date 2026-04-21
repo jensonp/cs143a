@@ -1,72 +1,84 @@
 # POSIX Shared Memory: API Shape, Object Model, and Correct Usage
 
-## 1. Why POSIX shared memory must be learned as an object model, not as a function list
+POSIX shared memory is mislearned whenever it is introduced as six unrelated functions. The chapter should start with one object: a **named kernel memory object** that processes can open, size, map, unmap, close, and eventually unlink. Once that object is clear, the API becomes short and coherent.
 
-POSIX shared memory is easy to misuse when it is taught as six unrelated calls. The reason this section exists is that the mechanism is not “a process gets some shared bytes” in the abstract. The mechanism is a named kernel object that can be opened, sized, mapped into one or more virtual address spaces, and later detached and unnamed under rules that are close to file and `mmap` reasoning, but not identical to ordinary file use. If that object model is not fixed first, the API names are misleading: `shm_open` sounds like it returns memory, `close` sounds like it ends use, and `shm_unlink` sounds like it destroys the shared region immediately. None of those readings is correct.
+The concept-level point is simple. Shared memory here does **not** mean “one process gives another process a pointer.” A pointer value is meaningful only inside one process’s virtual address space. POSIX shared memory works because multiple processes separately map the **same kernel object** into their own address spaces.
 
-The object to introduce first is the **POSIX shared-memory object** itself. Formally, it is a kernel-managed object in a shared-memory namespace, identified by a pathname-like name, opened through `shm_open`, given a byte length through `ftruncate`, and made accessible to a process only when that process maps it into its own virtual address space with `mmap`. The interpretation is immediate: the shared-memory object is not the same thing as the file descriptor returned by `shm_open`, and it is not the same thing as any one process’s pointer into the region after `mmap`. One kernel object can have many open descriptors over time and many simultaneous mappings in different processes.
+The canonical object has three views that must not be collapsed:
 
-This separation matters because the mechanism has three distinct views of “the same shared memory,” and each view obeys different lifetime rules. The **name** is how unrelated processes find the object. The **file descriptor** is one process’s open handle to that object. The **mapping** is a region in one process’s virtual address space whose pages refer to that object. If those are collapsed into one idea, cleanup and correctness both become confused.
+1. **The name**: how unrelated processes rendezvous on the object.
+2. **The descriptor**: one process’s open handle to that object after `shm_open`.
+3. **The mapping**: the process-local virtual-memory region returned by `mmap`, through which actual loads and stores happen.
 
-Boundary conditions come early. The name is pathname-like, but in POSIX it is not intended to be treated as an ordinary hierarchical filesystem pathname; typically it begins with a slash and contains no further slashes. Many Unix-like systems implement the namespace using a tmpfs such as `/dev/shm`, which makes the object feel file-like in tooling, but the portable API abstraction is “named shared-memory object,” not “ordinary disk file.” The object is local to one kernel instance. It is not network shared memory, and it is not an IPC mechanism across machines.
+Those are related, but they are not the same thing. The name is not the descriptor. The descriptor is not the mapping. The mapping is not the object’s whole lifetime.
 
-A mechanism trace clarifies the distinction. Suppose Process A calls `shm_open` on `/ringbuf`. At that moment A does **not** yet have usable shared bytes. It has an open descriptor to a kernel object. If the object was newly created, its initial size is typically zero, so there may still be no meaningful region to map. Only after A sets the desired size with `ftruncate` and calls `mmap` with a shared mapping does A receive a usable address range. Later, Process B can independently call `shm_open` on the same name, obtain its own descriptor, and map the same object into a different virtual address range. The two pointers in A and B need not be numerically equal; what is shared is the underlying object, not the virtual addresses.
+A second distinction belongs immediately beside the first: **creation, sizing, and mapping are different operations**. A process can create or open a shared-memory object and still have no usable shared bytes yet. If the object has size zero, there is nothing meaningful to map. If the object is mapped before its layout is initialized, the mapping exists but the protocol may still be invalid.
 
-A common misconception appears here. **Do not confuse “shared memory” with “one process hands another process a pointer.”** A raw pointer value is meaningful only inside the virtual address space in which it was created. POSIX shared memory works because each process separately maps the same kernel object into its own address space. The relationship is object-based, not pointer-based.
+So the first retention rule for this chapter is:
 
-This section connects directly to later material on `mmap`, page sharing, cache coherence visibility, and local IPC design. Once the object model is fixed, the API becomes a short sequence of operations on a stable abstraction rather than a memorized bag of calls.
+- `shm_open` gives you a handle to the object,
+- `ftruncate` gives the object a size,
+- `mmap` gives this process a usable address range onto that object.
 
-**Retain.** POSIX shared memory is a named kernel object that processes open and then map. The name, descriptor, and mapping are related, but they are not the same thing.
+A boundary condition should be stated early. The POSIX shared-memory name is pathname-like, but the portable abstraction is not “ordinary persistent disk file.” On many systems the namespace is implemented through something like `/dev/shm`, but conceptually the object is a kernel-managed shared-memory object local to one kernel instance.
 
-**Do Not Confuse.** Shared memory is not created by giving another process a pointer value, and `shm_open` does not itself return a usable memory region.
+A compact mechanism trace makes the model exact. Process A calls `shm_open("/ringbuf", ...)`. At that moment A has a descriptor, not a pointer. If the object is new, it may still have size zero. A calls `ftruncate` to set the size. A then calls `mmap` with a shared mapping. Only now does A have a usable address range. Later Process B can `shm_open` the same name, obtain its own descriptor, and map the same object at a completely different virtual address. What is shared is the underlying object, not the numerical pointer values.
 
-## 2. The object itself: name, descriptor, size, and mapping
+**Retain.** POSIX shared memory is a named kernel object that processes open and then map. Name, descriptor, and mapping are distinct layers of the same mechanism.
 
-This section exists because most bugs in shared-memory code are really object-model bugs. The programmer thinks the name is the object, or the descriptor is the memory, or the mapping owns the object’s lifetime. The mechanism becomes simpler once those roles are separated exactly.
+**Do Not Confuse.** Shared memory is not created by handing another process a pointer, and `shm_open` by itself does not return usable memory.
 
-The object here is the four-layer relationship among **pathname-like name**, **open file descriptor**, **object size**, and **mapped virtual memory**. Formally, a POSIX shared-memory object has a namespace entry used for lookup, an open-description mechanism returned through `shm_open`, a current byte length just as a file-like object has a length, and zero or more process-local mappings created with `mmap`. The interpretation is that shared memory deliberately combines file-like and memory-like semantics. It is file-like when named, opened, permission-checked, and sized. It is memory-like only after mapping.
+## The canonical API lifecycle
 
-The name is how unrelated processes rendezvous. A writer can create an object under a chosen name such as `/telemetry`, and a reader that knows the same name can later open that object. The descriptor returned by `shm_open` is then the process’s handle for operations that act on the object through a file-descriptor interface: setting permissions indirectly via creation mode, checking errors, resizing with `ftruncate`, and supplying the descriptor to `mmap`. The descriptor is not the shared state itself. After `mmap`, the mapping is the process-local virtual-memory view through which loads and stores actually occur.
+For exam purposes, the cleanest way to remember POSIX shared memory is as a lifecycle.
 
-Sizing deserves special care. Creating the object and sizing the object are different operations. A newly created shared-memory object may exist with length zero. Formally, `ftruncate` sets the object’s length in bytes. Interpretation: `shm_open` answers “which object?” while `ftruncate` answers “how many bytes does that object currently contain?” If the size is wrong, the mapping and the data layout are wrong, even if the name and permissions are right.
+### Step 1: create or open with `shm_open`
 
-The mapping step is where the OS turns an object into an address range. `mmap` with `MAP_SHARED` causes the process’s loads and stores through that region to refer to the shared object rather than to a private copy. Boundary conditions matter here. The mapping length is chosen by the caller, but meaningful access is only guaranteed within the current object size. The protection bits used in `mmap` must be compatible with how the descriptor was opened. A reader that opens read-only can map with read permissions; a writer that intends to modify must both open and map with write capability.
+`shm_open` either creates a new named object or opens an existing one. Those two states must be distinguished because only the creator should usually perform first-time initialization.
 
-A short mechanism trace makes the layers concrete. A process creates `/telemetry` with `shm_open`. The returned descriptor is valid, but the object length is zero. The process then calls `ftruncate` to make it, say, 4096 bytes. Now the kernel object has a defined size, but there is still no process pointer. The process then calls `mmap`; only now does it obtain a virtual address. At this point, the descriptor could even be closed, and the mapping can remain valid. That fact shows that the descriptor is not the mapping. The mapping continues because the process’s address-space entry still refers to the kernel object.
+### Step 2: size the object with `ftruncate`
 
-A misconception block is necessary here. **Do not confuse the shared-memory name with a persistent file pathname.** On many systems the name is backed by something visible under `/dev/shm`, and operationally that is useful. But the portable POSIX abstraction is a name in the shared-memory namespace. Correct reasoning should not depend on ordinary directory traversal semantics, hard links, or disk-file persistence assumptions.
+A new shared-memory object may exist with length zero. `ftruncate` sets its byte extent. This is object sizing, not mapping, not synchronization, and not logical initialization of fields.
 
-This section connects forward to `mmap` reasoning in general. The same discipline that distinguishes a file descriptor from a mapping in file-backed mappings applies here too, but the IPC setting makes lifetime and layout discipline much more visible.
+### Step 3: attach with `mmap`
 
-**Retain.** The name identifies the object, the descriptor is an open handle, `ftruncate` sets the object size, and `mmap` creates the process-local address range used for actual access.
+`mmap` creates this process’s virtual-memory view of the shared object. Until `mmap` succeeds, the process has no pointer through which it can actually access shared data.
 
-**Do Not Confuse.** Creating an object is not mapping it; sizing an object is not initializing its contents; closing a descriptor is not the same as removing a mapping.
+### Step 4: initialize or validate the layout
 
-## 3. The API shape as a lifecycle: creation, opening, sizing, mapping, detaching, and unlinking
+If this process is the creator, it must initialize the agreed layout. If it is an opener, it must validate the layout before use. Shared memory shares bytes, not types or meaning.
 
-This section exists because POSIX shared memory has a very particular lifecycle, and correctness depends on doing the operations in the right conceptual order. The calls make sense once they are read as transitions in the state of the object and of each process’s relationship to it.
+### Step 5: use the mapping
 
-The object being introduced here is the **lifecycle of access** to a shared-memory object. Formally, the lifecycle is: create or open a named object with `shm_open`; if newly created, set its length with `ftruncate`; map it with `mmap`; use the mapped region; later remove the process-local mapping with `munmap`; drop the descriptor with `close`; and remove the namespace entry with `shm_unlink` when the name should no longer resolve to the object. The interpretation is that some steps affect the kernel object globally and some affect only one process’s local handle or mapping.
+After successful mapping and successful protocol-level setup, loads and stores through the mapped region access the shared underlying object.
 
-`shm_open` has two roles, and they must be separated. It can **create** a new object if called with creation flags and the name does not already exist. It can also **open** an existing object if the name already resolves to one. Those are different states of the world. Correct programs often distinguish them because only the creator should perform first-time initialization, establish the layout version, and choose the size. Using creation flags such as `O_CREAT` and, when exclusivity matters, `O_EXCL`, is how one process detects whether it is the initializer or merely an opener.
+### Step 6: detach locally with `munmap`
 
-`ftruncate` has exactly one role here: it sets the length of the shared object. It is not mapping, not initialization of logical fields, and not synchronization. If the writer expects a header plus payload totaling 64 KiB, then `ftruncate` must set the object to at least that size before any process relies on that layout. If the object is resized later, every process must reason carefully about whether its existing mapping length, data structure assumptions, and access pattern still match the object.
+`munmap` removes this process’s mapping. It does not remove the object globally.
 
-`mmap` has the role of attaching the object to a process’s virtual address space. Until this call succeeds, the process has no pointer through which it can read or write shared data. The crucial flag is that the mapping must be shared rather than private. The mapping length should match the amount of data the process intends to access and must be consistent with the sized object.
+### Step 7: drop the descriptor with `close`
 
-`munmap` removes **this process’s mapping**. It does not remove the shared-memory object from the kernel, and it does not affect other processes’ mappings except indirectly through later lifetime rules. `close` removes **this process’s file descriptor**. If the process already has a valid mapping, that mapping can remain usable after `close`, because the descriptor and the mapping are different resources. `shm_unlink` removes **the name** from the namespace. It prevents future `shm_open` calls on that name from finding the object, but it does not instantly invalidate existing mappings or descriptors. The object is actually reclaimed only when no mappings and no relevant open references remain.
+`close` releases this process’s descriptor. If a valid mapping already exists, that mapping can still remain usable afterward because the descriptor and the mapping are different resources.
 
-The hidden constraint is that lifecycle discipline is part of correctness. Someone must own creation, someone must own initialization, someone must decide who unlinks, and everyone must agree when it is safe to detach. Without this protocol, the API can be used in a race-prone but syntactically correct way.
+### Step 8: remove the name with `shm_unlink`
 
-A full mechanism trace makes the lifecycle precise. Process A calls `shm_open` with creation and exclusivity intent on `/queue`. Because the name did not exist, A is now the creator. A calls `ftruncate` to set the object size to the exact bytes needed for the agreed header and buffer. A then `mmap`s the object with a shared writable mapping and initializes the header fields: magic number, version, capacity, write index, read index, and ready flag. Only after logical initialization is complete should A publish “ready” through a synchronization mechanism. Later, Process B calls `shm_open` on `/queue`, obtains its own descriptor, and `mmap`s the same object. B reads the header, verifies the magic number and version, and begins use. When B is done, it calls `munmap` to remove its mapping and `close` to drop its descriptor. When the system no longer wants the object discoverable by name, one designated process calls `shm_unlink`. Existing users continue until they unmap and close; new openers can no longer find the object by name.
+`shm_unlink` removes the namespace entry. It stops future `shm_open` lookups by that name, but it does not instantly tear down existing mappings or existing open references.
 
-A misconception must be cut off explicitly. **Do not confuse `shm_unlink` with “destroy the shared memory now.”** `shm_unlink` removes the name, not necessarily the live object. Existing mappings are not torn out from underneath running processes simply because the name was removed.
+That yields the canonical retention sentence:
 
-This lifecycle view connects directly to later work on robust resource ownership and crash cleanup. Shared memory is fast, but the speed benefit is bought with stronger responsibility for protocol discipline.
+**create/open -> size -> map -> initialize/validate -> use -> unmap -> close -> unlink when the name should disappear**
 
-**Retain.** `shm_open` creates or opens, `ftruncate` sizes, `mmap` attaches, `munmap` detaches a mapping, `close` drops a descriptor, and `shm_unlink` removes the name.
+The major misconception to cut off is the cleanup confusion. `munmap`, `close`, and `shm_unlink` operate on different things:
 
-**Do Not Confuse.** Unmapping is not unlinking, closing is not unmapping, and opening an existing object is not performing first-time initialization.
+- `munmap` affects this process’s mapping,
+- `close` affects this process’s descriptor,
+- `shm_unlink` affects the name.
+
+A compact trace makes the lifecycle precise. Process A creates `/queue`, sizes it, maps it, initializes the header, and publishes readiness through a separate synchronization rule. Process B later opens `/queue`, maps it, validates the header, and begins use. When B is done, it `munmap`s and `close`s. When the object should no longer be discoverable by name, one designated process calls `shm_unlink`. Existing mappings can still continue until their final references disappear.
+
+**Retain.** `shm_open` creates or opens, `ftruncate` sizes, `mmap` attaches, `munmap` detaches locally, `close` drops a descriptor, and `shm_unlink` removes the name.
+
+**Do Not Confuse.** Unmapping is not unlinking, closing is not unmapping, and opening an object is not the same as initializing it.
 
 ## 4. A full worked example: producer and consumer over one shared-memory object
 

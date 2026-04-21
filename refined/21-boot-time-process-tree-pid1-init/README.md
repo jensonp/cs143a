@@ -1,14 +1,27 @@
 # Boot-Time Process Tree, PID 1, and the Creation of init
 
-There is a moment in boot when the machine is already executing instructions but the ordinary user-space process tree does not yet exist. That is the object this chapter studies: the transition from “the kernel is bringing the machine up” to “there is now a first ordinary user-space process from which the familiar process tree can grow.” The formal statement comes second: in a Unix-like system, the first ordinary user-space process is conventionally assigned **PID 1**, and that process is traditionally called **init**. The interpretation matters immediately. PID 1 is not just “the first process that happens to run.” It is the process that stands at the boundary between bootstrapping and normal process creation.
+This chapter exists to explain the **base case** of ordinary process-tree reasoning. Inside a running Unix-like system, the usual rule is that processes come from earlier processes. A shell creates a child. A service manager starts a daemon. A supervisor launches workers. But that ordinary rule already presupposes that a process world exists. So the real question is: **how does the ordinary user-space process tree begin at all?**
 
-This chapter belongs **after** the ordinary process lifecycle for a simple reason. Before learning boot-time creation, one must already know what a normal process is, how a process is ordinarily created, what parent-child relationships mean, how `fork`, `exec`, and `wait` fit together, and why zombies and orphans exist. Without that background, the specialness of boot-time creation cannot even be stated cleanly. Once the ordinary lifecycle is understood, the right question appears naturally: if processes normally come from earlier processes, then where did the first one come from?
+The object of this chapter is the transition from **kernel bootstrapping** to **ordinary user-space process ancestry**. The canonical statement is this: the machine powers on, firmware and bootloader bring the kernel into execution, the kernel initializes enough core subsystems to support user-mode execution, and then the kernel establishes the **first ordinary user-space process**, conventionally **PID 1**, traditionally called **init**. From that point forward, the familiar parent-child process tree exists in the ordinary sense.
 
-The point of this lesson is not to reteach `fork`/`exec` from zero. It is to expose the **boundary case** that ordinary lifecycle explanations usually leave implicit. “All processes are created by other processes” is good enough inside an already-running system. It is not the whole story for system startup, and it is not the whole story for kernel-internal execution contexts either. Boot is where the approximation shows its seam.
+That is why this chapter belongs after the ordinary process-lifecycle material. The reader must already know what a normal process is, what parent-child ancestry means, how `fork`, `exec`, and `wait` work, and why zombies and orphans matter. Only then does the boundary case become meaningful. The point here is not to replace the usual lifecycle model. The point is to identify **where that model starts to apply**.
 
-**Retain.** Ordinary process lifecycle comes first because boot-time creation is understood as an exception, or more precisely as a bootstrap case, relative to ordinary parent-child process creation.
+## Introduction and canonical boot-time sequence
 
-**Do Not Confuse.** This chapter is not about replacing the usual lifecycle model. It is about identifying the exact point where that model begins to apply.
+The canonical sequence is:
+
+1. **Power-on and reset**: the CPU begins from a hardware-defined reset location.
+2. **Firmware**: minimal machine initialization occurs so that a boot path can be found.
+3. **Bootloader**: the kernel image is loaded and control is transferred to the kernel.
+4. **Kernel early boot**: the kernel initializes memory-management structures, interrupt/exception handling, scheduling machinery, device support, and enough image-loading support to start user space.
+5. **Kernel-mediated creation of the first user-space process**: the kernel establishes the first user-mode execution context and executes the initial program image.
+6. **PID 1 begins ordinary userspace**: init starts service bring-up, session bring-up, and the ordinary ancestor tree of user-space processes.
+
+The conceptual point is exact: **firmware and bootloader happen before the process tree, while PID 1 is the root inside the process tree**. Earlier in time is not the same thing as parent in the ordinary user-space ancestry relation.
+
+**Retain.** The ordinary process tree begins only after the kernel has completed enough bootstrapping to install the first user-space process.
+
+**Do Not Confuse.** This chapter is about the starting point of ordinary process ancestry, not about replacing the ordinary lifecycle model.
 
 ## The entities at the boundary: firmware, bootloader, kernel early boot, kernel threads, first user-space process, init
 
@@ -50,15 +63,7 @@ The failure modes at this stage are correspondingly severe. Failure before the f
 
 ## Why “all processes are created by other processes” is only approximately true
 
-Inside an already-running system, the statement feels exact because it tracks what ordinary observation sees. A shell forks a child. A daemon supervisor spawns workers. A service manager launches services. Parents produce children. Within that domain, the statement is practically right and pedagogically useful.
-
-But its domain is limited. The statement silently assumes that the system is already past bootstrapping and already possesses at least one process from which the rest can descend. The first user-space process cannot be explained by an earlier ordinary user-space parent, because there is none. The system must therefore include a special-case creation path in which the kernel itself initiates the first ordinary process context.
-
-This is not a contradiction of the lifecycle model; it is the base case that lets the lifecycle model start. In the same way that recursive reasoning needs a non-recursive base case, process-tree reasoning needs a boot-time base case. Once PID 1 exists, the familiar model applies robustly. Before PID 1 exists, the kernel is still constructing the world in which that model becomes meaningful.
-
-A second approximation hides here too. Even after boot, kernel threads and certain kernel-internal execution contexts are not well described as ordinary user processes created by other user processes. The scheduler may manage them, and the system may assign visible identifiers to them, but they belong to a different side of the privilege boundary and serve different purposes.
-
-The misconception to reject is the overly literal reading: “there must always be a parent process in the same sense, all the way back forever.” No. There is an ordinary rule for ordinary runtime, and there is a bootstrap boundary where the kernel establishes the first ordinary process. That is the point at which the infinite regress stops.
+Even after boot, kernel threads and certain kernel-internal execution contexts are not well described as ordinary user processes created by other user processes. The scheduler may manage them, and the system may assign visible identifiers to them, but they belong to a different side of the privilege boundary and serve different purposes.
 
 **Retain.** “All processes are created by other processes” is true enough for ordinary runtime reasoning but incomplete at boot. The first ordinary user-space process requires a kernel bootstrap path.
 
@@ -66,21 +71,23 @@ The misconception to reject is the overly literal reading: “there must always 
 
 ## Why PID 1 is special
 
-The first special feature of PID 1 is structural. It stands at the root of ordinary user-space startup. That alone would make it conceptually important, but operating systems, especially Unix-like ones, assign it additional semantic obligations.
+PID 1 is special for three canonical reasons and one consequence.
 
-The second special feature is **orphan adoption**. When a process loses its parent because that parent exits before waiting or before the child itself exits, the child must still have somewhere to be reparented so that exit status can eventually be collected and process-accounting invariants can remain coherent. PID 1 fills that role. Formally: orphaned ordinary user-space processes are reparented to PID 1 or to a designated subreaper mechanism derived from the same idea. Interpretation: PID 1 is the fallback ancestor that prevents abandoned descendants from becoming ownerless fragments of execution.
+First, it is the **root of ordinary user-space startup**. Once PID 1 exists, the process tree now has an ordinary ancestor root from which later service managers, login paths, shells, and user commands descend.
 
-The third special feature is **supervision**. In many systems, PID 1 does not merely exist as a passive ancestral root. It actively starts and monitors services, restarts failed daemons when policy says to do so, orders boot targets or runlevels, coordinates shutdown, and represents the stable control point for system-wide service lifetime. This makes PID 1 the bridge between raw process creation and administratively meaningful service management.
+Second, it is the **fallback adopter of orphans**. If a parent exits while a child remains alive, the child cannot simply become ownerless. Reparenting must occur so that process-accounting and exit-status collection remain coherent. PID 1, or a subreaper mechanism derived from the same idea, fills that role.
 
-The fourth special feature is what happens when PID 1 fails. Ordinary process failure is local: a process crashes, its parent may observe the termination, and the rest of the system often continues. PID 1 failure is global because it removes the system’s root process manager and orphan reaper from ordinary user space. The precise system response depends on the operating system and policy, but the broad rule is severe: if PID 1 cannot continue, the machine cannot continue normal multi-process operation in the ordinary way. On Linux, termination of PID 1 is treated as catastrophic; the kernel typically panics because the system has lost the process responsible for fundamental userspace management.
+Third, PID 1 is usually the **system-wide supervisor**. It is not just “the first process.” In many Unix-like systems it starts services, manages long-lived daemons, coordinates boot targets or runlevels, and participates in shutdown and recovery policy. This is where process management becomes system management.
 
-Boundary conditions matter here too. PID 1 is special because of its role, not because the number 1 is metaphysically magical. Different systems can organize startup differently. Containers can also have their own PID namespaces, in which a process appears as PID 1 inside the namespace and inherits many of the same reaping and signal-handling responsibilities relative to that namespace. The conceptual rule remains: the root process of a process domain has obligations beyond those of an ordinary leaf command.
+The consequence is severe failure behavior. Ordinary process failure is usually local. PID 1 failure is global because it removes the ordinary user-space root responsible for orphan adoption and service supervision. The exact response depends on the operating system, but the broad rule is stable: if PID 1 cannot continue, normal multi-process userspace cannot continue in the ordinary way.
 
-A common failure mode in understanding is to think orphan adoption means “every process eventually becomes a direct child of PID 1.” No. Most processes remain in their ordinary parent-child lineages. Reparenting occurs when a parent disappears while descendants remain alive. PID 1 is special because it is the fallback root when lineage continuity is broken.
+A useful boundary condition follows. PID 1 is special because of its **role**, not because the integer 1 is metaphysically magical. Containers may have their own PID namespaces, in which a process appears as PID 1 relative to that namespace and inherits many of the same reaping and signal-handling responsibilities there.
 
-**Retain.** PID 1 is special because it is the first ordinary user-space process, the fallback adopter of orphans, and typically the central supervisor of system services.
+A common confusion should be rejected directly: orphan adoption does **not** mean every process eventually becomes a direct child of PID 1. Most processes remain in ordinary parent-child chains. Reparenting happens when lineage continuity breaks.
 
-**Do Not Confuse.** PID 1 is not just “the first shell” and not just “a process with a small PID.” Its role persists throughout system lifetime.
+**Retain.** PID 1 is special because it is the boot-established root of ordinary userspace, the fallback adopter of orphans, and typically the central service supervisor.
+
+**Do Not Confuse.** PID 1 is not just “the first shell” and not just “a process with a small number.” Its specialness is structural and semantic.
 
 ## Do not confuse these three boundaries
 

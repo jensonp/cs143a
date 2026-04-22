@@ -6,15 +6,17 @@ That immediately gives the canonical object model.
 
 - The pipe itself is the kernel communication object.
 - The two descriptors are process-level handles to its two ends.
-- The stream is anonymous: there is no filesystem pathname to reopen later.
+- The stream is anonymous: there is no filesystem pathname by which unrelated processes can reopen it later.
 - The stream is unidirectional: bytes move from write end to read end.
 - The stream is byte-oriented: application-level message boundaries are not preserved automatically.
 
-The parent-child association now becomes easy to explain correctly. Anonymous pipes are commonly used between parent and child because `fork()` duplicates descriptor tables. After `fork()`, both processes possess descriptors referring to the same underlying pipe ends. The pipe works because the descriptors were inherited, not because kinship is magical.
+The term **descriptor** should be reactivated locally here. A descriptor is the small per-process handle — usually an integer in Unix/POSIX systems — that refers to an open kernel object. So when this chapter says that a process “has the read end,” it really means the process has a descriptor that refers to the read endpoint of the pipe object.
+
+The parent-child association now becomes easy to explain correctly. Anonymous pipes are commonly used between parent and child because `fork()` duplicates the process’s descriptor table. That means the child receives descriptors referring to the same underlying pipe object that the parent already had. The pipe works because the descriptors were inherited, not because kinship is magical.
 
 That distinction matters for exam reasoning. The real rule is **descriptor possession**, not family relation. Parent-child communication is simply the most common setup path because it is the easiest way to distribute the anonymous endpoints.
 
-A short mechanism reminder fixes the picture. A process calls `pipe(fd)`. The kernel creates one pipe object and installs two descriptors in that process. Later, if the process calls `fork()`, both parent and child hold references to the same read and write ends. Communication becomes possible because both now have handles to the same kernel object.
+A short mechanism reminder fixes the picture. A process calls `pipe(fd)`. The kernel creates one pipe object and installs two descriptors in that process. Later, if the process calls `fork()`, both parent and child hold descriptors referring to the same read and write ends. Communication becomes possible because both now have handles to the same kernel object.
 
 **Retain.** An ordinary pipe is one kernel-managed anonymous byte stream with one read end and one write end.
 
@@ -55,6 +57,8 @@ Do not confuse: ordered byte delivery with preserved higher-level message struct
 This section exists because pipe behavior is easiest to misread at the lifecycle level. Students often know the API calls but not the logic that makes EOF, blocking, and deadlock behavior emerge. The mechanism trace is therefore the center of the chapter.
 
 The object here is the **end-to-end lifetime of one ordinary pipe used between a writer and a reader after `fork()`**. Formally, the standard pattern is: create pipe, fork, close unused ends in each process, write from the designated writer, read from the designated reader, and observe EOF only after all write-end references are closed.
+
+One quick reminder is needed before the close-discipline discussion: a descriptor counts as an open reference to an endpoint even if the process never actually reads or writes through it. That is why “forgetting to close an unused end” is not cosmetic. It changes the kernel’s view of whether readers or writers still exist.
 
 Interpretation: close discipline is not cleanup decoration. It is part of the communication protocol. The kernel decides whether the stream still has potential writers by tracking whether any descriptors referring to the write end remain open. If an unused write end stays open somewhere, the reader may block forever waiting for bytes or EOF because the kernel still sees a possible writer.
 

@@ -2,17 +2,21 @@
 
 POSIX shared memory is mislearned whenever it is introduced as six unrelated functions. The chapter should start with one object: a **named kernel memory object** that processes can open, size, map, unmap, close, and eventually unlink. Once that object is clear, the API becomes short and coherent.
 
-The concept-level point is simple. Shared memory here does **not** mean “one process gives another process a pointer.” A pointer value is meaningful only inside one process’s virtual address space. POSIX shared memory works because multiple processes separately map the **same kernel object** into their own address spaces.
+The concept-level point is simple. Shared memory here does **not** mean “one process gives another process a pointer.” A pointer value is meaningful only inside one process’s own virtual address space — that is, the address world relative to that one process’s current mappings. POSIX shared memory works because multiple processes separately map the **same kernel object** into their own address spaces.
 
 The canonical object has three views that must not be collapsed:
 
-1. **The name**: how unrelated processes rendezvous on the object.
+1. **The name**: how unrelated processes refer to the same shared-memory object.
 2. **The descriptor**: one process’s open handle to that object after `shm_open`.
 3. **The mapping**: the process-local virtual-memory region returned by `mmap`, through which actual loads and stores happen.
+
+A reminder sentence is needed here. A **descriptor** is the per-process handle to an open kernel object. A **mapping** is the act and result of telling the kernel, “make this object accessible at some address range inside this process.” So the name is how the object is found, the descriptor is how the process holds it open, and the mapping is how the process actually accesses its bytes.
 
 Those are related, but they are not the same thing. The name is not the descriptor. The descriptor is not the mapping. The mapping is not the object’s whole lifetime.
 
 A second distinction belongs immediately beside the first: **creation, sizing, and mapping are different operations**. A process can create or open a shared-memory object and still have no usable shared bytes yet. If the object has size zero, there is nothing meaningful to map. If the object is mapped before its layout is initialized, the mapping exists but the protocol may still be invalid.
+
+That last point deserves one review sentence. A valid mapping only means the bytes are reachable through memory access. It does **not** mean the bytes already contain meaningful shared data or that the two processes agree on how to interpret those bytes.
 
 So the first retention rule for this chapter is:
 
@@ -20,7 +24,7 @@ So the first retention rule for this chapter is:
 - `ftruncate` gives the object a size,
 - `mmap` gives this process a usable address range onto that object.
 
-A boundary condition should be stated early. The POSIX shared-memory name is pathname-like, but the portable abstraction is not “ordinary persistent disk file.” On many systems the namespace is implemented through something like `/dev/shm`, but conceptually the object is a kernel-managed shared-memory object local to one kernel instance.
+A boundary condition should be stated early. The POSIX shared-memory name is **pathname-like**, meaning it behaves like a systemwide name by which processes can refer to the same object, but the portable abstraction is not “ordinary persistent disk file.” On many systems the namespace is implemented through something like `/dev/shm`, but conceptually the object is a kernel-managed shared-memory object local to one kernel instance.
 
 A compact mechanism trace makes the model exact. Process A calls `shm_open("/ringbuf", ...)`. At that moment A has a descriptor, not a pointer. If the object is new, it may still have size zero. A calls `ftruncate` to set the size. A then calls `mmap` with a shared mapping. Only now does A have a usable address range. Later Process B can `shm_open` the same name, obtain its own descriptor, and map the same object at a completely different virtual address. What is shared is the underlying object, not the numerical pointer values.
 

@@ -15,11 +15,13 @@ So the canonical statement of the chapter is:
 
 **RPC is a call-shaped abstraction built over request/reply communication, which itself is built over message passing.**
 
-That sentence matters because it prevents the main mistake. RPC is useful precisely because application programmers do not want to assemble raw messages by hand every time. But the abstraction is dangerous if the reader forgets that the middle of the apparent call is still communication: serialization, transport, server-side execution, reply delivery, timeout, retry, and partial failure.
+That sentence matters because it prevents the main mistake. RPC is useful precisely because application programmers do not want to assemble raw messages by hand every time. But the abstraction is dangerous if the reader forgets that the middle of the apparent call is still communication: argument packaging, transport over some communication path, server-side execution, reply delivery, timeout, retry, and partial failure.
 
 A clean formal definition follows naturally. A remote procedure call is an abstraction in which a caller invokes a procedure-like operation, the runtime marshals arguments, sends a request to a server, causes the corresponding server-side procedure to run, receives a reply, unmarshals the result, and presents the outcome back to the caller in procedure-call form.
 
 The retention point should already be visible here: **RPC does not eliminate communication. It organizes communication behind a procedure-call interface.**
+
+A short review sentence helps keep the mechanism grounded. **Marshalling** means packaging arguments into a transmissible representation. **Unmarshalling** means rebuilding usable argument values from that transmitted representation. **Binding** means deciding which remote service instance the request should be sent to. **Transport** means the underlying communication mechanism that actually carries the request and reply, such as a socket-based channel.
 
 **Retain.** RPC is procedure-call-shaped request/reply communication layered over message passing.
 
@@ -29,7 +31,7 @@ The retention point should already be visible here: **RPC does not eliminate com
 
 ### Why this section exists
 
-Once RPC is understood as an abstraction, the next question is where the abstraction is physically maintained. The caller does not magically talk to the remote procedure. A concrete runtime structure must preserve the interface illusion while performing the actual communication work. This section exists because RPC cannot be understood or debugged without understanding the components that maintain the illusion.
+Once RPC is understood as an abstraction, the next question is where the abstraction is physically maintained. The caller does not magically talk to the remote procedure. A concrete runtime structure must preserve the interface illusion while still doing the underlying work of packaging arguments, choosing a destination, sending a request, receiving a reply, and rebuilding the result. This section exists because RPC cannot be understood or debugged without understanding the components that maintain the illusion.
 
 ### The object being introduced
 

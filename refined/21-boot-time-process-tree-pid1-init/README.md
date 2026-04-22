@@ -6,14 +6,14 @@ The object of this chapter is the transition from **kernel bootstrapping** to **
 
 That is why this chapter belongs after the ordinary process-lifecycle material. The reader must already know what a normal process is, what parent-child ancestry means, how `fork`, `exec`, and `wait` work, and why zombies and orphans matter. Only then does the boundary case become meaningful. The point here is not to replace the usual lifecycle model. The point is to identify **where that model starts to apply**.
 
-## Introduction and canonical boot-time sequence
+## The canonical boot-time sequence
 
 The canonical sequence is:
 
 1. **Power-on and reset**: the CPU begins from a hardware-defined reset location.
-2. **Firmware**: minimal machine initialization occurs so that a boot path can be found.
-3. **Bootloader**: the kernel image is loaded and control is transferred to the kernel.
-4. **Kernel early boot**: the kernel initializes memory-management structures, interrupt/exception handling, scheduling machinery, device support, and enough image-loading support to start user space.
+2. **Firmware**: very early machine code, stored in nonvolatile platform memory, performs minimal hardware initialization and finds a boot path.
+3. **Bootloader**: a program whose job is to load the operating-system kernel image into memory and transfer control to it.
+4. **Kernel early boot**: the kernel initializes the core mechanisms it needs before normal userspace can exist, such as memory-management setup, interrupt/exception handling, scheduling machinery, device support, and program-loading support.
 5. **Kernel-mediated creation of the first user-space process**: the kernel establishes the first user-mode execution context and executes the initial program image.
 6. **PID 1 begins ordinary userspace**: init starts service bring-up, session bring-up, and the ordinary ancestor tree of user-space processes.
 
@@ -75,7 +75,9 @@ PID 1 is special for three canonical reasons and one consequence.
 
 First, it is the **root of ordinary user-space startup**. Once PID 1 exists, the process tree now has an ordinary ancestor root from which later service managers, login paths, shells, and user commands descend.
 
-Second, it is the **fallback adopter of orphans**. If a parent exits while a child remains alive, the child cannot simply become ownerless. Reparenting must occur so that process-accounting and exit-status collection remain coherent. PID 1, or a subreaper mechanism derived from the same idea, fills that role.
+A quick reminder helps here. A **service manager** is the system component that starts, stops, and supervises long-lived background services. A **login path** is the chain of processes that eventually leads from system startup to a user session and shell.
+
+Second, it is the **fallback adopter of orphans**. If a parent exits while a child remains alive, the child cannot simply become ownerless. Reparenting must occur so that process-accounting and exit-status collection remain coherent. PID 1, or a **subreaper** mechanism derived from the same idea, fills that role. A subreaper is a process that the kernel allows to act as an intermediate collector/adopter for descendant processes inside some scope, rather than forcing every orphan all the way back to global PID 1.
 
 Third, PID 1 is usually the **system-wide supervisor**. It is not just “the first process.” In many Unix-like systems it starts services, manages long-lived daemons, coordinates boot targets or runlevels, and participates in shutdown and recovery policy. This is where process management becomes system management.
 

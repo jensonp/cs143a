@@ -1,23 +1,33 @@
 # Named Pipes (FIFOs): Filesystem-Named Pipe Endpoints for IPC
 
-A named pipe should be introduced by stating exactly what naming changes and what it does not change.
+A named pipe should be introduced by stating exactly what naming changes and what naming does **not** change.
 
-A FIFO is a **pipe-like kernel IPC object that is discoverable by pathname**. That is the canonical object. An ordinary anonymous pipe is reached through already-open descriptors. A FIFO is reached through namespace lookup. That is the structural gain.
+A FIFO is a **pipe-like kernel IPC object that is discoverable by pathname**. In plain operating-systems terms, that means the kernel maintains a communication object with pipe-style stream behavior, and processes can find that object by asking the operating system to resolve a filesystem path to it. That resolution step is what this chapter means by **namespace lookup**: the OS takes a pathname and tells the process which object that name refers to.
 
-The concept-level point is therefore:
+That is the structural gain over an ordinary anonymous pipe. An ordinary anonymous pipe is usually reached only through file descriptors that some process already holds. A FIFO is reached by name. So naming changes **how processes find the object**, not what kind of transport the object is.
+
+The concept-level point should therefore be stated carefully:
 
 **naming changes discovery and rendezvous; it does not upgrade the transport into a different data model.**
 
-From that sentence, the core distinctions follow immediately.
+That sentence needs two reminder phrases.
 
-- An **ordinary pipe** is unnamed and usually shared through inherited or explicitly passed descriptors.
-- A **FIFO** is still pipe-like, but processes can open it later by pathname.
-- A **regular file** stores durable bytes with file-offset semantics. A FIFO does not.
-- A **socket** is a richer endpoint object with different connection and addressing semantics. A FIFO is not a socket with a pathname.
+Here, **discovery** means that unrelated processes can independently find the same kernel object by using the same pathname.  
+Here, **rendezvous** means that they can meet at the same communication object without needing one process to pass the object handle directly to the other.
 
-The portable model should be stated carefully. A FIFO is best taught as a **stream-oriented, pipe-semantics object whose rendezvous is pathname-based**. It does not preserve application-level message boundaries. It does not become a regular file because it has a path. And although some systems expose extensions that tempt looser descriptions, the teaching model should remain the canonical one: a FIFO is still fundamentally a pipe-class object.
+From that sentence, the core distinctions follow.
 
-A worked structural contrast makes the point cleanly. If process P creates an ordinary pipe and then forks child C, the child can use the inherited descriptors. If process X starts now and process Y starts later with no shared setup process, an ordinary pipe gives them no shared object by itself. A FIFO does: both can open the same pathname and rendezvous on the same pipe-like kernel object.
+An **ordinary pipe** is unnamed and usually shared through inherited or explicitly passed **descriptors**. A descriptor is the small per-process handle — typically an integer in Unix/POSIX systems — that refers to an open kernel object such as a file, pipe, or socket.
+
+A **FIFO** is still pipe-like, but processes can open it later by pathname rather than only by inheriting or receiving descriptors.
+
+A **regular file** stores durable bytes with file-offset semantics. That needs to be unpacked. **Durable** here means the bytes remain as stored data after one writer finishes or exits. **File offset** means the kernel tracks a current read/write position inside the file, so later operations read or write at some position in persistent file contents. A FIFO does not behave that way. It is a live stream, not stored file contents.
+
+A **socket** is a richer endpoint object with different connection and addressing semantics. That also needs to be unpacked. An **endpoint object** is a kernel communication object that one side of communication attaches to. **Addressing semantics** means the rules by which peers are identified and reached — for example, IP address plus port, or some local-socket naming scheme. A FIFO is not “a socket with a pathname.” It remains a narrower pipe-class object.
+
+The portable model should now be stated clearly. A FIFO is best taught as a **stream-oriented, pipe-semantics object whose rendezvous is pathname-based**. It does not preserve application-level message boundaries. It does not become a regular file just because it appears in the filesystem namespace. And although some systems expose extensions that tempt looser language, the teaching model should remain the canonical one: a FIFO is still fundamentally a pipe-class object.
+
+A worked structural contrast makes the point cleanly. If process P creates an ordinary pipe and then forks child C, the child can use the inherited descriptors. If process X starts now and process Y starts later with no shared setup process, an ordinary pipe gives them no shared object by itself. A FIFO does: both can open the same pathname and thereby attach to the same pipe-like kernel object.
 
 That gain has a cost. Because naming broadens who can attach, stale paths, accidental attachment, and mismatched protocol assumptions become more likely. Naming solves discovery. It does not solve framing, peer validation, or application protocol design.
 
@@ -36,19 +46,15 @@ A FIFO can be opened for reading or writing, but open behavior depends on whethe
 - In the ordinary blocking model, opening for reading waits until some writer opens the FIFO, and opening for writing waits until some reader opens the FIFO.
 - In nonblocking mode, opening for reading can return immediately even without a writer, while opening for writing fails if no reader is present.
 
-The exact platform details are less important than the conceptual rule: **pathname discovery does not remove peer-presence coordination.** It merely moves coordination to open time instead of descriptor inheritance time.
+The exact platform details are less important than the conceptual rule: **pathname discovery does not remove peer-presence coordination.** It merely moves coordination to open time instead of descriptor-inheritance time.
+
+That comparison needs one reminder sentence. In an ordinary anonymous pipe, one process typically creates the pipe first and then distributes the already-open ends by inheritance or explicit passing. In a FIFO, unrelated processes may each arrive later by pathname, so the coordination problem shifts to the act of opening the object.
+
+Once opened, FIFO behavior is still pipe-class behavior. Reads on an empty FIFO block if a writer still exists. Reads return EOF only when the stream is empty and no writer remains. Writes fail with broken-pipe behavior if no reader remains. Short writes up to the platform’s atomicity bound may be protected from interleaving, but that does not create message semantics. Larger writes can interleave when multiple writers participate.
+
+The portable teaching model should therefore be explicit: treat a FIFO as a **one-way byte stream** whose power lies in pathname-based rendezvous, not in richer transport semantics.
 
 ### Stream-time behavior
-
-Once opened, FIFO behavior is pipe-class behavior.
-
-- Reads on an empty FIFO block if a writer still exists.
-- Reads return EOF only when the stream is empty and no writer remains.
-- Writes fail with broken-pipe behavior if no reader remains.
-- Short writes up to the platform’s atomicity bound may be protected from interleaving, but that does not create message semantics.
-- Larger writes can interleave when multiple writers participate.
-
-The portable teaching model should be explicit: treat a FIFO as a **one-way byte stream** whose power lies in pathname-based rendezvous, not in richer transport semantics. Some systems allow extensions that tempt looser language, but the canonical model should remain the portable one.
 
 So the retention sentence is:
 

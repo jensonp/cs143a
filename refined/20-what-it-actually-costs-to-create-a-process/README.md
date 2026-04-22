@@ -6,10 +6,10 @@ This chapter exists to replace the slogan “create a process” with a canonica
 
 The canonical decomposition is:
 
-1. **Fresh kernel objects must be created**: task/process record, kernel execution backing, PID identity, scheduling presence.
-2. **Memory-management structures must be established**: memory descriptor, VM-region metadata, page-table state, copy-on-write setup where applicable.
-3. **Resource-reference state must be inherited or rebuilt**: file-descriptor table, open-file references, credentials, signal state, accounting state.
-4. **Execution semantics must be made true**: parent and child must return correctly, inheritance rules must hold, cleanup must be possible if any stage fails.
+1. **Fresh kernel objects must be created**: the kernel must allocate a process/task record, meaning the central bookkeeping structure that says “this process exists,” plus the kernel-side execution backing needed to schedule and resume it.
+2. **Memory-management structures must be established**: the kernel must create or duplicate the memory-management state that tells the machine how this process’s virtual addresses should be interpreted. That includes items such as VM-region metadata and page-table state.
+3. **Resource-reference state must be inherited or rebuilt**: the child must receive correct relationships to open files, pipes, sockets, credentials, signal state, and accounting state.
+4. **Execution semantics must be made true**: parent and child must return correctly from `fork`, inheritance rules must hold, and cleanup must be possible if any stage fails.
 
 That is the first thing to retain: process creation is not one kind of cost. It is a compound protocol.
 
@@ -32,6 +32,8 @@ So the chapter’s core questions are:
 
 Cost becomes readable only when the kernel-side objects are separated clearly. From user space, “a process” looks singular. Inside the kernel, the abstraction is realized by several kinds of state, and each kind contributes a different cost.
 
+A review sentence helps here. A **task/process record** is the kernel’s main bookkeeping object for one process. An **execution context** is the saved machine-level continuation state needed to resume running it. **VM metadata** means the kernel’s records describing the process’s mapped memory regions. A **descriptor table** is the process’s table of small handles referring to open kernel objects such as files, pipes, and sockets.
+
 The canonical breakdown is as follows.
 
 ### 1. Process/task control structure
@@ -44,7 +46,7 @@ A child cannot be schedulable without kernel-resident execution support such as 
 
 ### 3. PID and namespace bookkeeping
 
-A PID is not just a number. It is a namespace-visible identity that must be reserved, linked into lookup structures, and later reclaimed correctly. PID work is real, but it is only one piece of the larger protocol.
+A PID is not just a number. It is a **namespace-visible identity**, meaning the process’s identifier in the operating system’s process-ID naming system. The kernel must reserve that identity, link it into lookup structures, and later reclaim it correctly. PID work is real, but it is only one piece of the larger protocol.
 
 ### 4. Address-space descriptor and VM metadata
 
@@ -61,6 +63,8 @@ The child usually receives a fresh descriptor-table structure whose entries poin
 ### 7. Credentials, signal state, and scheduler-visible attributes
 
 The child must also inherit or initialize credentials, signal disposition and mask state, and scheduler-visible information such as priority, affinity, and accounting counters. None of this is glamorous, but all of it is part of making the child a valid process rather than a partially described artifact.
+
+A short reminder helps here too. **Credentials** are the kernel’s records of who the process is allowed to act as — for example, user/group identity and related permission state. **Signal disposition** means which signals are ignored, handled, or left at default behavior. **Affinity** means which CPU(s) the scheduler is allowed to run the process on.
 
 A single sentence should organize the whole section: **process creation means creating enough fresh structure, plus enough inherited structure, that the scheduler, memory subsystem, file subsystem, signal subsystem, and parent/child bookkeeping all agree a new process now exists.**
 

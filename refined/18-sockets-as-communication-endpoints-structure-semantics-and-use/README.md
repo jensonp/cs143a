@@ -2,7 +2,9 @@
 
 Sockets belong in operating-systems notes because they are not merely “network programming calls.” A socket is a **kernel-managed communication endpoint**. That is the canonical object of the chapter.
 
-This should be stated directly. A socket is the operating system’s endpoint abstraction for communication under a chosen domain and transport semantics. The kernel allocates endpoint state, tracks buffering state, enforces blocking and wakeup rules, and mediates communication through that endpoint whether the peer is on the same machine or a different one.
+That sentence should be unpacked immediately. An **endpoint** is one side of a communication arrangement — the object a process actually holds when it wants to send or receive data. The socket is the kernel’s representation of that endpoint. The kernel allocates endpoint state, tracks buffering state, enforces blocking and wakeup rules, and mediates communication through that endpoint whether the peer is on the same machine or a different one.
+
+This chapter also uses the phrase **domain and transport semantics**, so those terms should be reactivated locally. The **domain** says what communication world the socket lives in — for example, local Unix-domain communication or Internet-style IP communication. The **transport semantics** say what kind of data-delivery behavior the socket offers — for example, stream-style communication or datagram-style communication.
 
 That is why sockets belong inside IPC. A local Unix-domain socket is IPC. A loopback TCP socket is IPC. A remote TCP socket is IPC that happens to cross machines. The physical reach of the communication changes; the endpoint object does not.
 
@@ -14,7 +16,9 @@ Several later distinctions depend on that one sentence. If the socket is the end
 - the IP address is not the socket,
 - the port is not the socket,
 - the connection is not the socket,
-- and the message protocol above the stream is not the socket either.
+- and the application protocol above the stream is not the socket either.
+
+A short reminder helps with one of those distinctions. A **port** is a number used so the operating system can tell which service or endpoint on one host incoming communication is intended for. A **connection** is the communication relationship established between endpoints in a connection-oriented protocol. The socket is the endpoint object that participates in that relationship.
 
 A short mechanism trace fixes the picture. When a process creates a socket, the kernel allocates endpoint state and returns a handle to it. When data later arrives, it arrives first to kernel-managed buffers associated with that endpoint. Only later do process-level reads receive the data according to the endpoint’s semantics. The communication object therefore exists as operating-system state first and user-space interface second.
 
@@ -28,7 +32,11 @@ This section exists because socket discussions collapse several different object
 
 The first object is the **socket object**. Formally, this is the kernel-resident endpoint state owned or referenced by a process. It includes the communication domain, type, protocol metadata, buffering state, readiness state, and any associated local or peer addressing information the kernel has established. Interpretation: this is the thing the process actually holds through a descriptor.
 
-The second object is the **IP address**. Formally, an IP address identifies a network interface location within an IP network. Interpretation: it identifies a host interface, not a particular application process. A machine may have several IP addresses, and many different processes may communicate through the same IP address.
+The second object is the **IP address**.
+
+An IP address should be read here in the simplest correct way: it is the network-level locator of a host or interface, not the endpoint object itself. When this chapter later talks about **addressing semantics**, it means the rules by which endpoints are identified and reached — for example, IP address plus port in an Internet socket.
+
+Formally, an IP address identifies a network interface location within an IP network. Interpretation: it identifies a host interface, not a particular application process. A machine may have several IP addresses, and many different processes may communicate through the same IP address.
 
 The third object is the **port**. Formally, a port is a transport-layer demultiplexing identifier used by the operating system to decide which endpoint should receive incoming transport traffic at a host. Interpretation: ports exist because the machine needs a way to distinguish among multiple communication endpoints using the same IP address. Without ports, the kernel would know that data is for a host but not which application endpoint at that host should receive it.
 
